@@ -5,16 +5,35 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 @Slf4j
 public class TryCatch {
 
+    public static UnaryOperator<Exception> logIt = ex -> {
+        log.error(ex.getMessage(), ex);
+        return ex;
+    };
+
+    public static <T> Function<Exception, T> propagate() {
+        return ex -> {
+            if(ex instanceof RuntimeException re) {
+                throw re;
+            } else {
+                throw new RuntimeException(ex);
+            }
+        };
+    };
+
     public static <T> T tryCatch(Callable<T> callable) {
+        return tryCatch(callable, logIt.andThen(propagate()));
+    }
+
+    public static <T> T tryCatch(Callable<T> callable, Function<Exception, T> exceptionHandler) {
         try {
             return callable.call();
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
-            throw new RuntimeException(e);
+            return exceptionHandler.apply(e);
         }
     }
 
@@ -36,15 +55,14 @@ public class TryCatch {
         return t -> tryCatch(() -> function.apply(t));
     }
 
-    public interface ExceptionalRunnable {
-        void run() throws Exception;
+    public static <T> Try<T> tryWith(Callable<T> callable) {
+        return tryCatch(() -> new Success<>(callable.call()), Failure::new);
     }
 
-    public interface ExceptionalConsumer<T> {
-        void accept(T t) throws Exception;
-    }
-
-    public interface ExceptionalFunction<T,R> {
-        R apply(T t) throws Exception;
+    public static Try<Void> tryWith(ExceptionalRunnable runnable) {
+        return tryCatch(() -> {
+            runnable.run();
+            return new Success<>(null);
+        }, Failure::new);
     }
 }
