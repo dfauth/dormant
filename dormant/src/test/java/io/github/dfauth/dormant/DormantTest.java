@@ -2,13 +2,17 @@ package io.github.dfauth.dormant;
 
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 class DormantTest {
 
     @Test
@@ -17,10 +21,11 @@ class DormantTest {
         var original = new TestObject("hello", 42, 123456789L, 3.14f, 2.718, true, (byte) 7, (short) 1000, 'Z', nested,
                 List.of("alpha", "beta"), Map.of("x", 10, "y", 20));
 
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = original.write();
+        log.info("serialized original: {}",new String(bytes));
 
         var restored = new TestObject();
-        BinarySerde.deserialize(bytes, restored);
+        restored.read(bytes);
         assertEquals(original, restored);
     }
 
@@ -102,6 +107,50 @@ class DormantTest {
         assertEquals(original, restored);
         assertNull(restored.tags);
         assertNull(restored.metadata);
+    }
+
+    @Test
+    void testWriteToByteArray() {
+        var original = new NestedObject("hello", 42);
+        byte[] bytes = original.write();
+
+        var restored = new NestedObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testWriteToOutputStream() {
+        var original = new NestedObject("stream", 7);
+        var baos = new ByteArrayOutputStream();
+        original.write(baos);
+
+        var restored = new NestedObject();
+        restored.read(new ByteArrayInputStream(baos.toByteArray()));
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testReadFromByteArray() {
+        var original = new TestObject("bytes", 10, 20L, 1.5f, 2.5, true, (byte) 3, (short) 4, 'B',
+                new NestedObject("inner", 99), List.of("a", "b"), Map.of("k", 1));
+        byte[] bytes = original.write();
+
+        var restored = new TestObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testReadFromInputStream() {
+        var original = new TestObject("input", 5, 100L, 0.1f, 0.2, false, (byte) 1, (short) 2, 'X',
+                new NestedObject("nested", 50), List.of("x"), Map.of("y", 9));
+        var baos = new ByteArrayOutputStream();
+        original.write(baos);
+
+        var restored = new TestObject();
+        restored.read(new ByteArrayInputStream(baos.toByteArray()));
+        assertEquals(original, restored);
     }
 
     @EqualsAndHashCode

@@ -20,11 +20,11 @@ public class BinarySerde implements Serde {
     private DataOutputStream out;
     private DataInputStream in;
 
-    private BinarySerde(DataOutputStream out) {
+    BinarySerde(DataOutputStream out) {
         this.out = out;
     }
 
-    private BinarySerde(DataInputStream in) {
+    BinarySerde(DataInputStream in) {
         this.in = in;
     }
 
