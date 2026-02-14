@@ -1,5 +1,7 @@
 package io.github.dfauth.dormant;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -28,6 +30,8 @@ public interface Serde {
     void writeShort(short value);
     void writeChar(char value);
     void writeString(String value);
+    void writeBigDecimal(BigDecimal value);
+    void writeLocalDate(LocalDate value);
     int magicNumber();
     void writeDormant(Dormant value);
 
@@ -41,6 +45,8 @@ public interface Serde {
     short readShort();
     char readChar();
     String readString();
+    BigDecimal readBigDecimal();
+    LocalDate readLocalDate();
     <T extends Dormant> T readDormant(Supplier<T> factory);
 
     <T> void writeList(List<T> list, Writer<T> writer);

@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -151,6 +153,124 @@ class DormantTest {
         var restored = new TestObject();
         restored.read(new ByteArrayInputStream(baos.toByteArray()));
         assertEquals(original, restored);
+    }
+
+    @Test
+    void testBigDecimalRoundTrip() {
+        var original = new BigDecimalObject(new BigDecimal("12345.6789"), new BigDecimal("-0.001"), BigDecimal.ZERO);
+        byte[] bytes = original.write();
+
+        var restored = new BigDecimalObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testBigDecimalWithNullValue() {
+        var original = new BigDecimalObject(null, new BigDecimal("42"), null);
+        byte[] bytes = original.write();
+
+        var restored = new BigDecimalObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+        assertNull(restored.price);
+        assertNull(restored.rate);
+    }
+
+    @Test
+    void testBigDecimalWithLargeValue() {
+        var original = new BigDecimalObject(
+                new BigDecimal("99999999999999999999999999999.99999999999999999999"),
+                new BigDecimal("1E-30"),
+                new BigDecimal("1E+30")
+        );
+        byte[] bytes = original.write();
+
+        var restored = new BigDecimalObject();
+        restored.read(bytes);
+        assertEquals(0, original.price.compareTo(restored.price));
+        assertEquals(0, original.amount.compareTo(restored.amount));
+        assertEquals(0, original.rate.compareTo(restored.rate));
+    }
+
+    @Test
+    void testLocalDateRoundTrip() {
+        var original = new LocalDateObject(LocalDate.of(2024, 6, 15), LocalDate.of(1970, 1, 1), LocalDate.of(2000, 12, 31));
+        byte[] bytes = original.write();
+
+        var restored = new LocalDateObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testLocalDateWithNullValue() {
+        var original = new LocalDateObject(null, LocalDate.of(2024, 1, 1), null);
+        byte[] bytes = original.write();
+
+        var restored = new LocalDateObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+        assertNull(restored.start);
+        assertNull(restored.end);
+    }
+
+    @Test
+    void testLocalDateWithExtremeValues() {
+        var original = new LocalDateObject(LocalDate.MIN, LocalDate.MAX, LocalDate.EPOCH);
+        byte[] bytes = original.write();
+
+        var restored = new LocalDateObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    static class LocalDateObject implements Dormant {
+        LocalDate start;
+        LocalDate middle;
+        LocalDate end;
+
+        LocalDateObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeLocalDate(start);
+            serde.writeLocalDate(middle);
+            serde.writeLocalDate(end);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            start = serde.readLocalDate();
+            middle = serde.readLocalDate();
+            end = serde.readLocalDate();
+        }
+    }
+
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    static class BigDecimalObject implements Dormant {
+        BigDecimal price;
+        BigDecimal amount;
+        BigDecimal rate;
+
+        BigDecimalObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeBigDecimal(price);
+            serde.writeBigDecimal(amount);
+            serde.writeBigDecimal(rate);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            price = serde.readBigDecimal();
+            amount = serde.readBigDecimal();
+            rate = serde.readBigDecimal();
+        }
     }
 
     @EqualsAndHashCode

@@ -4,7 +4,10 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -119,6 +122,25 @@ public class BinarySerde implements Serde {
     }
 
     @Override
+    public void writeBigDecimal(BigDecimal value) {
+        writeBoolean(value != null);
+        if (value != null) {
+            writeInt(value.scale());
+            byte[] unscaled = value.unscaledValue().toByteArray();
+            writeInt(unscaled.length);
+            tryCatch(() -> out.write(unscaled));
+        }
+    }
+
+    @Override
+    public void writeLocalDate(LocalDate value) {
+        writeBoolean(value != null);
+        if (value != null) {
+            writeLong(value.toEpochDay());
+        }
+    }
+
+    @Override
     public void writeDormant(Dormant value) {
         writeBoolean(value != null);
         if (value != null) {
@@ -176,6 +198,26 @@ public class BinarySerde implements Serde {
             in.readFully(bytes);
             return new String(bytes, StandardCharsets.UTF_8);
         });
+    }
+
+    @Override
+    public BigDecimal readBigDecimal() {
+        if (readBoolean()) {
+            int scale = readInt();
+            int len = readInt();
+            byte[] unscaled = new byte[len];
+            tryCatch(() -> in.readFully(unscaled));
+            return new BigDecimal(new BigInteger(unscaled), scale);
+        }
+        return null;
+    }
+
+    @Override
+    public LocalDate readLocalDate() {
+        if (readBoolean()) {
+            return LocalDate.ofEpochDay(readLong());
+        }
+        return null;
     }
 
     @Override
