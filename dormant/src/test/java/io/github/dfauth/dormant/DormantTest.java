@@ -4,6 +4,9 @@ import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DormantTest {
@@ -11,7 +14,8 @@ class DormantTest {
     @Test
     void testRoundTripWithAllPrimitives() {
         var nested = new NestedObject("world", 99);
-        var original = new TestObject("hello", 42, 123456789L, 3.14f, 2.718, true, (byte) 7, (short) 1000, 'Z', nested);
+        var original = new TestObject("hello", 42, 123456789L, 3.14f, 2.718, true, (byte) 7, (short) 1000, 'Z', nested,
+                List.of("alpha", "beta"), Map.of("x", 10, "y", 20));
 
         byte[] bytes = BinarySerde.serialize(original);
 
@@ -22,7 +26,8 @@ class DormantTest {
 
     @Test
     void testRoundTripWithNullString() {
-        var original = new TestObject(null, 1, 2L, 3.0f, 4.0, false, (byte) 0, (short) 0, 'A', new NestedObject("test", 0));
+        var original = new TestObject(null, 1, 2L, 3.0f, 4.0, false, (byte) 0, (short) 0, 'A', new NestedObject("test", 0),
+                List.of(), Map.of());
 
         byte[] bytes = BinarySerde.serialize(original);
 
@@ -34,7 +39,8 @@ class DormantTest {
 
     @Test
     void testRoundTripWithEmptyString() {
-        var original = new TestObject("", 0, 0L, 0.0f, 0.0, false, (byte) 0, (short) 0, 'A', new NestedObject("", 0));
+        var original = new TestObject("", 0, 0L, 0.0f, 0.0, false, (byte) 0, (short) 0, 'A', new NestedObject("", 0),
+                List.of(), Map.of());
 
         byte[] bytes = BinarySerde.serialize(original);
 
@@ -56,7 +62,9 @@ class DormantTest {
                 Byte.MIN_VALUE,
                 Short.MAX_VALUE,
                 '\u0000',
-                new NestedObject("nested", Integer.MIN_VALUE)
+                new NestedObject("nested", Integer.MIN_VALUE),
+                List.of("one", "two", "three"),
+                Map.of("key", 999)
         );
 
         byte[] bytes = BinarySerde.serialize(original);
@@ -69,7 +77,8 @@ class DormantTest {
 
     @Test
     void testRoundTripWithNullNested() {
-        var original = new TestObject("solo", 1, 2L, 3.0f, 4.0, true, (byte) 0, (short) 0, 'A', null);
+        var original = new TestObject("solo", 1, 2L, 3.0f, 4.0, true, (byte) 0, (short) 0, 'A', null,
+                List.of("tag"), Map.of("a", 1));
 
         byte[] bytes = BinarySerde.serialize(original);
 
@@ -78,6 +87,21 @@ class DormantTest {
 
         assertEquals(original, restored);
         assertNull(restored.nested);
+    }
+
+    @Test
+    void testRoundTripWithNullListAndMap() {
+        var original = new TestObject("nulls", 0, 0L, 0.0f, 0.0, false, (byte) 0, (short) 0, 'A', null,
+                null, null);
+
+        byte[] bytes = BinarySerde.serialize(original);
+
+        var restored = new TestObject();
+        BinarySerde.deserialize(bytes, restored);
+
+        assertEquals(original, restored);
+        assertNull(restored.tags);
+        assertNull(restored.metadata);
     }
 
     @EqualsAndHashCode
@@ -114,11 +138,14 @@ class DormantTest {
         short rank;
         char grade;
         NestedObject nested;
+        List<String> tags;
+        Map<String, Integer> metadata;
 
         TestObject() {}
 
         @Override
-        public void write(Serde serde) {
+        public void write(Serde serde)
+        {
             serde.writeString(name);
             serde.writeInt(age);
             serde.writeLong(id);
@@ -129,10 +156,13 @@ class DormantTest {
             serde.writeShort(rank);
             serde.writeChar(grade);
             serde.writeDormant(nested);
+            serde.writeList(tags, Serde::writeString);
+            serde.writeMap(metadata, Serde::writeString, Serde::writeInt);
         }
 
         @Override
-        public void read(Serde serde) {
+        public void read(Serde serde)
+        {
             name = serde.readString();
             age = serde.readInt();
             id = serde.readLong();
@@ -143,6 +173,8 @@ class DormantTest {
             rank = serde.readShort();
             grade = serde.readChar();
             nested = serde.readDormant(NestedObject::new);
+            tags = serde.readList(Serde::readString);
+            metadata = serde.readMap(Serde::readString, Serde::readInt);
         }
     }
 }

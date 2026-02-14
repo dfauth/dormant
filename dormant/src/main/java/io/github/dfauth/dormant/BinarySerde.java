@@ -1,8 +1,17 @@
 package io.github.dfauth.dormant;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
+
+import static io.github.dfauth.trycatch.TryCatch.tryCatch;
 
 public class BinarySerde implements Serde {
 
@@ -49,47 +58,47 @@ public class BinarySerde implements Serde {
     // Write methods
     @Override
     public void writeInt(int value) {
-        wrap(() -> out.writeInt(value));
+        tryCatch(() -> out.writeInt(value));
     }
 
     @Override
     public void writeLong(long value) {
-        wrap(() -> out.writeLong(value));
+        tryCatch(() -> out.writeLong(value));
     }
 
     @Override
     public void writeFloat(float value) {
-        wrap(() -> out.writeFloat(value));
+        tryCatch(() -> out.writeFloat(value));
     }
 
     @Override
     public void writeDouble(double value) {
-        wrap(() -> out.writeDouble(value));
+        tryCatch(() -> out.writeDouble(value));
     }
 
     @Override
     public void writeBoolean(boolean value) {
-        wrap(() -> out.writeBoolean(value));
+        tryCatch(() -> out.writeBoolean(value));
     }
 
     @Override
     public void writeByte(byte value) {
-        wrap(() -> out.writeByte(value));
+        tryCatch(() -> out.writeByte(value));
     }
 
     @Override
     public void writeShort(short value) {
-        wrap(() -> out.writeShort(value));
+        tryCatch(() -> out.writeShort(value));
     }
 
     @Override
     public void writeChar(char value) {
-        wrap(() -> out.writeChar(value));
+        tryCatch(() -> out.writeChar(value));
     }
 
     @Override
     public void writeString(String value) {
-        wrap(() -> {
+        tryCatch(() -> {
             if (value == null) {
                 out.writeInt(-1);
             } else {
@@ -111,47 +120,47 @@ public class BinarySerde implements Serde {
     // Read methods
     @Override
     public int readInt() {
-        return supply(() -> in.readInt());
+        return tryCatch(() -> in.readInt());
     }
 
     @Override
     public long readLong() {
-        return supply(() -> in.readLong());
+        return tryCatch(() -> in.readLong());
     }
 
     @Override
     public float readFloat() {
-        return supply(() -> in.readFloat());
+        return tryCatch(() -> in.readFloat());
     }
 
     @Override
     public double readDouble() {
-        return supply(() -> in.readDouble());
+        return tryCatch(() -> in.readDouble());
     }
 
     @Override
     public boolean readBoolean() {
-        return supply(() -> in.readBoolean());
+        return tryCatch(() -> in.readBoolean());
     }
 
     @Override
     public byte readByte() {
-        return supply(() -> in.readByte());
+        return tryCatch(() -> in.readByte());
     }
 
     @Override
     public short readShort() {
-        return supply(() -> in.readShort());
+        return tryCatch(() -> in.readShort());
     }
 
     @Override
     public char readChar() {
-        return supply(() -> in.readChar());
+        return tryCatch(() -> in.readChar());
     }
 
     @Override
     public String readString() {
-        return supply(() -> {
+        return tryCatch(() -> {
             int len = in.readInt();
             if (len == -1) return null;
             byte[] bytes = new byte[len];
@@ -170,25 +179,73 @@ public class BinarySerde implements Serde {
         return null;
     }
 
-    private void wrap(IORunnable r) {
-        try {
-            r.run();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+    @Override
+    public <T> void writeList(List<T> list, Writer<T> writer)
+    {
+        if (list == null)
+        {
+            writeInt(-1);
+        }
+        else
+        {
+            writeInt(list.size());
+            for (T element : list)
+            {
+                writer.write(this, element);
+            }
         }
     }
 
-    private <T> T supply(IOSupplier<T> s) {
-        try {
-            return s.get();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+    @Override
+    public <T> List<T> readList(Reader<T> reader)
+    {
+        int size = readInt();
+        if (size == -1)
+        {
+            return null;
+        }
+        List<T> list = new ArrayList<>(size);
+        for (int i = 0; i < size; i++)
+        {
+            list.add(reader.read(this));
+        }
+        return list;
+    }
+
+    @Override
+    public <K, V> void writeMap(Map<K, V> map, Writer<K> keyWriter, Writer<V> valueWriter)
+    {
+        if (map == null)
+        {
+            writeInt(-1);
+        }
+        else
+        {
+            writeInt(map.size());
+            for (Map.Entry<K, V> entry : map.entrySet())
+            {
+                keyWriter.write(this, entry.getKey());
+                valueWriter.write(this, entry.getValue());
+            }
         }
     }
 
-    @FunctionalInterface
-    private interface IORunnable { void run() throws IOException; }
+    @Override
+    public <K, V> Map<K, V> readMap(Reader<K> keyReader, Reader<V> valueReader)
+    {
+        int size = readInt();
+        if (size == -1)
+        {
+            return null;
+        }
+        Map<K, V> map = new HashMap<>(size);
+        for (int i = 0; i < size; i++)
+        {
+            K key = keyReader.read(this);
+            V value = valueReader.read(this);
+            map.put(key, value);
+        }
+        return map;
+    }
 
-    @FunctionalInterface
-    private interface IOSupplier<T> { T get() throws IOException; }
 }
