@@ -233,7 +233,7 @@ class TryCatchTest {
         var holder = new Object() { String value = null; };
         var result = TryCatch.<String>tryWith(() -> {
             throw new Exception("boom");
-        }).<String>onFailure(e -> "recovered: " + e.getMessage())
+        }).onFailure(e -> "recovered: " + e.getMessage())
                 .map((Consumer<String>) v -> holder.value = v);
         assertInstanceOf(Success.class, result);
         assertEquals("recovered: boom", holder.value);
@@ -243,7 +243,7 @@ class TryCatchTest {
     void testOnFailureFunctionSkippedOnSuccess() {
         var holder = new Object() { boolean called = false; };
         var result = TryCatch.tryWith(() -> "hello")
-                .<String>onFailure(e -> {
+                .onFailure(e -> {
                     holder.called = true;
                     return "recovered";
                 });

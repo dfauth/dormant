@@ -42,6 +42,15 @@ public class BinarySerde implements Serde {
         return baos.toByteArray();
     }
 
+    public static int peekTypeId(byte[] data) {
+        var serde = new BinarySerde(new DataInputStream(new ByteArrayInputStream(data)));
+        int magic = serde.readInt();
+        if (magic != MAGIC_NUMBER) {
+            throw new IllegalArgumentException("Invalid magic number: 0x" + Integer.toHexString(magic));
+        }
+        return serde.readInt();
+    }
+
     public static void deserialize(byte[] data, Dormant dormant) {
         var serde = new BinarySerde(new DataInputStream(new ByteArrayInputStream(data)));
         int magic = serde.readInt();
