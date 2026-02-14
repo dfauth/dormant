@@ -128,4 +128,126 @@ class TryCatchTest {
         });
         assertInstanceOf(Failure.class, result);
     }
+
+    @Test
+    void testTryWithRunnableExecutesCallbackOnException() {
+        var holder = new Object() {
+            Exception exception = null;
+        };
+        var result = TryCatch.tryWith((ExceptionalRunnable) () -> {
+            throw new Exception("fail");
+        }).onFailure((Consumer<Exception>) e -> holder.exception = e);
+        assertInstanceOf(Failure.class, result);
+        assertNotNull(holder.exception);
+    }
+
+    @Test
+    void testTryWithCallableExecutesCallbackOnSuccess() {
+        var holder = new Object() { String value = null; };
+        var result = TryCatch.tryWith(() -> "hello").map((Consumer<String>) v -> holder.value = v);
+        assertInstanceOf(Success.class, result);
+        assertEquals("hello", holder.value);
+    }
+
+    @Test
+    void testOnSuccessNotCalledOnFailure() {
+        var holder = new Object() { boolean called = false; };
+        var result = TryCatch.<String>tryWith(() -> {
+            throw new Exception("boom");
+        }).map((Consumer<String>) v -> holder.called = true);
+        assertInstanceOf(Failure.class, result);
+        assertFalse(holder.called);
+    }
+
+    @Test
+    void testOnFailureNotCalledOnSuccess() {
+        var holder = new Object() { boolean called = false; };
+        var result = TryCatch.tryWith(() -> "hello").onFailure((Consumer<Exception>) e -> holder.called = true);
+        assertInstanceOf(Success.class, result);
+        assertFalse(holder.called);
+    }
+
+    @Test
+    void testOnSuccessFunctionMapsValue() {
+        var result = TryCatch.tryWith(() -> "hello")
+                .map(String::length);
+        assertInstanceOf(Success.class, result);
+    }
+
+    @Test
+    void testOnSuccessFunctionChaining() {
+        var holder = new Object() { int value = 0; };
+        TryCatch.tryWith(() -> "hello")
+                .map(String::length)
+                .map((Consumer<Integer>) v -> holder.value = v);
+        assertEquals(5, holder.value);
+    }
+
+    @Test
+    void testOnSuccessFunctionSkippedOnFailure() {
+        var holder = new Object() { boolean called = false; };
+        var result = TryCatch.<String>tryWith(() -> {
+            throw new Exception("boom");
+        }).map(s -> {
+            holder.called = true;
+            return s.length();
+        });
+        assertInstanceOf(Failure.class, result);
+        assertFalse(holder.called);
+    }
+
+    @Test
+    void testFlatMapOnSuccess() {
+        var result = TryCatch.tryWith(() -> "hello")
+                .flatMap(s -> TryCatch.tryWith(() -> s.length()));
+        assertInstanceOf(Success.class, result);
+        var holder = new Object() { int value = 0; };
+        result.map((Consumer<Integer>) v -> holder.value = v);
+        assertEquals(5, holder.value);
+    }
+
+    @Test
+    void testFlatMapOnSuccessReturningFailure() {
+        var result = TryCatch.tryWith(() -> "hello")
+                .flatMap(s -> TryCatch.<Integer>tryWith(() -> {
+                    throw new Exception("inner fail");
+                }));
+        assertInstanceOf(Failure.class, result);
+    }
+
+    @Test
+    void testFlatMapSkippedOnFailure() {
+        var holder = new Object() { boolean called = false; };
+        var result = TryCatch.<String>tryWith(() -> {
+            throw new Exception("boom");
+        }).flatMap(s -> {
+            holder.called = true;
+            return TryCatch.tryWith(() -> s.length());
+        });
+        assertInstanceOf(Failure.class, result);
+        assertFalse(holder.called);
+    }
+
+    @Test
+    void testOnFailureFunctionRecovery() {
+        var holder = new Object() { String value = null; };
+        var result = TryCatch.<String>tryWith(() -> {
+            throw new Exception("boom");
+        }).<String>onFailure(e -> "recovered: " + e.getMessage())
+                .map((Consumer<String>) v -> holder.value = v);
+        assertInstanceOf(Success.class, result);
+        assertEquals("recovered: boom", holder.value);
+    }
+
+    @Test
+    void testOnFailureFunctionSkippedOnSuccess() {
+        var holder = new Object() { boolean called = false; };
+        var result = TryCatch.tryWith(() -> "hello")
+                .<String>onFailure(e -> {
+                    holder.called = true;
+                    return "recovered";
+                });
+        assertInstanceOf(Success.class, result);
+        assertFalse(holder.called);
+    }
 }
