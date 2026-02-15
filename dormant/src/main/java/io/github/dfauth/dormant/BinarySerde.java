@@ -18,7 +18,7 @@ import static io.github.dfauth.trycatch.TryCatch.tryCatch;
 
 public class BinarySerde implements Serde {
 
-    public static final int MAGIC_NUMBER = 0xD0BACAFE;
+    public static final int MAGIC_NUMBER = 0xDECACAFE;
 
     private DataOutputStream out;
     private DataInputStream in;
@@ -152,6 +152,17 @@ public class BinarySerde implements Serde {
     }
 
     @Override
+    public Serde writeBytes(byte[] value) {
+        if (value == null) {
+            writeInt(-1);
+        } else {
+            writeInt(value.length);
+            tryCatch(() -> out.write(value));
+        }
+        return this;
+    }
+
+    @Override
     public Serde writeDormant(Dormant value) {
         writeBoolean(value != null);
         if (value != null) {
@@ -230,6 +241,15 @@ public class BinarySerde implements Serde {
             return LocalDate.ofEpochDay(readLong());
         }
         return null;
+    }
+
+    @Override
+    public byte[] readBytes() {
+        int len = readInt();
+        if (len == -1) return null;
+        byte[] bytes = new byte[len];
+        tryCatch(() -> in.readFully(bytes));
+        return bytes;
     }
 
     @Override

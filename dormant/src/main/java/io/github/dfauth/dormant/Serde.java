@@ -33,6 +33,7 @@ public interface Serde {
     Serde writeString(String value);
     Serde writeBigDecimal(BigDecimal value);
     Serde writeLocalDate(LocalDate value);
+    Serde writeBytes(byte[] value);
     int magicNumber();
     Serde writeDormant(Dormant value);
 
@@ -100,6 +101,12 @@ public interface Serde {
     LocalDate readLocalDate();
     default Serde readLocalDate(Consumer<LocalDate> consumer) {
         consumer.accept(readLocalDate());
+        return this;
+    }
+
+    byte[] readBytes();
+    default Serde readBytes(Consumer<byte[]> consumer) {
+        consumer.accept(readBytes());
         return this;
     }
 

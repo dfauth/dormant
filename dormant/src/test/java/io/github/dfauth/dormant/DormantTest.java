@@ -156,6 +156,28 @@ class DormantTest {
     }
 
     @Test
+    void testByteArrayRoundTrip() {
+        var original = new ByteArrayObject(new byte[]{1, 2, 3, 4, 5}, new byte[0]);
+        byte[] bytes = original.write();
+
+        var restored = new ByteArrayObject();
+        restored.read(bytes);
+        assertArrayEquals(original.data, restored.data);
+        assertArrayEquals(original.extra, restored.extra);
+    }
+
+    @Test
+    void testByteArrayWithNullValue() {
+        var original = new ByteArrayObject(null, new byte[]{42});
+        byte[] bytes = original.write();
+
+        var restored = new ByteArrayObject();
+        restored.read(bytes);
+        assertNull(restored.data);
+        assertArrayEquals(original.extra, restored.extra);
+    }
+
+    @Test
     void testBigDecimalRoundTrip() {
         var original = new BigDecimalObject(new BigDecimal("12345.6789"), new BigDecimal("-0.001"), BigDecimal.ZERO);
         byte[] bytes = original.write();
@@ -223,6 +245,26 @@ class DormantTest {
         var restored = new LocalDateObject();
         restored.read(bytes);
         assertEquals(original, restored);
+    }
+
+    @AllArgsConstructor
+    static class ByteArrayObject implements Dormant {
+        byte[] data;
+        byte[] extra;
+
+        ByteArrayObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeBytes(data)
+                    .writeBytes(extra);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            serde.readBytes(v -> data = v)
+                    .readBytes(v -> extra = v);
+        }
     }
 
     @EqualsAndHashCode
