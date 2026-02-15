@@ -192,6 +192,18 @@ public class BinarySerde implements Serde {
     }
 
     @Override
+    public Serde writeEnum(Enum<?> value) {
+        writeString(value != null ? value.name() : null);
+        return this;
+    }
+
+    @Override
+    public Serde writeOrdinal(Enum<?> value) {
+        writeInt(value != null ? value.ordinal() : -1);
+        return this;
+    }
+
+    @Override
     public Serde writeDormant(Dormant value) {
         writeBoolean(value != null);
         if (value != null) {
@@ -300,6 +312,20 @@ public class BinarySerde implements Serde {
         byte[] bytes = new byte[len];
         tryCatch(() -> in.readFully(bytes));
         return bytes;
+    }
+
+    @Override
+    public <E extends Enum<E>> E readEnum(Class<E> enumClass) {
+        String name = readString();
+        if (name == null) return null;
+        return Enum.valueOf(enumClass, name);
+    }
+
+    @Override
+    public <E extends Enum<E>> E readOrdinal(Class<E> enumClass) {
+        int ordinal = readInt();
+        if (ordinal == -1) return null;
+        return enumClass.getEnumConstants()[ordinal];
     }
 
     @Override

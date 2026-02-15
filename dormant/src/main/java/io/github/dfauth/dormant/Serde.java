@@ -38,6 +38,8 @@ public interface Serde {
     Serde writeInstant(Instant value);
     Serde writeLocalDateTime(LocalDateTime value);
     Serde writeBytes(byte[] value);
+    Serde writeEnum(Enum<?> value);
+    Serde writeOrdinal(Enum<?> value);
     int magicNumber();
     Serde writeDormant(Dormant value);
 
@@ -123,6 +125,18 @@ public interface Serde {
     byte[] readBytes();
     default Serde readBytes(Consumer<byte[]> consumer) {
         consumer.accept(readBytes());
+        return this;
+    }
+
+    <E extends Enum<E>> E readEnum(Class<E> enumClass);
+    default <E extends Enum<E>> Serde readEnum(Class<E> enumClass, Consumer<E> consumer) {
+        consumer.accept(readEnum(enumClass));
+        return this;
+    }
+
+    <E extends Enum<E>> E readOrdinal(Class<E> enumClass);
+    default <E extends Enum<E>> Serde readOrdinal(Class<E> enumClass, Consumer<E> consumer) {
+        consumer.accept(readOrdinal(enumClass));
         return this;
     }
 

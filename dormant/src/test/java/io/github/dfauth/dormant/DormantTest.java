@@ -157,6 +157,48 @@ class DormantTest {
     }
 
     @Test
+    void testEnumRoundTrip() {
+        var original = new EnumObject(Direction.NORTH, Priority.HIGH);
+        byte[] bytes = original.write();
+
+        var restored = new EnumObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testEnumWithNullValue() {
+        var original = new EnumObject(null, Priority.LOW);
+        byte[] bytes = original.write();
+
+        var restored = new EnumObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+        assertNull(restored.direction);
+    }
+
+    @Test
+    void testOrdinalRoundTrip() {
+        var original = new OrdinalObject(Direction.EAST, Priority.MEDIUM);
+        byte[] bytes = original.write();
+
+        var restored = new OrdinalObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testOrdinalWithNullValue() {
+        var original = new OrdinalObject(null, Priority.HIGH);
+        byte[] bytes = original.write();
+
+        var restored = new OrdinalObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+        assertNull(restored.direction);
+    }
+
+    @Test
     void testExternalizableRoundTrip() throws Exception {
         var original = new NestedObject("externalizable", 42);
 
@@ -325,6 +367,51 @@ class DormantTest {
         var restored = new LocalDateObject();
         restored.read(bytes);
         assertEquals(original, restored);
+    }
+
+    enum Direction { NORTH, SOUTH, EAST, WEST }
+    enum Priority { LOW, MEDIUM, HIGH }
+
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    static class EnumObject implements Dormant {
+        Direction direction;
+        Priority priority;
+
+        EnumObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeEnum(direction)
+                    .writeEnum(priority);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            serde.readEnum(Direction.class, v -> direction = v)
+                    .readEnum(Priority.class, v -> priority = v);
+        }
+    }
+
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    static class OrdinalObject implements Dormant {
+        Direction direction;
+        Priority priority;
+
+        OrdinalObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeOrdinal(direction)
+                    .writeOrdinal(priority);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            serde.readOrdinal(Direction.class, v -> direction = v)
+                    .readOrdinal(Priority.class, v -> priority = v);
+        }
     }
 
     @EqualsAndHashCode

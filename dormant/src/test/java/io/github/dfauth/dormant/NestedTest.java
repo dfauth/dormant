@@ -1,6 +1,7 @@
 package io.github.dfauth.dormant;
 
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,8 @@ public class NestedTest {
 
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class TestObject extends AbstractDormant {
+    @EqualsAndHashCode
+    public static class TestObject implements Dormant {
 
         private int n;
         private String s;
@@ -47,6 +49,7 @@ public class NestedTest {
 
     @AllArgsConstructor
     @NoArgsConstructor
+    @EqualsAndHashCode
     public static class NestedObjectImpl implements NestedObject, Dormant {
 
         private int m;
