@@ -9,6 +9,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -234,6 +235,29 @@ class DormantTest {
     }
 
     @Test
+    void testLocalDateTimeRoundTrip() {
+        var original = new LocalDateTimeObject(
+                LocalDateTime.of(2024, 6, 15, 10, 30, 45, 123456789),
+                LocalDateTime.of(1970, 1, 1, 0, 0, 0));
+        byte[] bytes = original.write();
+
+        var restored = new LocalDateTimeObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testLocalDateTimeWithNullValue() {
+        var original = new LocalDateTimeObject(null, LocalDateTime.now());
+        byte[] bytes = original.write();
+
+        var restored = new LocalDateTimeObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+        assertNull(restored.start);
+    }
+
+    @Test
     void testBigDecimalRoundTrip() {
         var original = new BigDecimalObject(new BigDecimal("12345.6789"), new BigDecimal("-0.001"), BigDecimal.ZERO);
         byte[] bytes = original.write();
@@ -301,6 +325,27 @@ class DormantTest {
         var restored = new LocalDateObject();
         restored.read(bytes);
         assertEquals(original, restored);
+    }
+
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    static class LocalDateTimeObject implements Dormant {
+        LocalDateTime start;
+        LocalDateTime end;
+
+        LocalDateTimeObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeLocalDateTime(start)
+                    .writeLocalDateTime(end);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            serde.readLocalDateTime(v -> start = v)
+                    .readLocalDateTime(v -> end = v);
+        }
     }
 
     @EqualsAndHashCode

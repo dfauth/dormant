@@ -3,6 +3,7 @@ package io.github.dfauth.dormant;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -35,6 +36,7 @@ public interface Serde {
     Serde writeBigDecimal(BigDecimal value);
     Serde writeLocalDate(LocalDate value);
     Serde writeInstant(Instant value);
+    Serde writeLocalDateTime(LocalDateTime value);
     Serde writeBytes(byte[] value);
     int magicNumber();
     Serde writeDormant(Dormant value);
@@ -109,6 +111,12 @@ public interface Serde {
     Instant readInstant();
     default Serde readInstant(Consumer<Instant> consumer) {
         consumer.accept(readInstant());
+        return this;
+    }
+
+    LocalDateTime readLocalDateTime();
+    default Serde readLocalDateTime(Consumer<LocalDateTime> consumer) {
+        consumer.accept(readLocalDateTime());
         return this;
     }
 

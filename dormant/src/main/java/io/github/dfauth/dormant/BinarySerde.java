@@ -9,6 +9,8 @@ import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -163,6 +165,16 @@ public class BinarySerde implements Serde {
     }
 
     @Override
+    public Serde writeLocalDateTime(LocalDateTime value) {
+        writeBoolean(value != null);
+        if (value != null) {
+            writeLong(value.toLocalDate().toEpochDay());
+            writeLong(value.toLocalTime().toNanoOfDay());
+        }
+        return this;
+    }
+
+    @Override
     public Serde writeBytes(byte[] value) {
         if (value == null) {
             writeInt(-1);
@@ -260,6 +272,16 @@ public class BinarySerde implements Serde {
             long epochSecond = readLong();
             int nano = readInt();
             return Instant.ofEpochSecond(epochSecond, nano);
+        }
+        return null;
+    }
+
+    @Override
+    public LocalDateTime readLocalDateTime() {
+        if (readBoolean()) {
+            LocalDate date = LocalDate.ofEpochDay(readLong());
+            LocalTime time = LocalTime.ofNanoOfDay(readLong());
+            return LocalDateTime.of(date, time);
         }
         return null;
     }
