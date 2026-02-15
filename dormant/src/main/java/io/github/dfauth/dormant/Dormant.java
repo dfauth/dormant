@@ -11,7 +11,7 @@ public interface Dormant extends Externalizable {
     }
 
     @Override
-    default void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+    default void readExternal(ObjectInput in) throws IOException {
         int len = in.readInt();
         byte[] bytes = new byte[len];
         in.readFully(bytes);
@@ -47,7 +47,14 @@ public interface Dormant extends Externalizable {
         read(serde);
     }
 
+    ClassValue<Integer> TYPE_ID_CACHE = new ClassValue<>() {
+        @Override
+        protected Integer computeValue(Class<?> type) {
+            return type.getName().hashCode();
+        }
+    };
+
     default int typeId() {
-        return this.getClass().getName().hashCode();
+        return TYPE_ID_CACHE.get(getClass());
     }
 }
