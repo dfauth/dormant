@@ -126,6 +126,12 @@ public interface Serde {
         return this;
     }
 
+    <T extends Dormant> T readDormant();
+    default <T extends Dormant> Serde readDormant(Consumer<T> consumer) {
+        consumer.accept(readDormant());
+        return this;
+    }
+
     <T extends Dormant> T readDormant(Supplier<T> factory);
     default <T extends Dormant> Serde readDormant(Supplier<T> factory, Consumer<T> consumer) {
         consumer.accept(readDormant(factory));

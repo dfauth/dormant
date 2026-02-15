@@ -25,6 +25,7 @@ public class BinarySerde implements Serde {
 
     private DataOutputStream out;
     private DataInputStream in;
+    private DormantRegistry registry;
 
     BinarySerde(DataOutputStream out) {
         this.out = out;
@@ -32,6 +33,11 @@ public class BinarySerde implements Serde {
 
     BinarySerde(DataInputStream in) {
         this.in = in;
+    }
+
+    BinarySerde withRegistry(DormantRegistry registry) {
+        this.registry = registry;
+        return this;
     }
 
     @Override
@@ -189,6 +195,7 @@ public class BinarySerde implements Serde {
     public Serde writeDormant(Dormant value) {
         writeBoolean(value != null);
         if (value != null) {
+            writeInt(value.typeId());
             value.write(this);
         }
         return this;
@@ -296,8 +303,24 @@ public class BinarySerde implements Serde {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
+    public <T extends Dormant> T readDormant() {
+        if (readBoolean()) {
+            int typeId = readInt();
+            if (registry == null) {
+                throw new UnsupportedOperationException("No DormantRegistry available. Use readDormant(Supplier<T>) instead.");
+            }
+            Dormant instance = registry.create(typeId);
+            instance.read(this);
+            return (T) instance;
+        }
+        return null;
+    }
+
+    @Override
     public <T extends Dormant> T readDormant(Supplier<T> factory) {
         if (readBoolean()) {
+            readInt(); // consume typeId
             T value = factory.get();
             value.read(this);
             return value;

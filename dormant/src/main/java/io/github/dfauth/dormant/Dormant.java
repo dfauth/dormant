@@ -27,7 +27,10 @@ public interface Dormant extends Externalizable {
     }
 
     default void write(OutputStream stream) {
-        write(SerdeFactory.create(stream));
+        Serde serde = SerdeFactory.create(stream);
+        serde.writeInt(serde.magicNumber());
+        serde.writeInt(typeId());
+        write(serde);
     }
 
     void read(Serde serde);
@@ -38,7 +41,10 @@ public interface Dormant extends Externalizable {
     }
 
     default void read(InputStream stream) {
-        read(SerdeFactory.create(stream));
+        Serde serde = SerdeFactory.create(stream);
+        serde.readInt(); // magic number
+        serde.readInt(); // typeId
+        read(serde);
     }
 
     default int typeId() {

@@ -1,5 +1,8 @@
 package io.github.dfauth.dormant;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
@@ -69,15 +72,25 @@ public class DormantRegistry {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public <T extends Dormant> T deserialize(byte[] data) {
-        int typeId = BinarySerde.peekTypeId(data);
+    Dormant create(int typeId) {
         Supplier<Dormant> factory = factories.get(typeId);
         if (factory == null) {
             throw new IllegalArgumentException("No Dormant registered for typeId: " + typeId);
         }
-        Dormant instance = factory.get();
-        BinarySerde.deserialize(data, instance);
+        return factory.get();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T extends Dormant> T deserialize(byte[] data) {
+        var serde = new BinarySerde(new DataInputStream(new ByteArrayInputStream(data)))
+                .withRegistry(this);
+        int magic = serde.readInt();
+        if (magic != BinarySerde.MAGIC_NUMBER) {
+            throw new IllegalArgumentException("Invalid magic number: 0x" + Integer.toHexString(magic));
+        }
+        int typeId = serde.readInt();
+        Dormant instance = create(typeId);
+        instance.read(serde);
         return (T) instance;
     }
 }
