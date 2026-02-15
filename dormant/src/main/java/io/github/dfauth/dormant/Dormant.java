@@ -1,11 +1,22 @@
 package io.github.dfauth.dormant;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 
-public interface Dormant {
+public interface Dormant extends Externalizable {
+    @Override
+    default void writeExternal(ObjectOutput out) throws IOException {
+        byte[] bytes = write();
+        out.writeInt(bytes.length);
+        out.write(bytes);
+    }
+
+    @Override
+    default void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+        int len = in.readInt();
+        byte[] bytes = new byte[len];
+        in.readFully(bytes);
+        read(bytes);
+    }
 
     void write(Serde serde);
 

@@ -5,8 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -153,6 +152,41 @@ class DormantTest {
 
         var restored = new TestObject();
         restored.read(new ByteArrayInputStream(baos.toByteArray()));
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testExternalizableRoundTrip() throws Exception {
+        var original = new NestedObject("externalizable", 42);
+
+        var baos = new ByteArrayOutputStream();
+        try (var oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(original);
+        }
+
+        NestedObject restored;
+        try (var ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            restored = (NestedObject) ois.readObject();
+        }
+
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testExternalizableWithComplexObject() throws Exception {
+        var original = new TestObject("ext", 1, 2L, 3.0f, 4.0, true, (byte) 5, (short) 6, 'G',
+                new NestedObject("inner", 99), List.of("a", "b"), Map.of("k", 7));
+
+        var baos = new ByteArrayOutputStream();
+        try (var oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(original);
+        }
+
+        TestObject restored;
+        try (var ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            restored = (TestObject) ois.readObject();
+        }
+
         assertEquals(original, restored);
     }
 
@@ -360,11 +394,11 @@ class DormantTest {
 
     @EqualsAndHashCode
     @AllArgsConstructor
-    static class NestedObject implements Dormant {
+    public static class NestedObject implements Dormant {
         String label;
         int value;
 
-        NestedObject() {}
+        public NestedObject() {}
 
         @Override
         public void write(Serde serde) {
@@ -381,7 +415,7 @@ class DormantTest {
 
     @EqualsAndHashCode
     @AllArgsConstructor
-    static class TestObject implements Dormant {
+    public static class TestObject implements Dormant {
         String name;
         int age;
         long id;
@@ -395,7 +429,7 @@ class DormantTest {
         List<String> tags;
         Map<String, Integer> metadata;
 
-        TestObject() {}
+        public TestObject() {}
 
         @Override
         public void write(Serde serde)
