@@ -236,16 +236,16 @@ class DormantTest {
 
         @Override
         public void write(Serde serde) {
-            serde.writeLocalDate(start);
-            serde.writeLocalDate(middle);
-            serde.writeLocalDate(end);
+            serde.writeLocalDate(start)
+                    .writeLocalDate(middle)
+                    .writeLocalDate(end);
         }
 
         @Override
         public void read(Serde serde) {
-            start = serde.readLocalDate();
-            middle = serde.readLocalDate();
-            end = serde.readLocalDate();
+            serde.readLocalDate(v -> start = v)
+                    .readLocalDate(v -> middle = v)
+                    .readLocalDate(v -> end = v);
         }
     }
 
@@ -260,16 +260,16 @@ class DormantTest {
 
         @Override
         public void write(Serde serde) {
-            serde.writeBigDecimal(price);
-            serde.writeBigDecimal(amount);
-            serde.writeBigDecimal(rate);
+            serde.writeBigDecimal(price)
+                    .writeBigDecimal(amount)
+                    .writeBigDecimal(rate);
         }
 
         @Override
         public void read(Serde serde) {
-            price = serde.readBigDecimal();
-            amount = serde.readBigDecimal();
-            rate = serde.readBigDecimal();
+            serde.readBigDecimal(v -> price = v)
+                    .readBigDecimal(v -> amount = v)
+                    .readBigDecimal(v -> rate = v);
         }
     }
 
@@ -283,14 +283,14 @@ class DormantTest {
 
         @Override
         public void write(Serde serde) {
-            serde.writeString(label);
-            serde.writeInt(value);
+            serde.writeString(label)
+                    .writeInt(value);
         }
 
         @Override
         public void read(Serde serde) {
-            label = serde.readString();
-            value = serde.readInt();
+            serde.readString(v -> label = v)
+                    .readInt(v -> value = v);
         }
     }
 
@@ -315,35 +315,35 @@ class DormantTest {
         @Override
         public void write(Serde serde)
         {
-            serde.writeString(name);
-            serde.writeInt(age);
-            serde.writeLong(id);
-            serde.writeFloat(score);
-            serde.writeDouble(balance);
-            serde.writeBoolean(active);
-            serde.writeByte(level);
-            serde.writeShort(rank);
-            serde.writeChar(grade);
-            serde.writeDormant(nested);
-            serde.writeList(tags, Serde::writeString);
-            serde.writeMap(metadata, Serde::writeString, Serde::writeInt);
+            serde.writeString(name)
+                    .writeInt(age)
+                    .writeLong(id)
+                    .writeFloat(score)
+                    .writeDouble(balance)
+                    .writeBoolean(active)
+                    .writeByte(level)
+                    .writeShort(rank)
+                    .writeChar(grade)
+                    .writeDormant(nested)
+                    .writeList(tags, Serde::writeString)
+                    .writeMap(metadata, Serde::writeString, Serde::writeInt);
         }
 
         @Override
         public void read(Serde serde)
         {
-            name = serde.readString();
-            age = serde.readInt();
-            id = serde.readLong();
-            score = serde.readFloat();
-            balance = serde.readDouble();
-            active = serde.readBoolean();
-            level = serde.readByte();
-            rank = serde.readShort();
-            grade = serde.readChar();
-            nested = serde.readDormant(NestedObject::new);
-            tags = serde.readList(Serde::readString);
-            metadata = serde.readMap(Serde::readString, Serde::readInt);
+            serde.readString(v -> name = v)
+                    .readInt(v -> age = v)
+                    .readLong(v -> id = v)
+                    .readFloat(v -> score = v)
+                    .readDouble(v -> balance = v)
+                    .readBoolean(v -> active = v)
+                    .readByte(v -> level = v)
+                    .readShort(v -> rank = v)
+                    .readChar(v -> grade = v)
+                    .readDormant(NestedObject::new, v -> nested = v)
+                    .readList(Serde::readString, v -> tags = v)
+                    .readMap(Serde::readString, Serde::readInt, v -> metadata = v);
         }
     }
 }

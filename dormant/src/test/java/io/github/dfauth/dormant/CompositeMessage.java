@@ -16,13 +16,13 @@ public class CompositeMessage implements Dormant {
 
     @Override
     public void write(Serde serde) {
-        serde.writeString(header);
-        serde.writeDormant(body);
+        serde.writeString(header)
+                .writeDormant(body);
     }
 
     @Override
     public void read(Serde serde) {
-        header = serde.readString();
-        body = serde.readDormant(SimpleMessage::new);
+        serde.readString(v -> header = v)
+                .readDormant(SimpleMessage::new, v -> body = v);
     }
 }

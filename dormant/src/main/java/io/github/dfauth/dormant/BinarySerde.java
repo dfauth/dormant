@@ -69,47 +69,55 @@ public class BinarySerde implements Serde {
 
     // Write methods
     @Override
-    public void writeInt(int value) {
+    public Serde writeInt(int value) {
         tryCatch(() -> out.writeInt(value));
+        return this;
     }
 
     @Override
-    public void writeLong(long value) {
+    public Serde writeLong(long value) {
         tryCatch(() -> out.writeLong(value));
+        return this;
     }
 
     @Override
-    public void writeFloat(float value) {
+    public Serde writeFloat(float value) {
         tryCatch(() -> out.writeFloat(value));
+        return this;
     }
 
     @Override
-    public void writeDouble(double value) {
+    public Serde writeDouble(double value) {
         tryCatch(() -> out.writeDouble(value));
+        return this;
     }
 
     @Override
-    public void writeBoolean(boolean value) {
+    public Serde writeBoolean(boolean value) {
         tryCatch(() -> out.writeBoolean(value));
+        return this;
     }
 
     @Override
-    public void writeByte(byte value) {
+    public Serde writeByte(byte value) {
         tryCatch(() -> out.writeByte(value));
+        return this;
     }
 
     @Override
-    public void writeShort(short value) {
+    public Serde writeShort(short value) {
         tryCatch(() -> out.writeShort(value));
+        return this;
     }
 
     @Override
-    public void writeChar(char value) {
+    public Serde writeChar(char value) {
         tryCatch(() -> out.writeChar(value));
+        return this;
     }
 
     @Override
-    public void writeString(String value) {
+    public Serde writeString(String value) {
         tryCatch(() -> {
             if (value == null) {
                 out.writeInt(-1);
@@ -119,10 +127,11 @@ public class BinarySerde implements Serde {
                 out.write(bytes);
             }
         });
+        return this;
     }
 
     @Override
-    public void writeBigDecimal(BigDecimal value) {
+    public Serde writeBigDecimal(BigDecimal value) {
         writeBoolean(value != null);
         if (value != null) {
             writeInt(value.scale());
@@ -130,22 +139,25 @@ public class BinarySerde implements Serde {
             writeInt(unscaled.length);
             tryCatch(() -> out.write(unscaled));
         }
+        return this;
     }
 
     @Override
-    public void writeLocalDate(LocalDate value) {
+    public Serde writeLocalDate(LocalDate value) {
         writeBoolean(value != null);
         if (value != null) {
             writeLong(value.toEpochDay());
         }
+        return this;
     }
 
     @Override
-    public void writeDormant(Dormant value) {
+    public Serde writeDormant(Dormant value) {
         writeBoolean(value != null);
         if (value != null) {
             value.write(this);
         }
+        return this;
     }
 
     // Read methods
@@ -231,7 +243,7 @@ public class BinarySerde implements Serde {
     }
 
     @Override
-    public <T> void writeList(List<T> list, Writer<T> writer)
+    public <T> Serde writeList(List<T> list, Writer<T> writer)
     {
         if (list == null)
         {
@@ -245,6 +257,7 @@ public class BinarySerde implements Serde {
                 writer.write(this, element);
             }
         }
+        return this;
     }
 
     @Override
@@ -264,7 +277,7 @@ public class BinarySerde implements Serde {
     }
 
     @Override
-    public <K, V> void writeMap(Map<K, V> map, Writer<K> keyWriter, Writer<V> valueWriter)
+    public <K, V> Serde writeMap(Map<K, V> map, Writer<K> keyWriter, Writer<V> valueWriter)
     {
         if (map == null)
         {
@@ -279,6 +292,7 @@ public class BinarySerde implements Serde {
                 valueWriter.write(this, entry.getValue());
             }
         }
+        return this;
     }
 
     @Override
