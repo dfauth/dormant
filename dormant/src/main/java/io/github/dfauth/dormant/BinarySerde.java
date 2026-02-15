@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -152,6 +153,16 @@ public class BinarySerde implements Serde {
     }
 
     @Override
+    public Serde writeInstant(Instant value) {
+        writeBoolean(value != null);
+        if (value != null) {
+            writeLong(value.getEpochSecond());
+            writeInt(value.getNano());
+        }
+        return this;
+    }
+
+    @Override
     public Serde writeBytes(byte[] value) {
         if (value == null) {
             writeInt(-1);
@@ -239,6 +250,16 @@ public class BinarySerde implements Serde {
     public LocalDate readLocalDate() {
         if (readBoolean()) {
             return LocalDate.ofEpochDay(readLong());
+        }
+        return null;
+    }
+
+    @Override
+    public Instant readInstant() {
+        if (readBoolean()) {
+            long epochSecond = readLong();
+            int nano = readInt();
+            return Instant.ofEpochSecond(epochSecond, nano);
         }
         return null;
     }

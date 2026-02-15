@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -178,6 +179,27 @@ class DormantTest {
     }
 
     @Test
+    void testInstantRoundTrip() {
+        var original = new InstantObject(Instant.parse("2024-06-15T10:30:00.123456789Z"), Instant.EPOCH);
+        byte[] bytes = original.write();
+
+        var restored = new InstantObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+    }
+
+    @Test
+    void testInstantWithNullValue() {
+        var original = new InstantObject(null, Instant.now());
+        byte[] bytes = original.write();
+
+        var restored = new InstantObject();
+        restored.read(bytes);
+        assertEquals(original, restored);
+        assertNull(restored.created);
+    }
+
+    @Test
     void testBigDecimalRoundTrip() {
         var original = new BigDecimalObject(new BigDecimal("12345.6789"), new BigDecimal("-0.001"), BigDecimal.ZERO);
         byte[] bytes = original.write();
@@ -245,6 +267,27 @@ class DormantTest {
         var restored = new LocalDateObject();
         restored.read(bytes);
         assertEquals(original, restored);
+    }
+
+    @EqualsAndHashCode
+    @AllArgsConstructor
+    static class InstantObject implements Dormant {
+        Instant created;
+        Instant updated;
+
+        InstantObject() {}
+
+        @Override
+        public void write(Serde serde) {
+            serde.writeInstant(created)
+                    .writeInstant(updated);
+        }
+
+        @Override
+        public void read(Serde serde) {
+            serde.readInstant(v -> created = v)
+                    .readInstant(v -> updated = v);
+        }
     }
 
     @AllArgsConstructor
