@@ -7,6 +7,8 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -22,11 +24,15 @@ public class UserService {
     }
 
     public User findOrCreateUser(String googleId, String email, String name) {
-        return userRepository.findByGoogleId(googleId)
+        return findById(googleId)
                 .orElseGet(() -> userRepository.save(User.builder()
                         .googleId(googleId)
                         .email(email)
                         .name(name)
                         .build()));
+    }
+
+    public Optional<User> findById(String googleId) {
+        return userRepository.findByGoogleId(googleId);
     }
 }

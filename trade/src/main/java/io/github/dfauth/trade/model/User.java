@@ -25,4 +25,8 @@ public class User {
     private String email;
 
     private String name;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private String defaultMarket = "ASX";
 }

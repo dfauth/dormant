@@ -4,7 +4,7 @@ export default function App() {
   const [state, setState] = useState({ status: 'loading', trades: [], error: null })
 
   useEffect(() => {
-    fetch('/api/trades/market/ASX', { credentials: 'include' })
+    fetch('/api/trades', { credentials: 'include' })
       .then(res => {
         if (res.status === 401 || res.redirected) {
           setState({ status: 'unauthenticated', trades: [], error: null })

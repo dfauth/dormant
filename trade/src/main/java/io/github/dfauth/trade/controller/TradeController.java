@@ -1,6 +1,7 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.Trade;
+import io.github.dfauth.trade.model.User;
 import io.github.dfauth.trade.repository.TradeRepository;
 import io.github.dfauth.trade.service.DuplicateTradeException;
 import io.github.dfauth.trade.service.TradeService;
@@ -10,12 +11,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -63,10 +66,18 @@ public class TradeController {
         }
     }
 
-    @GetMapping("/market/{market}")
-    public List<Trade> getTradesByMarket(@PathVariable("market") String market, Authentication authentication) {
+    @GetMapping()
+    public List<Trade> getTradesByMarket(@RequestParam("market") Optional<String> market, Authentication authentication) {
         Long userId = resolveUserId(authentication);
-        return tradeRepository.findByUserIdAndMarket(userId, market);
+        return tradeRepository.findByUserIdAndMarket(userId, market.orElseGet(() ->
+            switch(authentication.getPrincipal()) {
+                case DefaultOidcUser p ->
+                    userService.findById(p.getSubject()).map(User::getDefaultMarket).orElseThrow();
+
+                default -> throw new IllegalStateException("Unexpected value: " + authentication.getPrincipal());
+            }
+
+        ));
     }
 
     @GetMapping("/confirmationId/{confirmationId}")

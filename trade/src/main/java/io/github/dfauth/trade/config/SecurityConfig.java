@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 
@@ -27,8 +27,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         RequestMatcher csrfDisabledMatcher = new OrRequestMatcher(
-                new AntPathRequestMatcher("/api/**"),
-                new AntPathRequestMatcher("/h2-console/**")
+                PathPatternRequestMatcher.pathPattern("/api/**"),
+                PathPatternRequestMatcher.pathPattern("/h2-console/**")
         );
 
         http
@@ -47,7 +47,7 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .defaultAuthenticationEntryPointFor(
                                 new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                                new AntPathRequestMatcher("/api/**")
+                                PathPatternRequestMatcher.pathPattern("/api/**")
                         )
                 )
                 .oauth2Login(oauth2 -> oauth2
