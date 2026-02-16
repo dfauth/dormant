@@ -20,25 +20,25 @@ public class PositionService {
 
     private final TradeRepository tradeRepository;
 
-    public List<Position> getPositions(String market, String code) {
-        List<Trade> trades = tradeRepository.findByMarketAndCodeOrderByDateAsc(market, code);
+    public List<Position> getPositions(Long userId, String market, String code) {
+        List<Trade> trades = tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(userId, market, code);
         return buildPositions(trades);
     }
 
-    public List<Position> getOpenPositions() {
-        List<Object[]> pairs = tradeRepository.findDistinctMarketAndCode();
+    public List<Position> getOpenPositions(Long userId) {
+        List<Object[]> pairs = tradeRepository.findDistinctMarketAndCodeByUserId(userId);
         List<Position> open = new ArrayList<>();
         for (Object[] pair : pairs) {
             String market = (String) pair[0];
             String code = (String) pair[1];
-            List<Position> positions = getPositions(market, code);
+            List<Position> positions = getPositions(userId, market, code);
             positions.stream().filter(Position::isOpen).forEach(open::add);
         }
         return open;
     }
 
-    public List<Position> getPositionsByMarket(String market) {
-        List<Trade> allTrades = tradeRepository.findByMarketOrderByDateAsc(market);
+    public List<Position> getPositionsByMarket(Long userId, String market) {
+        List<Trade> allTrades = tradeRepository.findByUserIdAndMarketOrderByDateAsc(userId, market);
         List<Position> result = new ArrayList<>();
         // Group trades by code while preserving order within each group
         allTrades.stream()
@@ -53,8 +53,8 @@ public class PositionService {
         return result;
     }
 
-    public PerformanceStats getPerformanceStats(String market) {
-        List<Position> positions = getPositionsByMarket(market);
+    public PerformanceStats getPerformanceStats(Long userId, String market) {
+        List<Position> positions = getPositionsByMarket(userId, market);
         return computePerformanceStats(positions);
     }
 

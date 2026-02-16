@@ -4,10 +4,14 @@ import io.github.dfauth.trade.model.Trade;
 import io.github.dfauth.trade.repository.TradeRepository;
 import io.github.dfauth.trade.service.DuplicateTradeException;
 import io.github.dfauth.trade.service.TradeService;
+import io.github.dfauth.trade.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,22 +25,36 @@ public class TradeController {
 
     private final TradeRepository tradeRepository;
     private final TradeService tradeService;
+    private final UserService userService;
+
+    private Long resolveUserId(Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof OidcUser oidcUser) {
+            return userService.findOrCreateUser(oidcUser).getId();
+        } else if (principal instanceof Jwt jwt) {
+            return userService.findOrCreateUser(jwt).getId();
+        }
+        throw new IllegalStateException("Unsupported principal type: " + principal.getClass());
+    }
 
     @PostMapping
-    public ResponseEntity<?> createTrade(@RequestBody Trade trade) {
+    public ResponseEntity<?> createTrade(@RequestBody Trade trade, Authentication authentication) {
+        Long userId = resolveUserId(authentication);
         if (tradeRepository.existsByConfirmationId(trade.getConfirmationId())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(Map.of("error", "Trade with confirmation_id '" + trade.getConfirmationId() + "' already exists"));
         }
+        trade.setUserId(userId);
         Trade saved = tradeRepository.save(trade);
         log.info("Persisted trade: market={}, confirmationId={}, code={}, side={}", saved.getMarket(), saved.getConfirmationId(), saved.getCode(), saved.getSide());
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
     @PostMapping("/batch")
-    public ResponseEntity<?> createTrades(@RequestBody List<Trade> trades) {
+    public ResponseEntity<?> createTrades(@RequestBody List<Trade> trades, Authentication authentication) {
+        Long userId = resolveUserId(authentication);
         try {
-            List<Trade> saved = tradeService.createBatch(trades);
+            List<Trade> saved = tradeService.createBatch(trades, userId);
             log.info("Persisted {} trades", saved.size());
             return ResponseEntity.status(HttpStatus.CREATED).body(saved);
         } catch (DuplicateTradeException e) {
@@ -46,12 +64,13 @@ public class TradeController {
     }
 
     @GetMapping("/market/{market}")
-    public List<Trade> getTradesByMarket(@PathVariable("market") String market) {
-        return tradeRepository.findByMarket(market);
+    public List<Trade> getTradesByMarket(@PathVariable("market") String market, Authentication authentication) {
+        Long userId = resolveUserId(authentication);
+        return tradeRepository.findByUserIdAndMarket(userId, market);
     }
 
     @GetMapping("/confirmationId/{confirmationId}")
-    public ResponseEntity<Trade> getByConfirmationId(@PathVariable("confirmationId") String confirmationId) {
+    public ResponseEntity<Trade> getByConfirmationId(@PathVariable("confirmationId") String confirmationId, Authentication authentication) {
         return tradeRepository.findByConfirmationId(confirmationId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

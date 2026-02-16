@@ -3,7 +3,9 @@ package io.github.dfauth.trade.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.dfauth.trade.model.Side;
 import io.github.dfauth.trade.model.Trade;
+import io.github.dfauth.trade.model.User;
 import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.trade.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -26,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TradeControllerTest {
 
     private static final String MARKET = "NYSE";
+    private static final String GOOGLE_ID = "google-123";
 
     @Autowired
     private MockMvc mockMvc;
@@ -36,9 +40,20 @@ class TradeControllerTest {
     @Autowired
     private TradeRepository tradeRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    private User testUser;
+
     @BeforeEach
     void setUp() {
         tradeRepository.deleteAll();
+        userRepository.deleteAll();
+        testUser = userRepository.save(User.builder()
+                .googleId(GOOGLE_ID)
+                .email("test@example.com")
+                .name("Test User")
+                .build());
     }
 
     private Trade sampleTrade(String confirmationId) {
@@ -52,7 +67,14 @@ class TradeControllerTest {
                 .side(Side.BUY)
                 .notes("Entry position")
                 .confirmationId(confirmationId)
+                .userId(testUser.getId())
                 .build();
+    }
+
+    @Test
+    void unauthenticatedRequest_returns401() throws Exception {
+        mockMvc.perform(get("/api/trades/market/NYSE"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -60,6 +82,7 @@ class TradeControllerTest {
         Trade trade = sampleTrade("CONF-001");
 
         mockMvc.perform(post("/api/trades")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(trade)))
                 .andExpect(status().isCreated())
@@ -78,6 +101,7 @@ class TradeControllerTest {
         tradeRepository.save(trade);
 
         mockMvc.perform(post("/api/trades")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(sampleTrade("CONF-DUP"))))
                 .andExpect(status().isConflict())
@@ -95,6 +119,7 @@ class TradeControllerTest {
         );
 
         mockMvc.perform(post("/api/trades/batch")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(trades)))
                 .andExpect(status().isCreated())
@@ -116,6 +141,7 @@ class TradeControllerTest {
         );
 
         mockMvc.perform(post("/api/trades/batch")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(trades)))
                 .andExpect(status().isConflict())
@@ -134,7 +160,8 @@ class TradeControllerTest {
         tradeRepository.save(nyse);
         tradeRepository.save(asx);
 
-        mockMvc.perform(get("/api/trades/market/{market}", "NYSE"))
+        mockMvc.perform(get("/api/trades/market/{market}", "NYSE")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].market").value("NYSE"));
@@ -146,7 +173,8 @@ class TradeControllerTest {
         trade.setMarket(MARKET);
         tradeRepository.save(trade);
 
-        mockMvc.perform(get("/api/trades/confirmationId/LOOKUP-001"))
+        mockMvc.perform(get("/api/trades/confirmationId/LOOKUP-001")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("AAPL"))
                 .andExpect(jsonPath("$.confirmationId").value("LOOKUP-001"));
@@ -154,7 +182,8 @@ class TradeControllerTest {
 
     @Test
     void getByConfirmationId_notFound() throws Exception {
-        mockMvc.perform(get("/api/trades/NONEXISTENT"))
+        mockMvc.perform(get("/api/trades/confirmationId/NONEXISTENT")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isNotFound());
     }
 }

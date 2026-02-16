@@ -15,11 +15,12 @@ public class TradeService {
     private final TradeRepository tradeRepository;
 
     @Transactional
-    public List<Trade> createBatch(List<Trade> trades) {
+    public List<Trade> createBatch(List<Trade> trades, Long userId) {
         for (Trade trade : trades) {
             if (tradeRepository.existsByConfirmationId(trade.getConfirmationId())) {
                 throw new DuplicateTradeException(trade.getConfirmationId());
             }
+            trade.setUserId(userId);
         }
         return tradeRepository.saveAll(trades);
     }
