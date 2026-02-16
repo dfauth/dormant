@@ -105,24 +105,24 @@ class TradeControllerTest {
     }
 
     @Test
-    void createBatch_skipsDuplicates() throws Exception {
+    void createBatch_rejectsAllOnDuplicate() throws Exception {
         Trade existing = sampleTrade("EXISTING");
         existing.setMarket(MARKET);
         tradeRepository.save(existing);
 
         List<Trade> trades = List.of(
-                sampleTrade("EXISTING"),
-                sampleTrade("NEW-001")
+                sampleTrade("NEW-001"),
+                sampleTrade("EXISTING")
         );
 
         mockMvc.perform(post("/api/trades/batch")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(trades)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].confirmationId").value("NEW-001"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error", containsString("EXISTING")));
 
-        assertEquals(2, tradeRepository.count());
+        // Neither trade should have been committed
+        assertEquals(1, tradeRepository.count());
     }
 
     @Test

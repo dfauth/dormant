@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.service;
 
+import io.github.dfauth.trade.model.PerformanceStats;
 import io.github.dfauth.trade.model.Position;
 import io.github.dfauth.trade.model.Side;
 import io.github.dfauth.trade.model.Trade;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +51,74 @@ public class PositionService {
                     result.addAll(buildPositions(tradesForCode));
                 });
         return result;
+    }
+
+    public PerformanceStats getPerformanceStats(String market) {
+        List<Position> positions = getPositionsByMarket(market);
+        return computePerformanceStats(positions);
+    }
+
+    PerformanceStats computePerformanceStats(List<Position> positions) {
+        List<Position> closed = positions.stream()
+                .filter(p -> !p.isOpen())
+                .toList();
+
+        int total = closed.size();
+        if (total == 0) {
+            return PerformanceStats.builder()
+                    .totalClosedPositions(0)
+                    .wins(0)
+                    .losses(0)
+                    .winRate(BigDecimal.ZERO)
+                    .averageWin(BigDecimal.ZERO)
+                    .averageLoss(BigDecimal.ZERO)
+                    .riskRewardRatio(BigDecimal.ZERO)
+                    .expectancy(BigDecimal.ZERO)
+                    .build();
+        }
+
+        List<Position> winners = closed.stream()
+                .filter(p -> p.getRealisedPnl().compareTo(BigDecimal.ZERO) > 0)
+                .toList();
+        List<Position> losers = closed.stream()
+                .filter(p -> p.getRealisedPnl().compareTo(BigDecimal.ZERO) <= 0)
+                .toList();
+
+        int wins = winners.size();
+        int losses = losers.size();
+
+        BigDecimal winRate = new BigDecimal(wins)
+                .divide(new BigDecimal(total), 10, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"));
+
+        BigDecimal averageWin = winners.isEmpty() ? BigDecimal.ZERO
+                : winners.stream().map(Position::getRealisedPnl).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(new BigDecimal(wins), 10, RoundingMode.HALF_UP);
+
+        BigDecimal averageLoss = losers.isEmpty() ? BigDecimal.ZERO
+                : losers.stream().map(Position::getRealisedPnl).reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(new BigDecimal(losses), 10, RoundingMode.HALF_UP);
+
+        BigDecimal riskRewardRatio = averageLoss.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
+                : averageWin.divide(averageLoss.abs(), 10, RoundingMode.HALF_UP);
+
+        BigDecimal lossRate = new BigDecimal(losses)
+                .divide(new BigDecimal(total), 10, RoundingMode.HALF_UP);
+        BigDecimal winRateFraction = new BigDecimal(wins)
+                .divide(new BigDecimal(total), 10, RoundingMode.HALF_UP);
+        BigDecimal expectancy = winRateFraction.multiply(averageWin)
+                .add(lossRate.multiply(averageLoss));
+
+        return PerformanceStats.builder()
+                .totalClosedPositions(total)
+                .wins(wins)
+                .losses(losses)
+                .winRate(winRate)
+                .averageWin(averageWin)
+                .averageLoss(averageLoss)
+                .riskRewardRatio(riskRewardRatio)
+                .expectancy(expectancy)
+                .build();
     }
 
     List<Position> buildPositions(List<Trade> trades) {

@@ -2,6 +2,8 @@ package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.Trade;
 import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.trade.service.DuplicateTradeException;
+import io.github.dfauth.trade.service.TradeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import java.util.Map;
 public class TradeController {
 
     private final TradeRepository tradeRepository;
+    private final TradeService tradeService;
 
     @PostMapping
     public ResponseEntity<?> createTrade(@RequestBody Trade trade) {
@@ -32,12 +35,14 @@ public class TradeController {
 
     @PostMapping("/batch")
     public ResponseEntity<?> createTrades(@RequestBody List<Trade> trades) {
-        List<Trade> saved = trades.stream()
-                .filter(t -> !tradeRepository.existsByConfirmationId(t.getConfirmationId()))
-                .map(tradeRepository::save)
-                .toList();
-        log.info("Persisted {} of {} trades", saved.size(), trades.size());
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        try {
+            List<Trade> saved = tradeService.createBatch(trades);
+            log.info("Persisted {} trades", saved.size());
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (DuplicateTradeException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/market/{market}")

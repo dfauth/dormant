@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.trade.model.PerformanceStats;
 import io.github.dfauth.trade.model.Position;
 import io.github.dfauth.trade.service.PositionService;
 import lombok.RequiredArgsConstructor;
@@ -30,5 +31,10 @@ public class PositionController {
     @GetMapping("/market/{market}/code/{code}")
     public List<Position> getPositions(@PathVariable("market") String market, @PathVariable("code") String code) {
         return positionService.getPositions(market, code);
+    }
+
+    @GetMapping("/market/{market}/performance")
+    public PerformanceStats getPerformanceStats(@PathVariable("market") String market) {
+        return positionService.getPerformanceStats(market);
     }
 }
