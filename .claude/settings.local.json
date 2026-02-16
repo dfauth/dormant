@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(mvn clean test:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(mvn test:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(git stash:*)",
+      "Bash(git commit:*)",
+      "Bash(MAVEN_OPTS=\"\" mvn test:*)",
+      "Bash(MAVEN_OPTS=\"\" mvn clean test:*)",
+      "WebSearch"
     ]
   }
 }

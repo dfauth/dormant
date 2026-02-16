@@ -1,6 +1,8 @@
 # IntelliJ IDEA
 .idea/
 .run
+**/.run/
+**/data/
 *.iml
 *.iws
 *.ipr
