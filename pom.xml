@@ -11,6 +11,7 @@
     <modules>
         <module>trycatch</module>
         <module>dormant</module>
+        <module>trade</module>
     </modules>
 
     <properties>
