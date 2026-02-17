@@ -17,11 +17,13 @@ public interface DateRange {
     }
 
     static Optional<DateRange> resolve(Optional<String> tenor, Optional<String> startFrom, Optional<String> endAt) {
-        return tenor.map(TenorRange::parse)
-                .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElse(t))
-                .<DateRange>map(t -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t))
-                .or(() -> startFrom.map(YYYYMMDD::toLocalDate)
-                        .flatMap(s -> endAt.map(YYYYMMDD::toLocalDate)
-                                .map(e -> DateRange.of(s, e))));
+        // if start and end dates are explicitly provided, ignore the tenor
+        return startFrom.map(YYYYMMDD::toLocalDate)
+                .flatMap(s -> endAt.map(YYYYMMDD::toLocalDate)
+                        .map(e -> DateRange.of(s, e)))
+                .or(() -> tenor.map(TenorRange::parse)
+                        .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElse(t))
+                        .<DateRange>map(t -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t))
+                );
     }
 }

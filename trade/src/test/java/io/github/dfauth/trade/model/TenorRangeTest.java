@@ -125,7 +125,7 @@ class TenorRangeTest {
                 Optional.of(new TenorRange(6, Tenor.M, LocalDate.now(), BACKWARD)),
                 Optional.of(new TenorRange(6, Tenor.M, end, BACKWARD)),
                 Optional.of(new TenorRange(6, Tenor.M, start, FORWARD)),
-                Optional.of(new TenorRange(6, Tenor.M, end, BACKWARD)),
+                Optional.of(DateRange.of(start, end)),
         };
         int[] i = new int[]{0};
         return Stream.of(tenors)
