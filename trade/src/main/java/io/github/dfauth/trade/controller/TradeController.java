@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.trade.model.TenorRange;
 import io.github.dfauth.trade.model.Trade;
 import io.github.dfauth.trade.model.User;
 import io.github.dfauth.trade.repository.TradeRepository;
@@ -19,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static io.github.dfauth.trade.model.DatetimeFormats.YYYYMMDD;
 
 @Slf4j
 @RestController
@@ -67,17 +70,27 @@ public class TradeController {
     }
 
     @GetMapping()
-    public List<Trade> getTradesByMarket(@RequestParam("market") Optional<String> market, Authentication authentication) {
+    public List<Trade> getTradesByMarket(Authentication authentication,
+                                         @RequestParam("market") Optional<String> market,
+                                         @RequestParam("tenor") Optional<String> tenors,
+                                         @RequestParam("startFrom") Optional<String> startFrom,
+                                         @RequestParam("endAt") Optional<String> endAt
+    ) {
+        Optional<TenorRange> tenorRange = tenors.map(TenorRange::parse)
+                .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElse(t))
+                .map(t -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t));
         Long userId = resolveUserId(authentication);
-        return tradeRepository.findByUserIdAndMarket(userId, market.orElseGet(() ->
+        String mkt = market.orElseGet(() ->
             switch(authentication.getPrincipal()) {
                 case DefaultOidcUser p ->
                     userService.findById(p.getSubject()).map(User::getDefaultMarket).orElseThrow();
 
                 default -> throw new IllegalStateException("Unexpected value: " + authentication.getPrincipal());
             }
-
-        ));
+        );
+        return tenorRange
+                .map(tr -> tradeRepository.findByUserIdMarketAndDates(userId, mkt, tr.start(), tr.end()))
+                .orElseGet(() -> tradeRepository.findByUserIdAndMarket(userId, mkt));
     }
 
     @GetMapping("/confirmationId/{confirmationId}")

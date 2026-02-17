@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +34,7 @@ public interface TradeRepository extends JpaRepository<Trade, Long> {
 
     @Query("SELECT DISTINCT t.market, t.code FROM Trade t WHERE t.userId = :userId")
     List<Object[]> findDistinctMarketAndCodeByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT t FROM Trade t WHERE t.userId = :userId AND t.market = :market AND t.date >= :start AND t.date <= :end")
+    List<Trade> findByUserIdMarketAndDates(@Param("userId") Long userId, @Param("market") String market, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }
