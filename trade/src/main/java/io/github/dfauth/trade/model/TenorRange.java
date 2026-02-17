@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 
 import static java.time.LocalDate.now;
 
-public record TenorRange(int amount, Tenor unit, LocalDate anchor, Direction direction) {
+public record TenorRange(int amount, Tenor unit, LocalDate anchor, Direction direction) implements DateRange {
 
     private static final Pattern TENOR_PATTERN = Pattern.compile("^(\\d+)([A-Z])$");
 

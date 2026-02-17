@@ -12,7 +12,7 @@ class DatetimeFormatsTest {
 
     @Test
     void parseYYYYMMDD() {
-        TemporalAccessor result = DatetimeFormats.YYYYMMDD.apply("20250615");
+        TemporalAccessor result = DatetimeFormats.YYYYMMDD.parse("20250615");
         assertEquals(2025, result.get(YEAR));
         assertEquals(6, result.get(MONTH_OF_YEAR));
         assertEquals(15, result.get(DAY_OF_MONTH));
@@ -20,7 +20,7 @@ class DatetimeFormatsTest {
 
     @Test
     void parseToLocalDate() {
-        TemporalAccessor result = DatetimeFormats.YYYYMMDD.apply("20231201");
+        TemporalAccessor result = DatetimeFormats.YYYYMMDD.parse("20231201");
         LocalDate date = LocalDate.from(result);
         assertEquals(LocalDate.of(2023, 12, 1), date);
     }
@@ -33,21 +33,21 @@ class DatetimeFormatsTest {
 
     @Test
     void parseLeapYearDate() {
-        TemporalAccessor result = DatetimeFormats.YYYYMMDD.apply("20240229");
+        TemporalAccessor result = DatetimeFormats.YYYYMMDD.parse("20240229");
         LocalDate date = LocalDate.from(result);
         assertEquals(LocalDate.of(2024, 2, 29), date);
     }
 
     @Test
     void parseFirstDayOfYear() {
-        TemporalAccessor result = DatetimeFormats.YYYYMMDD.apply("20250101");
+        TemporalAccessor result = DatetimeFormats.YYYYMMDD.parse("20250101");
         LocalDate date = LocalDate.from(result);
         assertEquals(LocalDate.of(2025, 1, 1), date);
     }
 
     @Test
     void parseLastDayOfYear() {
-        TemporalAccessor result = DatetimeFormats.YYYYMMDD.apply("20251231");
+        TemporalAccessor result = DatetimeFormats.YYYYMMDD.parse("20251231");
         LocalDate date = LocalDate.from(result);
         assertEquals(LocalDate.of(2025, 12, 31), date);
     }
@@ -70,6 +70,6 @@ class DatetimeFormatsTest {
 
     @Test
     void invalidInputThrows() {
-        assertThrows(Exception.class, () -> DatetimeFormats.YYYYMMDD.apply("not-a-date"));
+        assertThrows(Exception.class, () -> DatetimeFormats.YYYYMMDD.parse("not-a-date"));
     }
 }

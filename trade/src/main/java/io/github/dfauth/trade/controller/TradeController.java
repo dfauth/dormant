@@ -1,6 +1,6 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.TenorRange;
+import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.Trade;
 import io.github.dfauth.trade.model.User;
 import io.github.dfauth.trade.repository.TradeRepository;
@@ -20,8 +20,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static io.github.dfauth.trade.model.DatetimeFormats.YYYYMMDD;
 
 @Slf4j
 @RestController
@@ -76,9 +74,7 @@ public class TradeController {
                                          @RequestParam("startFrom") Optional<String> startFrom,
                                          @RequestParam("endAt") Optional<String> endAt
     ) {
-        Optional<TenorRange> tenorRange = tenors.map(TenorRange::parse)
-                .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElse(t))
-                .map(t -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t));
+        Optional<DateRange> dateRange = DateRange.resolve(tenors, startFrom, endAt);
         Long userId = resolveUserId(authentication);
         String mkt = market.orElseGet(() ->
             switch(authentication.getPrincipal()) {
@@ -88,8 +84,8 @@ public class TradeController {
                 default -> throw new IllegalStateException("Unexpected value: " + authentication.getPrincipal());
             }
         );
-        return tenorRange
-                .map(tr -> tradeRepository.findByUserIdMarketAndDates(userId, mkt, tr.start(), tr.end()))
+        return dateRange
+                .map(dr -> tradeRepository.findByUserIdMarketAndDates(userId, mkt, dr.start(), dr.end()))
                 .orElseGet(() -> tradeRepository.findByUserIdAndMarket(userId, mkt));
     }
 

@@ -5,11 +5,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.TemporalAccessor;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import static java.time.temporal.ChronoField.*;
 
-public enum DatetimeFormats implements Function<String, TemporalAccessor> {
+public enum DatetimeFormats {
 
     YYYYMMDD(b -> b
             .appendValue(YEAR, 4)
@@ -25,12 +24,15 @@ public enum DatetimeFormats implements Function<String, TemporalAccessor> {
         this.dtf = builder.toFormatter();
     }
 
-    @Override
-    public TemporalAccessor apply(String s) {
+    public TemporalAccessor parse(String s) {
         return dtf.parse(s);
     }
 
     public LocalDate toLocalDate(String s) {
-        return LocalDate.from(apply(s));
+        return LocalDate.from(parse(s));
+    }
+
+    public String format(LocalDate date) {
+        return dtf.format(date);
     }
 }
