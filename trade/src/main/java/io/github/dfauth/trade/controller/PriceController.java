@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -21,19 +20,19 @@ public class PriceController {
 
     private final PriceRepository priceRepository;
 
-    @PostMapping("/batch")
-    public ResponseEntity<Map<String, Integer>> createPrices(@RequestBody List<Price> prices) {
+    @PostMapping("/batch/{code}")
+    public ResponseEntity<Integer> createPrices(@PathVariable("code") String code, @RequestBody List<Price> prices) {
         List<Price> newPrices = prices.stream()
                 .filter(p -> !priceRepository.existsByMarketAndCodeAndDate(p.getMarket(), p.getCode(), p.getDate()))
                 .toList();
         priceRepository.saveAll(newPrices);
         log.info("Persisted {} of {} prices ({} duplicates skipped)", newPrices.size(), prices.size(), prices.size() - newPrices.size());
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("persisted", newPrices.size(), "skipped", prices.size() - newPrices.size()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(newPrices.size());
     }
 
-    @GetMapping
+    @GetMapping("/{code}")
     public List<Price> getPrices(@RequestParam("market") String market,
-                                 @RequestParam("code") String code,
+                                 @PathVariable("code") String code,
                                  @RequestParam("tenor") Optional<String> tenor,
                                  @RequestParam("startFrom") Optional<String> startFrom,
                                  @RequestParam("endAt") Optional<String> endAt) {
