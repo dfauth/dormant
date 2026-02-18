@@ -9,7 +9,7 @@
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>trycatch</artifactId>
+    <artifactId>ta</artifactId>
 
     <dependencies>
         <dependency>

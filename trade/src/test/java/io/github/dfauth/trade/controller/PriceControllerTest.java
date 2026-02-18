@@ -71,7 +71,7 @@ class PriceControllerTest {
 
     @Test
     void unauthenticatedRequest_returns401() throws Exception {
-        mockMvc.perform(get("/api/prices").param("market", MARKET).param("code", CODE))
+        mockMvc.perform(get("/api/prices/" + CODE).param("market", MARKET))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -83,13 +83,12 @@ class PriceControllerTest {
                 samplePrice(LocalDate.of(2024, 1, 4))
         );
 
-        mockMvc.perform(post("/api/prices/batch")
+        mockMvc.perform(post("/api/prices/batch/" + CODE)
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(prices)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.persisted").value(3))
-                .andExpect(jsonPath("$.skipped").value(0));
+                .andExpect(jsonPath("$").value(3));
 
         assertEquals(3, priceRepository.count());
     }
@@ -103,13 +102,12 @@ class PriceControllerTest {
                 samplePrice(LocalDate.of(2024, 1, 3))
         );
 
-        mockMvc.perform(post("/api/prices/batch")
+        mockMvc.perform(post("/api/prices/batch/" + CODE)
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(prices)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.persisted").value(1))
-                .andExpect(jsonPath("$.skipped").value(1));
+                .andExpect(jsonPath("$").value(1));
 
         assertEquals(2, priceRepository.count());
     }
@@ -119,7 +117,7 @@ class PriceControllerTest {
         priceRepository.save(samplePrice(LocalDate.of(2024, 1, 3)));
         priceRepository.save(samplePrice(LocalDate.of(2024, 1, 2)));
 
-        mockMvc.perform(get("/api/prices").param("market", MARKET).param("code", CODE)
+        mockMvc.perform(get("/api/prices/" + CODE).param("market", MARKET)
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
@@ -133,9 +131,8 @@ class PriceControllerTest {
         priceRepository.save(samplePrice(LocalDate.of(2024, 1, 15)));
         priceRepository.save(samplePrice(LocalDate.of(2024, 2, 1)));
 
-        mockMvc.perform(get("/api/prices")
+        mockMvc.perform(get("/api/prices/" + CODE)
                         .param("market", MARKET)
-                        .param("code", CODE)
                         .param("startFrom", "20240101")
                         .param("endAt", "20240120")
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
@@ -150,9 +147,8 @@ class PriceControllerTest {
         priceRepository.save(samplePrice(LocalDate.now().minusMonths(1)));
         priceRepository.save(samplePrice(LocalDate.now().minusMonths(8)));
 
-        mockMvc.perform(get("/api/prices")
+        mockMvc.perform(get("/api/prices/" + CODE)
                         .param("market", MARKET)
-                        .param("code", CODE)
                         .param("tenor", "6M")
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
