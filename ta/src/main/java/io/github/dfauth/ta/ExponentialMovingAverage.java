@@ -1,5 +1,7 @@
 package io.github.dfauth.ta;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -9,13 +11,18 @@ import java.util.function.Function;
 import static io.github.dfauth.ta.SimpleMovingAverage.sma;
 import static java.util.Optional.empty;
 
-public class ExponentialMovingAverage {
+@RequiredArgsConstructor
+public class ExponentialMovingAverage implements Function<Double, Optional<Double>> {
 
-    private ExponentialMovingAverage() {}
+    private final RingBuffer<Double> ringBuffer;
+    private final double multiplier;
+
+    public static Function<Double, Optional<Double>> ema(double smoothingFactor, int period, int window) {
+        return new ExponentialMovingAverage(RingBuffer.create(new double[period]), smoothingFactor / (period + 1));
+    }
 
     public static BinaryOperator<Double> ema(double smoothingFactor, int period) {
-        double multiplier = smoothingFactor / (period + 1);
-        return (current, previous) -> (current * multiplier) + (previous * (1 - multiplier));
+        return new ExponentialMovingAverage(RingBuffer.create(new double[period]), smoothingFactor / (period + 1))::calculate;
     }
 
     public static double ema(double[] prices) {
@@ -44,8 +51,12 @@ public class ExponentialMovingAverage {
         return result;
     }
 
-    public static Function<Double, Optional<Double>> ema(int period) {
-        double multiplier = 2.0 / (period + 1);
+    public static Function<Double, Optional<Double>> emaStream(int period) {
+        return emaStream(2.0, period);
+    }
+
+    public static Function<Double, Optional<Double>> emaStream(double smoothingFactor, int period) {
+        double multiplier = smoothingFactor / (period + 1);
         RingBuffer<Double> ringbuffer = RingBuffer.create(new double[period]);
         double[] prev = {Double.NaN};
         return d -> {
@@ -84,5 +95,20 @@ public class ExponentialMovingAverage {
                 return Collections.emptyList();
             }
         };
+    }
+
+    public Optional<Double> apply(Double current) {
+        Double prev = ringBuffer.read();
+        double next = calculate(current, prev);
+        ringBuffer.write(next);
+        return ringBuffer.isFull() ? Optional.of(next) : empty();
+    }
+
+    public double calculate(double current, double prev) {
+        return calculate(multiplier, current, prev);
+    }
+
+    public static double calculate(double multiplier, double current, double prev) {
+        return (current * multiplier) + (prev * (1 - multiplier));
     }
 }

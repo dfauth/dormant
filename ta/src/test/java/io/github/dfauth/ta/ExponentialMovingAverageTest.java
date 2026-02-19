@@ -57,7 +57,7 @@ class ExponentialMovingAverageTest {
 
     @Test
     void testStreamingEma() {
-        Function<Double, Optional<Double>> ema = ExponentialMovingAverage.ema(3);
+        Function<Double, Optional<Double>> ema = ExponentialMovingAverage.emaStream(3);
 
         assertEquals(Optional.empty(), ema.apply(10.0));
         assertEquals(Optional.empty(), ema.apply(20.0));
@@ -68,7 +68,7 @@ class ExponentialMovingAverageTest {
 
     @Test
     void testStreamingEmaRollingValues() {
-        Function<Double, Optional<Double>> ema = ExponentialMovingAverage.ema(3);
+        Function<Double, Optional<Double>> ema = ExponentialMovingAverage.emaStream(3);
 
         ema.apply(10.0);
         ema.apply(20.0);

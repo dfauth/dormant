@@ -9,6 +9,21 @@ import static org.junit.jupiter.api.Assertions.*;
 class SimpleRingBufferTest {
 
     @Test
+    void testWriteAndRead() {
+        RingBuffer<String> buffer = RingBuffer.create(new String[3]);
+
+        buffer.write("a");
+        assertEquals("a", buffer.read());
+        buffer.write("b");
+        assertEquals("b", buffer.read());
+        assertEquals("a", buffer.read(-2));
+        buffer.write("c");
+        assertEquals("c", buffer.read());
+        assertEquals("b", buffer.read(-2));
+        assertEquals("a", buffer.read(-3));
+    }
+
+    @Test
     void testWriteAndStream() {
         RingBuffer<String> buffer = RingBuffer.create(new String[3]);
 

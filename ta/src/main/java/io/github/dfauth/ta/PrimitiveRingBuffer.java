@@ -1,14 +1,11 @@
 package io.github.dfauth.ta;
 
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.DoubleStream;
-import java.util.stream.Stream;
+import java.util.function.Predicate;
 
-public class PrimitiveRingBuffer implements RingBuffer<Double> {
+public class PrimitiveRingBuffer extends AbstractRingBuffer<Double> implements RingBuffer<Double> {
 
     private final double[] storage;
-    private AtomicInteger counter = new AtomicInteger(0);
 
     public PrimitiveRingBuffer(double[] storage) {
         this.storage = storage;
@@ -16,34 +13,22 @@ public class PrimitiveRingBuffer implements RingBuffer<Double> {
     }
 
     @Override
-    public Double write(Double d) {
-        try {
-            return storage[offset()];
-        } finally {
-            storage[offset(true)] = d;
-        }
+    protected Predicate<Double> nonNull() {
+        return d -> !Double.isNaN(d.doubleValue());
     }
 
     @Override
-    public Stream<Double> stream() {
-        return DoubleStream.concat(Arrays.stream(storage, offset(), storage.length), Arrays.stream(storage, 0, offset())).filter(d -> !Double.isNaN(d)).boxed();
+    protected Double readOffset(int offset) {
+        return storage[offset];
     }
 
     @Override
-    public boolean isFull() {
-        return counter.get() >= capacity();
-    }
-
-    public int offset() {
-        return offset(false);
+    protected void writeOffset(int offset, Double d) {
+        storage[offset] = d;
     }
 
     @Override
     public int capacity() {
         return storage.length;
-    }
-
-    private int offset(boolean increment) {
-        return (increment ? counter.getAndIncrement() : counter.get()) % storage.length;
     }
 }

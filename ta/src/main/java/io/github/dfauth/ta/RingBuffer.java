@@ -11,7 +11,9 @@ public interface RingBuffer<T> {
         return new PrimitiveRingBuffer(storage);
     }
 
-    int offset();
+    T read();
+
+    T read(int n);
 
     int capacity();
 
