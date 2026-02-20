@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TrendTest {
+class TrendCalculatorTest {
 
     @Test
     void testClassifyBullish() {
@@ -41,7 +41,7 @@ class TrendTest {
 
     @Test
     void testInsufficientData() {
-        Function<Double, Optional<TrendState>> stream = Trend.trendStream(2, 5, 10);
+        Function<Double, Optional<Trend>> stream = TrendCalculator.trendStream(2, 5, 10);
         // Feed fewer prices than longPeriod — should always return empty
         for (int i = 0; i < 9; i++) {
             assertEquals(Optional.empty(), stream.apply((double) (i + 1)));
@@ -50,8 +50,8 @@ class TrendTest {
 
     @Test
     void testStreamingTrend() {
-        Function<Double, Optional<TrendState>> stream = Trend.trendStream(2, 5, 10);
-        Optional<TrendState> result = Optional.empty();
+        Function<Double, Optional<Trend>> stream = TrendCalculator.trendStream(2, 5, 10);
+        Optional<Trend> result = Optional.empty();
         // Feed a steadily rising sequence to prime all three EMAs
         for (int i = 1; i <= 20; i++) {
             result = stream.apply((double) i);
@@ -65,15 +65,15 @@ class TrendTest {
         for (int i = 0; i < prices.length; i++) {
             prices[i] = i + 1.0;  // steadily rising
         }
-        Optional<TrendState> result = Trend.trend(prices, 2, 5, 10);
+        Optional<Trend> result = TrendCalculator.trend(prices, 2, 5, 10);
         assertTrue(result.isPresent());
-        assertEquals(TrendState.BULL, result.get());
+        assertEquals(TrendState.BULL, result.map(Trend::getTrendState).get());
     }
 
     @Test
     void testInvalidPeriodOrdering() {
-        assertThrows(IllegalArgumentException.class, () -> Trend.trendStream(5, 3, 10));
-        assertThrows(IllegalArgumentException.class, () -> Trend.trendStream(3, 3, 10));
-        assertThrows(IllegalArgumentException.class, () -> Trend.trendStream(2, 5, 5));
+        assertThrows(IllegalArgumentException.class, () -> TrendCalculator.trendStream(5, 3, 10));
+        assertThrows(IllegalArgumentException.class, () -> TrendCalculator.trendStream(3, 3, 10));
+        assertThrows(IllegalArgumentException.class, () -> TrendCalculator.trendStream(2, 5, 5));
     }
 }
