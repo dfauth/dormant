@@ -15,6 +15,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -59,6 +60,13 @@ public class ValuationController {
         return dateRange
                 .map(dr -> valuationRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market, code, dr.start(), dr.end()))
                 .orElseGet(() -> valuationRepository.findByMarketAndCodeOrderByDateAsc(market, code));
+    }
+
+    @Operation(summary = "Get the most recent valuation per code, updated within the last 3 months")
+    @ApiResponse(responseCode = "200", description = "Latest valuation per security, dated within 3 months")
+    @GetMapping("/recent")
+    public List<Valuation> getRecentValuations() {
+        return valuationRepository.findLatestPerCodeSince(LocalDate.now().minusMonths(3));
     }
 
     @Operation(summary = "Get the most recent valuation for a security")

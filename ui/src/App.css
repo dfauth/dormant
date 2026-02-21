@@ -188,6 +188,21 @@ body {
   font-weight: 600;
 }
 
+.consensus-buy {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.consensus-sell {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.consensus-hold {
+  color: #d97706;
+  font-weight: 600;
+}
+
 /* ---------- Price Sheet ---------- */
 
 .sheet-hint {

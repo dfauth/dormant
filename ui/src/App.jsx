@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import PriceSheet from './PriceSheet'
+import Valuations from './Valuations'
 
 export default function App() {
   const [state, setState] = useState({ status: 'loading', trades: [], error: null })
@@ -56,6 +57,7 @@ export default function App() {
         <span className={`nav-item ${page === 'trades' ? 'active' : ''}`} onClick={() => setPage('trades')}>Trades</span>
         <span className={`nav-item ${page === 'positions' ? 'active' : ''}`} onClick={() => setPage('positions')}>Positions</span>
         <span className={`nav-item ${page === 'prices' ? 'active' : ''}`} onClick={() => setPage('prices')}>Prices</span>
+        <span className={`nav-item ${page === 'valuations' ? 'active' : ''}`} onClick={() => setPage('valuations')}>Valuations</span>
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
@@ -133,6 +135,7 @@ export default function App() {
         )}
 
         {page === 'prices' && <PriceSheet />}
+        {page === 'valuations' && <Valuations />}
       </div>
     </>
   )
