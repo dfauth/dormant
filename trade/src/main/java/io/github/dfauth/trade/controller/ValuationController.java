@@ -47,6 +47,13 @@ public class ValuationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved.size());
     }
 
+    @Operation(summary = "Get the most recent valuation per code, updated within the last 3 months")
+    @ApiResponse(responseCode = "200", description = "Latest valuation per security, dated within 3 months")
+    @GetMapping("/recent")
+    public List<Valuation> getRecentValuations() {
+        return valuationRepository.findLatestPerCodeSince(LocalDate.now().minusMonths(3));
+    }
+
     @Operation(summary = "Get valuations for a security", description = "Returns analyst valuations ordered by date ascending, optionally filtered by date range or tenor.")
     @ApiResponse(responseCode = "200", description = "List of valuations")
     @GetMapping("/{code}")
@@ -60,13 +67,6 @@ public class ValuationController {
         return dateRange
                 .map(dr -> valuationRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market, code, dr.start(), dr.end()))
                 .orElseGet(() -> valuationRepository.findByMarketAndCodeOrderByDateAsc(market, code));
-    }
-
-    @Operation(summary = "Get the most recent valuation per code, updated within the last 3 months")
-    @ApiResponse(responseCode = "200", description = "Latest valuation per security, dated within 3 months")
-    @GetMapping("/recent")
-    public List<Valuation> getRecentValuations() {
-        return valuationRepository.findLatestPerCodeSince(LocalDate.now().minusMonths(3));
     }
 
     @Operation(summary = "Get the most recent valuation for a security")
