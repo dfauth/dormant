@@ -31,8 +31,7 @@ function sortData(data, col, dir) {
 function ratioClass(ratio) {
   if (ratio == null) return ''
   const n = Number(ratio)
-  if (n >= 200) return 'pnl-negative'
-  if (n > 100) return 'pnl-positive'
+  if (n > 200) return 'pnl-positive'
   if (n < 50) return 'pnl-negative'
   return ''
 }
