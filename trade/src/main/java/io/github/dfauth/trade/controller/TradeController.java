@@ -7,6 +7,11 @@ import io.github.dfauth.trade.repository.TradeRepository;
 import io.github.dfauth.trade.service.DuplicateTradeException;
 import io.github.dfauth.trade.service.TradeService;
 import io.github.dfauth.trade.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -25,6 +30,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/trades")
 @RequiredArgsConstructor
+@Tag(name = "Trades", description = "Record and retrieve trades")
 public class TradeController {
 
     private final TradeRepository tradeRepository;
@@ -41,6 +47,11 @@ public class TradeController {
         throw new IllegalStateException("Unsupported principal type: " + principal.getClass());
     }
 
+    @Operation(summary = "Create a trade", description = "Persists a single trade. Returns 409 if a trade with the same confirmation ID already exists.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Trade created"),
+            @ApiResponse(responseCode = "409", description = "Duplicate confirmation ID")
+    })
     @PostMapping
     public ResponseEntity<?> createTrade(@RequestBody Trade trade, Authentication authentication) {
         Long userId = resolveUserId(authentication);
@@ -54,6 +65,11 @@ public class TradeController {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
+    @Operation(summary = "Create multiple trades", description = "Persists a batch of trades. Returns 409 if any trade has a duplicate confirmation ID; no trades in the batch are saved.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "All trades created"),
+            @ApiResponse(responseCode = "409", description = "Duplicate confirmation ID in batch")
+    })
     @PostMapping("/batch")
     public ResponseEntity<?> createTrades(@RequestBody List<Trade> trades, Authentication authentication) {
         Long userId = resolveUserId(authentication);
@@ -67,12 +83,14 @@ public class TradeController {
         }
     }
 
+    @Operation(summary = "Get trades by market", description = "Returns the authenticated user's trades for a market, optionally filtered by date range or tenor.")
+    @ApiResponse(responseCode = "200", description = "List of trades")
     @GetMapping()
     public List<Trade> getTradesByMarket(Authentication authentication,
-                                         @RequestParam("market") Optional<String> market,
-                                         @RequestParam("tenor") Optional<String> tenors,
-                                         @RequestParam("startFrom") Optional<String> startFrom,
-                                         @RequestParam("endAt") Optional<String> endAt
+                                         @Parameter(description = "Market code (e.g. ASX). Defaults to the user's default market.") @RequestParam("market") Optional<String> market,
+                                         @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenors,
+                                         @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
+                                         @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt
     ) {
         Optional<DateRange> dateRange = DateRange.resolve(tenors, startFrom, endAt);
         Long userId = resolveUserId(authentication);
@@ -89,8 +107,15 @@ public class TradeController {
                 .orElseGet(() -> tradeRepository.findByUserIdAndMarket(userId, mkt));
     }
 
+    @Operation(summary = "Get trade by confirmation ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Trade found"),
+            @ApiResponse(responseCode = "404", description = "Trade not found")
+    })
     @GetMapping("/confirmationId/{confirmationId}")
-    public ResponseEntity<Trade> getByConfirmationId(@PathVariable("confirmationId") String confirmationId, Authentication authentication) {
+    public ResponseEntity<Trade> getByConfirmationId(
+            @Parameter(description = "Unique confirmation ID of the trade") @PathVariable("confirmationId") String confirmationId,
+            Authentication authentication) {
         return tradeRepository.findByConfirmationId(confirmationId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
