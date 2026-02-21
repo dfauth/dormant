@@ -11,4 +11,6 @@ public interface MarketDepthRepository extends JpaRepository<MarketDepth, Long> 
     List<MarketDepth> findByMarketAndCodeOrderByRecordedAtDesc(String market, String code);
 
     List<MarketDepth> findByRecordedAtGreaterThanEqual(LocalDateTime cutoff);
+
+    List<MarketDepth> findByCodeOrderByRecordedAtDesc(String code);
 }

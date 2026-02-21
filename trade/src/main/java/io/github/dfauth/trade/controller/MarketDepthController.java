@@ -33,8 +33,18 @@ public class MarketDepthController {
     @GetMapping("/recent")
     public List<MarketDepthSummary> getRecentDepth() {
         LocalDateTime cutoff = LocalDate.now().minusDays(3).atStartOfDay();
-        List<MarketDepth> entries = marketDepthRepository.findByRecordedAtGreaterThanEqual(cutoff);
+        return aggregateByDay(marketDepthRepository.findByRecordedAtGreaterThanEqual(cutoff));
+    }
 
+    @Operation(summary = "Get all daily-averaged market depth history for a code")
+    @ApiResponse(responseCode = "200", description = "Daily averages for the given code, all history")
+    @GetMapping("/{code}")
+    public List<MarketDepthSummary> getDepthByCode(
+            @Parameter(description = "Security code (e.g. CBA)") @PathVariable("code") String code) {
+        return aggregateByDay(marketDepthRepository.findByCodeOrderByRecordedAtDesc(code.toUpperCase()));
+    }
+
+    private List<MarketDepthSummary> aggregateByDay(List<MarketDepth> entries) {
         return entries.stream()
                 .collect(Collectors.groupingBy(
                         d -> d.getCode() + "|" + d.getRecordedAt().toLocalDate(),
@@ -45,9 +55,9 @@ public class MarketDepthController {
                     List<MarketDepth> days = e.getValue();
                     String code = days.get(0).getCode();
                     LocalDate date = days.get(0).getRecordedAt().toLocalDate();
-                    int buyers      = (int) Math.round(days.stream().mapToInt(MarketDepth::getBuyers).average().orElse(0));
-                    int buyerShares = (int) Math.round(days.stream().mapToInt(MarketDepth::getBuyerShares).average().orElse(0));
-                    int sellers     = (int) Math.round(days.stream().mapToInt(MarketDepth::getSellers).average().orElse(0));
+                    int buyers       = (int) Math.round(days.stream().mapToInt(MarketDepth::getBuyers).average().orElse(0));
+                    int buyerShares  = (int) Math.round(days.stream().mapToInt(MarketDepth::getBuyerShares).average().orElse(0));
+                    int sellers      = (int) Math.round(days.stream().mapToInt(MarketDepth::getSellers).average().orElse(0));
                     int sellerShares = (int) Math.round(days.stream().mapToInt(MarketDepth::getSellerShares).average().orElse(0));
                     double ratio = sellerShares > 0
                             ? (double) buyerShares / sellerShares * 100
