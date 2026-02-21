@@ -114,6 +114,21 @@ body {
   padding: 0.65rem 1rem;
 }
 
+.th-sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.th-sortable:hover {
+  background: #32325a;
+}
+
+.th-sort-icon {
+  display: inline-block;
+  width: 1em;
+}
+
 .trades-table td {
   padding: 0.6rem 1rem;
   font-size: 0.875rem;

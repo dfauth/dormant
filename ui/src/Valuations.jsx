@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const CONSENSUS_LABEL = {
   STRONG_BUY: 'Strong Buy',
@@ -6,6 +6,36 @@ const CONSENSUS_LABEL = {
   HOLD: 'Hold',
   SELL: 'Sell',
   STRONG_SELL: 'Strong Sell',
+}
+
+const COLUMNS = [
+  { key: 'date',      label: 'Date' },
+  { key: 'code',      label: 'Code' },
+  { key: 'consensus', label: 'Consensus' },
+  { key: 'buy',       label: 'Buy' },
+  { key: 'hold',      label: 'Hold' },
+  { key: 'sell',      label: 'Sell' },
+  { key: 'price',     label: 'Price' },
+  { key: 'target',    label: 'Target' },
+  { key: 'potential', label: 'Potential' },
+]
+
+function sortValue(row, key) {
+  const v = row[key]
+  if (v == null) return null
+  return (key === 'date' || key === 'code' || key === 'consensus') ? v : Number(v)
+}
+
+function sortData(data, col, dir) {
+  return [...data].sort((a, b) => {
+    const av = sortValue(a, col)
+    const bv = sortValue(b, col)
+    if (av == null && bv == null) return 0
+    if (av == null) return 1
+    if (bv == null) return -1
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0
+    return dir === 'asc' ? cmp : -cmp
+  })
 }
 
 function consensusClass(consensus) {
@@ -34,6 +64,8 @@ function fmtPotential(val) {
 
 export default function Valuations() {
   const [state, setState] = useState({ data: [], loading: true, error: null })
+  const [sortCol, setSortCol] = useState('date')
+  const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
     fetch('/api/valuations/recent', { credentials: 'include' })
@@ -44,6 +76,17 @@ export default function Valuations() {
       .then(data => setState({ data, loading: false, error: null }))
       .catch(err => setState({ data: [], loading: false, error: err.message }))
   }, [])
+
+  const sorted = useMemo(() => sortData(state.data, sortCol, sortDir), [state.data, sortCol, sortDir])
+
+  function handleSort(key) {
+    if (key === sortCol) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortCol(key)
+      setSortDir('asc')
+    }
+  }
 
   if (state.loading) return <p>Loading…</p>
   if (state.error) return <p className="error">Error: {state.error}</p>
@@ -59,19 +102,18 @@ export default function Valuations() {
         <table className="trades-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Code</th>
-              <th>Consensus</th>
-              <th>Buy</th>
-              <th>Hold</th>
-              <th>Sell</th>
-              <th>Price</th>
-              <th>Target</th>
-              <th>Potential</th>
+              {COLUMNS.map(col => (
+                <th key={col.key} className="th-sortable" onClick={() => handleSort(col.key)}>
+                  {col.label}
+                  <span className="th-sort-icon">
+                    {sortCol === col.key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+                  </span>
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {state.data.map(v => (
+            {sorted.map(v => (
               <tr key={`${v.market}-${v.code}`}>
                 <td>{v.date}</td>
                 <td>{v.code}</td>
