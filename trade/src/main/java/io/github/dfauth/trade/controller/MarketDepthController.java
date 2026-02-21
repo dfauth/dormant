@@ -1,6 +1,7 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.MarketDepth;
+import io.github.dfauth.trade.model.MarketDepthSummary;
 import io.github.dfauth.trade.repository.MarketDepthRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,7 +13,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -22,6 +27,38 @@ import java.time.LocalDateTime;
 public class MarketDepthController {
 
     private final MarketDepthRepository marketDepthRepository;
+
+    @Operation(summary = "Get daily-averaged market depth per code for the last 3 days")
+    @ApiResponse(responseCode = "200", description = "Daily averages per security")
+    @GetMapping("/recent")
+    public List<MarketDepthSummary> getRecentDepth() {
+        LocalDateTime cutoff = LocalDate.now().minusDays(3).atStartOfDay();
+        List<MarketDepth> entries = marketDepthRepository.findByRecordedAtGreaterThanEqual(cutoff);
+
+        return entries.stream()
+                .collect(Collectors.groupingBy(
+                        d -> d.getCode() + "|" + d.getRecordedAt().toLocalDate(),
+                        Collectors.toList()
+                ))
+                .entrySet().stream()
+                .map(e -> {
+                    List<MarketDepth> days = e.getValue();
+                    String code = days.get(0).getCode();
+                    LocalDate date = days.get(0).getRecordedAt().toLocalDate();
+                    int buyers      = (int) Math.round(days.stream().mapToInt(MarketDepth::getBuyers).average().orElse(0));
+                    int buyerShares = (int) Math.round(days.stream().mapToInt(MarketDepth::getBuyerShares).average().orElse(0));
+                    int sellers     = (int) Math.round(days.stream().mapToInt(MarketDepth::getSellers).average().orElse(0));
+                    int sellerShares = (int) Math.round(days.stream().mapToInt(MarketDepth::getSellerShares).average().orElse(0));
+                    double ratio = sellerShares > 0
+                            ? (double) buyerShares / sellerShares * 100
+                            : 0;
+                    return new MarketDepthSummary(date, code, buyers, buyerShares, sellers, sellerShares,
+                            Math.round(ratio * 10.0) / 10.0);
+                })
+                .sorted(Comparator.comparing(MarketDepthSummary::date).reversed()
+                        .thenComparing(MarketDepthSummary::code))
+                .toList();
+    }
 
     @Operation(
             summary = "Record a market depth snapshot",
