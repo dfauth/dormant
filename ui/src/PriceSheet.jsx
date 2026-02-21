@@ -60,7 +60,7 @@ export default function PriceSheet() {
 
     for (let r = 0; r < SCAN_ROWS; r++) {
       for (let c = 0; c < SCAN_COLS; c++) {
-        const cell = sheet.getRange(r, c).getValue()
+        const cell = sheet.getRange(r, c).getFormulas()[0][0]
         const parsed = parseFormula(cell)
         if (!parsed) continue
 
