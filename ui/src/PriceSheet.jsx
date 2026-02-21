@@ -34,8 +34,6 @@ export default function PriceSheet() {
     // reconciliation can never touch the children UniverJS adds to it.
     const container = document.createElement('div')
     container.className = 'sheet-container'
-    container.style.width = '100%'
-    container.style.height = 'calc(100vh - 11rem)'
     anchorRef.current.insertAdjacentElement('afterend', container)
 
     const { univerAPI } = createUniver({
@@ -112,7 +110,7 @@ export default function PriceSheet() {
         {error && <span className="error">{error}</span>}
       </div>
       {/* anchor: UniverJS container is inserted after this div by useEffect */}
-      <div ref={anchorRef} />
+      <div ref={anchorRef} style={{ display: 'none' }} />
     </>
   )
 }

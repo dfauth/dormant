@@ -59,7 +59,7 @@ export default function App() {
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
-      <div className={page === 'prices' ? 'page page-wide' : 'page'}>
+      <div className={page === 'prices' ? 'page-prices' : 'page'}>
         {page === 'trades' && (
           <>
             <h1>Trades — ASX</h1>
