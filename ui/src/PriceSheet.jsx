@@ -1,14 +1,9 @@
-import { useState, useCallback } from 'react'
-import Spreadsheet from 'react-spreadsheet'
-
-const INITIAL_ROWS = 30
-const INITIAL_COLS = 10
-
-function emptyGrid(rows, cols) {
-  return Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => ({ value: '' }))
-  )
-}
+import { useEffect, useRef, useState } from 'react'
+import { createUniver, defaultTheme, LocaleType, merge } from '@univerjs/presets'
+import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
+import SheetsLocaleEnUS from '@univerjs/preset-sheets-core/locales/en-US'
+import '@univerjs/presets/lib/styles/preset-sheets-core.css'
+import '@univerjs/preset-sheets-core/lib/index.css'
 
 function parseFormula(value) {
   if (typeof value !== 'string') return null
@@ -25,22 +20,50 @@ function buildUrl({ market, code, tenor }) {
 
 const HEADERS = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
 const FIELDS = ['date', 'open', 'high', 'low', 'close', 'volume']
+const SCAN_ROWS = 200
+const SCAN_COLS = 50
 
 export default function PriceSheet() {
-  const [data, setData] = useState(() => emptyGrid(INITIAL_ROWS, INITIAL_COLS))
+  const univerRef = useRef(null)
+  const anchorRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const handleChange = useCallback((newData) => {
-    setData(newData)
+  useEffect(() => {
+    // Create the container ourselves outside React's management so React
+    // reconciliation can never touch the children UniverJS adds to it.
+    const container = document.createElement('div')
+    container.className = 'sheet-container'
+    container.style.width = '100%'
+    container.style.height = 'calc(100vh - 11rem)'
+    anchorRef.current.insertAdjacentElement('afterend', container)
+
+    const { univerAPI } = createUniver({
+      locale: LocaleType.EN_US,
+      locales: { [LocaleType.EN_US]: merge({}, SheetsLocaleEnUS) },
+      theme: defaultTheme,
+      presets: [UniverSheetsCorePreset({ container })],
+    })
+    univerAPI.createWorkbook({ name: 'Prices' })
+    univerRef.current = univerAPI
+
+    return () => {
+      univerAPI.dispose()
+      container.remove()
+      univerRef.current = null
+    }
   }, [])
 
-  const handleCommit = useCallback(async () => {
-    // Scan the grid for formula cells
-    for (let r = 0; r < data.length; r++) {
-      for (let c = 0; c < data[r].length; c++) {
-        const cell = data[r][c]
-        const parsed = parseFormula(cell?.value)
+  const handleFetch = async () => {
+    const univerAPI = univerRef.current
+    if (!univerAPI) return
+    const sheet = univerAPI.getActiveWorkbook()?.getActiveSheet()
+    if (!sheet) return
+
+    for (let r = 0; r < SCAN_ROWS; r++) {
+      for (let c = 0; c < SCAN_COLS; c++) {
+        const cell = sheet.getRange(r, c).getValue()
+        const parsed = parseFormula(cell)
         if (!parsed) continue
 
         setLoading(true)
@@ -50,42 +73,11 @@ export default function PriceSheet() {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           const prices = await res.json()
 
-          setData(prev => {
-            const grid = prev.map(row => row.map(cell => ({ ...cell })))
-
-            // Ensure enough rows for header + data
-            const needed = r + 1 + prices.length
-            while (grid.length < needed) {
-              grid.push(Array.from({ length: grid[0].length }, () => ({ value: '' })))
-            }
-
-            // Ensure enough columns for the spill
-            const colsNeeded = c + HEADERS.length
-            if (colsNeeded > grid[0].length) {
-              for (const row of grid) {
-                while (row.length < colsNeeded) row.push({ value: '' })
-              }
-            }
-
-            // Write the formula cell as a label
-            grid[r][c] = { value: `${parsed.market}:${parsed.code}`, readOnly: true }
-
-            // Write headers in the same row, offset by 1
-            HEADERS.forEach((h, i) => {
-              if (c + i < grid[r].length) {
-                grid[r][c + i] = { value: h, readOnly: true }
-              }
-            })
-
-            // Write price rows below
-            prices.forEach((price, ri) => {
-              FIELDS.forEach((f, ci) => {
-                grid[r + 1 + ri][c + ci] = { value: String(price[f] ?? ''), readOnly: true }
-              })
-            })
-
-            return grid
-          })
+          sheet.getRange(r, c, 1, HEADERS.length).setValues([HEADERS])
+          if (prices.length > 0) {
+            const rows = prices.map(p => FIELDS.map(f => p[f] ?? ''))
+            sheet.getRange(r + 1, c, prices.length, FIELDS.length).setValues(rows)
+          }
         } catch (err) {
           setError(`Failed to fetch prices: ${err.message}`)
         } finally {
@@ -94,7 +86,14 @@ export default function PriceSheet() {
         return // process one formula at a time
       }
     }
-  }, [data])
+  }
+
+  const handleClear = () => {
+    const univerAPI = univerRef.current
+    if (!univerAPI) return
+    const sheet = univerAPI.getActiveWorkbook()?.getActiveSheet()
+    sheet?.clear()
+  }
 
   return (
     <>
@@ -104,17 +103,16 @@ export default function PriceSheet() {
         Example: <code>=PRICES(ASX,BHP,1Y)</code>
       </p>
       <div className="sheet-toolbar">
-        <button className="sheet-btn" onClick={handleCommit} disabled={loading}>
+        <button className="sheet-btn" onClick={handleFetch} disabled={loading}>
           {loading ? 'Fetching…' : 'Fetch'}
         </button>
-        <button className="sheet-btn sheet-btn-secondary" onClick={() => setData(emptyGrid(INITIAL_ROWS, INITIAL_COLS))}>
+        <button className="sheet-btn sheet-btn-secondary" onClick={handleClear}>
           Clear
         </button>
         {error && <span className="error">{error}</span>}
       </div>
-      <div className="sheet-container">
-        <Spreadsheet data={data} onChange={handleChange} />
-      </div>
+      {/* anchor: UniverJS container is inserted after this div by useEffect */}
+      <div ref={anchorRef} />
     </>
   )
 }

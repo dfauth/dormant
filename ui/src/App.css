@@ -229,25 +229,10 @@ body {
 }
 
 .sheet-container {
-  overflow: auto;
-  background: #fff;
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 11rem);
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-  padding: 0.5rem;
-}
-
-.sheet-container .Spreadsheet {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 0.8rem;
-}
-
-.sheet-container .Spreadsheet__header {
-  background: #272742;
-  color: #d1d5db;
-  font-weight: 600;
-  min-width: 3rem;
-}
-
-.sheet-container .Spreadsheet__cell {
-  min-width: 5.5rem;
+  overflow: hidden;
 }

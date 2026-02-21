@@ -1,9 +1,7 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+// StrictMode intentionally omitted: UniverJS registers components in a global
+// registry that its dispose() does not fully clear, so StrictMode's
+// dev-only double-mount causes "Component already exists" errors.
+createRoot(document.getElementById('root')).render(<App />)
