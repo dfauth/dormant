@@ -2,6 +2,8 @@ package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.Valuation;
+import io.github.dfauth.trade.model.ValuationSummary;
+import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.repository.ValuationRepository;
 import io.github.dfauth.trade.service.ValuationService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +30,7 @@ public class ValuationController {
 
     private final ValuationRepository valuationRepository;
     private final ValuationService valuationService;
+    private final PriceRepository priceRepository;
 
     @Operation(summary = "Create or update a valuation", description = "Upserts a valuation for a given market, code, and date. If a record already exists for that combination, it is updated.")
     @ApiResponse(responseCode = "201", description = "Valuation created or updated")
@@ -48,10 +51,16 @@ public class ValuationController {
     }
 
     @Operation(summary = "Get the most recent valuation per code, updated within the last 3 months")
-    @ApiResponse(responseCode = "200", description = "Latest valuation per security, dated within 3 months")
+    @ApiResponse(responseCode = "200", description = "Latest valuation per security with current price and upside potential, dated within 3 months")
     @GetMapping("/recent")
-    public List<Valuation> getRecentValuations() {
-        return valuationRepository.findLatestPerCodeSince(LocalDate.now().minusMonths(3));
+    public List<ValuationSummary> getRecentValuations() {
+        return valuationRepository.findLatestPerCodeSince(LocalDate.now().minusMonths(3))
+                .stream()
+                .map(v -> ValuationSummary.of(v,
+                        priceRepository.findTopByMarketAndCodeOrderByDateDesc(v.getMarket(), v.getCode())
+                                .map(p -> p.getClose())
+                                .orElse(null)))
+                .toList();
     }
 
     @Operation(summary = "Get valuations for a security", description = "Returns analyst valuations ordered by date ascending, optionally filtered by date range or tenor.")

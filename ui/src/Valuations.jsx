@@ -43,7 +43,9 @@ export default function Valuations() {
               <th>Code</th>
               <th>Date</th>
               <th>Consensus</th>
+              <th>Price</th>
               <th>Target</th>
+              <th>Potential</th>
               <th>Buy</th>
               <th>Hold</th>
               <th>Sell</th>
@@ -58,7 +60,11 @@ export default function Valuations() {
                 <td className={consensusClass(v.consensus)}>
                   {CONSENSUS_LABEL[v.consensus] ?? v.consensus}
                 </td>
+                <td>{v.price ?? '—'}</td>
                 <td>{v.target}</td>
+                <td className={v.potential == null ? '' : Number(v.potential) >= 0 ? 'pnl-positive' : 'pnl-negative'}>
+                  {v.potential == null ? '—' : `${Number(v.potential) >= 0 ? '+' : ''}${v.potential}%`}
+                </td>
                 <td>{v.buy}</td>
                 <td>{v.hold}</td>
                 <td>{v.sell}</td>
