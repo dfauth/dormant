@@ -125,8 +125,12 @@ body {
   border-bottom: none;
 }
 
+.trades-table tbody tr:nth-child(even) {
+  background: #f3f4f6;
+}
+
 .trades-table tbody tr:hover {
-  background: #f9fafb;
+  background: #e8eaf0;
 }
 
 /* ---------- Login ---------- */
@@ -178,27 +182,27 @@ body {
   margin-top: 1rem;
 }
 
-.pnl-positive {
+td.pnl-positive, .pnl-positive {
   color: #16a34a;
   font-weight: 600;
 }
 
-.pnl-negative {
+td.pnl-negative, .pnl-negative {
   color: #dc2626;
   font-weight: 600;
 }
 
-.consensus-buy {
+td.consensus-buy {
   color: #16a34a;
   font-weight: 600;
 }
 
-.consensus-sell {
+td.consensus-sell {
   color: #dc2626;
   font-weight: 600;
 }
 
-.consensus-hold {
+td.consensus-hold {
   color: #d97706;
   font-weight: 600;
 }

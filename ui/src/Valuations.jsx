@@ -66,6 +66,7 @@ export default function Valuations() {
               <th>Hold</th>
               <th>Sell</th>
               <th>Price</th>
+              <th>Target</th>
               <th>Potential</th>
             </tr>
           </thead>
@@ -81,6 +82,7 @@ export default function Valuations() {
                 <td>{v.hold}</td>
                 <td>{v.sell}</td>
                 <td>{fmtPrice(v.price)}</td>
+                <td>{fmtPrice(v.target)}</td>
                 <td className={potentialClass(v.potential)}>
                   {fmtPotential(v.potential)}
                 </td>
