@@ -63,19 +63,23 @@ public class ValuationController {
                 .toList();
     }
 
-    @Operation(summary = "Get valuations for a security", description = "Returns analyst valuations ordered by date ascending, optionally filtered by date range or tenor.")
-    @ApiResponse(responseCode = "200", description = "List of valuations")
+    @Operation(summary = "Get valuations for a security", description = "Returns analyst valuations ordered by date ascending, optionally filtered by date range or tenor. Price and potential are enriched from the most recent closing price.")
+    @ApiResponse(responseCode = "200", description = "List of valuations with current price and upside potential")
     @GetMapping("/{code}")
-    public List<Valuation> getValuations(
+    public List<ValuationSummary> getValuations(
             @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") String market,
             @Parameter(description = "Security code (e.g. CBA)") @PathVariable("code") String code,
             @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
             @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
             @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
         Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
-        return dateRange
+        List<Valuation> valuations = dateRange
                 .map(dr -> valuationRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market, code, dr.start(), dr.end()))
                 .orElseGet(() -> valuationRepository.findByMarketAndCodeOrderByDateAsc(market, code));
+        java.math.BigDecimal price = priceRepository.findTopByMarketAndCodeOrderByDateDesc(market, code)
+                .map(p -> p.getClose())
+                .orElse(null);
+        return valuations.stream().map(v -> ValuationSummary.of(v, price)).toList();
     }
 
     @Operation(summary = "Get the most recent valuation for a security")

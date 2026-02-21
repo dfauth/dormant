@@ -1,8 +1,10 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.Consensus;
+import io.github.dfauth.trade.model.Price;
 import io.github.dfauth.trade.model.User;
 import io.github.dfauth.trade.model.Valuation;
+import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.repository.UserRepository;
 import io.github.dfauth.trade.repository.ValuationRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,11 +46,15 @@ class ValuationControllerTest {
     private ValuationRepository valuationRepository;
 
     @Autowired
+    private PriceRepository priceRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @BeforeEach
     void setUp() {
         valuationRepository.deleteAll();
+        priceRepository.deleteAll();
         userRepository.deleteAll();
         userRepository.save(User.builder()
                 .googleId(GOOGLE_ID)
@@ -220,5 +226,76 @@ class ValuationControllerTest {
                         .param("market", MARKET)
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isNotFound());
+    }
+
+    // ── GET /recent ──────────────────────────────────────────────────────────
+
+    @Test
+    void recent_returnsEmptyList_whenNoData() throws Exception {
+        mockMvc.perform(get("/api/valuations/recent")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void recent_returnsLatestValuationPerCode() throws Exception {
+        // two entries for the same code — only the most recent should be returned
+        valuationRepository.save(sampleValuation(LocalDate.now().minusMonths(2)));
+        valuationRepository.save(sampleValuation(LocalDate.now().minusMonths(1)));
+
+        mockMvc.perform(get("/api/valuations/recent")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].date").value(LocalDate.now().minusMonths(1).toString()));
+    }
+
+    @Test
+    void recent_excludesValuationsOlderThan3Months() throws Exception {
+        valuationRepository.save(sampleValuation(LocalDate.now().minusMonths(4)));
+
+        mockMvc.perform(get("/api/valuations/recent")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+    }
+
+    @Test
+    void recent_includesPriceAndPotential_whenPriceExists() throws Exception {
+        // target = 105.5, price = 100.0 → potential = (105.5 - 100) / 100 * 100 = 5.5
+        valuationRepository.save(sampleValuation(LocalDate.now().minusMonths(1)));
+        priceRepository.save(Price.builder()
+                .market(MARKET).code(CODE).date(LocalDate.now())
+                .open(new BigDecimal("100.000000")).high(new BigDecimal("102.000000"))
+                .low(new BigDecimal("98.000000")).close(new BigDecimal("100.000000"))
+                .volume(100000).build());
+
+        mockMvc.perform(get("/api/valuations/recent")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].price").value(100.0))
+                .andExpect(jsonPath("$[0].potential").value(5.5));
+    }
+
+    // ── GET /{code} price enrichment ─────────────────────────────────────────
+
+    @Test
+    void getValuations_includesPriceAndPotential_whenPriceExists() throws Exception {
+        // target = 105.5, price = 100.0 → potential = 5.5%
+        valuationRepository.save(sampleValuation(LocalDate.of(2024, 3, 1)));
+        priceRepository.save(Price.builder()
+                .market(MARKET).code(CODE).date(LocalDate.now())
+                .open(new BigDecimal("100.000000")).high(new BigDecimal("102.000000"))
+                .low(new BigDecimal("98.000000")).close(new BigDecimal("100.000000"))
+                .volume(100000).build());
+
+        mockMvc.perform(get("/api/valuations/" + CODE)
+                        .param("market", MARKET)
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].price").value(100.0))
+                .andExpect(jsonPath("$[0].potential").value(5.5));
     }
 }

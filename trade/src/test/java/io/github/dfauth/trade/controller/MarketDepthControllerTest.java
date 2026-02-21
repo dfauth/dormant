@@ -298,6 +298,16 @@ class MarketDepthControllerTest {
     }
 
     @Test
+    void recent_sellerSharesZero_ratioIsZero() throws Exception {
+        saveDepth("ASX", "CBA", LocalDateTime.now(), 120, 50000, 85, 0);
+
+        mockMvc.perform(get("/api/depth/recent"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].ratio").value(0.0));
+    }
+
+    @Test
     void byCode_multiDayHistoryReturnedAsSeperateRows() throws Exception {
         saveDepth("ASX", "CBA", LocalDateTime.now());
         saveDepth("ASX", "CBA", LocalDateTime.now().minusDays(10));

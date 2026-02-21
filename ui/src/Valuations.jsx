@@ -8,7 +8,7 @@ const CONSENSUS_LABEL = {
   STRONG_SELL: 'Strong Sell',
 }
 
-const COLUMNS = [
+const SUMMARY_COLUMNS = [
   { key: 'date',      label: 'Date' },
   { key: 'code',      label: 'Code' },
   { key: 'consensus', label: 'Consensus' },
@@ -19,6 +19,7 @@ const COLUMNS = [
   { key: 'target',    label: 'Target' },
   { key: 'potential', label: 'Potential' },
 ]
+
 
 function sortValue(row, key) {
   const v = row[key]
@@ -66,10 +67,32 @@ function fmtPotential(val) {
   return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`
 }
 
+function SortableHeader({ columns, sortCol, sortDir, onSort }) {
+  return (
+    <thead>
+      <tr>
+        {columns.map(col => (
+          <th key={col.key} className="th-sortable" onClick={() => onSort(col.key)}>
+            {col.label}
+            <span className="th-sort-icon">
+              {sortCol === col.key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+            </span>
+          </th>
+        ))}
+      </tr>
+    </thead>
+  )
+}
+
 export default function Valuations() {
   const [state, setState] = useState({ data: [], loading: true, error: null })
   const [sortCol, setSortCol] = useState('date')
   const [sortDir, setSortDir] = useState('desc')
+
+  const [selectedItem, setSelectedItem] = useState(null) // { code, market }
+  const [detail, setDetail] = useState({ data: [], loading: false, error: null })
+  const [detailSortCol, setDetailSortCol] = useState('date')
+  const [detailSortDir, setDetailSortDir] = useState('desc')
 
   useEffect(() => {
     fetch('/api/valuations/recent', { credentials: 'include' })
@@ -81,7 +104,20 @@ export default function Valuations() {
       .catch(err => setState({ data: [], loading: false, error: err.message }))
   }, [])
 
+  useEffect(() => {
+    if (!selectedItem) return
+    setDetail({ data: [], loading: true, error: null })
+    fetch(`/api/valuations/${selectedItem.code}?market=${selectedItem.market}`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(data => setDetail({ data, loading: false, error: null }))
+      .catch(err => setDetail({ data: [], loading: false, error: err.message }))
+  }, [selectedItem])
+
   const sorted = useMemo(() => sortData(state.data, sortCol, sortDir), [state.data, sortCol, sortDir])
+  const detailSorted = useMemo(() => sortData(detail.data, detailSortCol, detailSortDir), [detail.data, detailSortCol, detailSortDir])
 
   function handleSort(key) {
     if (key === sortCol) {
@@ -90,6 +126,53 @@ export default function Valuations() {
       setSortCol(key)
       setSortDir('asc')
     }
+  }
+
+  function handleDetailSort(key) {
+    if (key === detailSortCol) {
+      setDetailSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setDetailSortCol(key)
+      setDetailSortDir('asc')
+    }
+  }
+
+  if (selectedItem) {
+    return (
+      <>
+        <h1>Valuations — {selectedItem.market}:{selectedItem.code}</h1>
+        <button className="back-btn" onClick={() => setSelectedItem(null)}>← Back</button>
+        {detail.loading && <p>Loading…</p>}
+        {detail.error && <p className="error">Error: {detail.error}</p>}
+        {!detail.loading && !detail.error && detail.data.length === 0 && (
+          <p className="empty">No valuation history for {selectedItem.code}.</p>
+        )}
+        {!detail.loading && !detail.error && detail.data.length > 0 && (
+          <table className="trades-table">
+            <SortableHeader columns={SUMMARY_COLUMNS} sortCol={detailSortCol} sortDir={detailSortDir} onSort={handleDetailSort} />
+            <tbody>
+              {detailSorted.map(v => (
+                <tr key={v.id}>
+                  <td>{v.date}</td>
+                  <td>{v.code}</td>
+                  <td className={consensusClass(v.consensus)}>
+                    {CONSENSUS_LABEL[v.consensus] ?? v.consensus}
+                  </td>
+                  <td>{v.buy}</td>
+                  <td>{v.hold}</td>
+                  <td>{v.sell}</td>
+                  <td>{fmtPrice(v.price)}</td>
+                  <td>{fmtPrice(v.target)}</td>
+                  <td className={potentialClass(v.potential)}>
+                    {fmtPotential(v.potential)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </>
+    )
   }
 
   if (state.loading) return <p>Loading…</p>
@@ -104,23 +187,16 @@ export default function Valuations() {
         <p className="empty">No valuations updated in the last 3 months.</p>
       ) : (
         <table className="trades-table">
-          <thead>
-            <tr>
-              {COLUMNS.map(col => (
-                <th key={col.key} className="th-sortable" onClick={() => handleSort(col.key)}>
-                  {col.label}
-                  <span className="th-sort-icon">
-                    {sortCol === col.key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
-                  </span>
-                </th>
-              ))}
-            </tr>
-          </thead>
+          <SortableHeader columns={SUMMARY_COLUMNS} sortCol={sortCol} sortDir={sortDir} onSort={handleSort} />
           <tbody>
             {sorted.map(v => (
               <tr key={`${v.market}-${v.code}`}>
                 <td>{v.date}</td>
-                <td>{v.code}</td>
+                <td>
+                  <span className="code-link" onClick={() => setSelectedItem({ code: v.code, market: v.market })}>
+                    {v.code}
+                  </span>
+                </td>
                 <td className={consensusClass(v.consensus)}>
                   {CONSENSUS_LABEL[v.consensus] ?? v.consensus}
                 </td>

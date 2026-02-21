@@ -290,6 +290,36 @@ td.consensus-strong-sell {
   overflow: hidden;
 }
 
+/* ---------- Shared drill-down ---------- */
+
+.code-link {
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.code-link:hover {
+  color: #1d4ed8;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  padding: 0.4rem 0.9rem;
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.back-btn:hover {
+  background: #d1d5db;
+}
+
 /* ---------- Market Depth ---------- */
 
 .depth-code-link {
