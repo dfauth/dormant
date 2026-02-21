@@ -39,9 +39,13 @@ function sortData(data, col, dir) {
 }
 
 function consensusClass(consensus) {
-  if (consensus === 'STRONG_BUY' || consensus === 'BUY') return 'consensus-buy'
-  if (consensus === 'STRONG_SELL' || consensus === 'SELL') return 'consensus-sell'
-  return 'consensus-hold'
+  switch (consensus) {
+    case 'STRONG_BUY':  return 'consensus-strong-buy'
+    case 'BUY':         return 'consensus-buy'
+    case 'SELL':        return 'consensus-sell'
+    case 'STRONG_SELL': return 'consensus-strong-sell'
+    default:            return ''
+  }
 }
 
 function potentialClass(potential) {

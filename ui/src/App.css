@@ -207,18 +207,23 @@ td.pnl-negative, .pnl-negative {
   font-weight: 600;
 }
 
+td.consensus-strong-buy {
+  color: #15803d;
+  font-weight: 600;
+}
+
 td.consensus-buy {
-  color: #16a34a;
+  color: #22c55e;
   font-weight: 600;
 }
 
 td.consensus-sell {
-  color: #dc2626;
+  color: #d97706;
   font-weight: 600;
 }
 
-td.consensus-hold {
-  color: #d97706;
+td.consensus-strong-sell {
+  color: #dc2626;
   font-weight: 600;
 }
 
