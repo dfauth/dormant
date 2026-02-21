@@ -14,6 +14,24 @@ function consensusClass(consensus) {
   return 'consensus-hold'
 }
 
+function potentialClass(potential) {
+  if (potential == null) return ''
+  const n = Number(potential)
+  if (n > 0) return 'pnl-positive'
+  if (n < 0) return 'pnl-negative'
+  return ''
+}
+
+function fmtPrice(val) {
+  return val == null ? '—' : Number(val).toFixed(2)
+}
+
+function fmtPotential(val) {
+  if (val == null) return '—'
+  const n = Number(val)
+  return `${n > 0 ? '+' : ''}${n.toFixed(2)}%`
+}
+
 export default function Valuations() {
   const [state, setState] = useState({ data: [], loading: true, error: null })
 
@@ -30,44 +48,42 @@ export default function Valuations() {
   if (state.loading) return <p>Loading…</p>
   if (state.error) return <p className="error">Error: {state.error}</p>
 
+  const markets = [...new Set(state.data.map(v => v.market))].join(', ')
+
   return (
     <>
-      <h1>Valuations</h1>
+      <h1>Valuations{markets ? ` — ${markets}` : ''}</h1>
       {state.data.length === 0 ? (
         <p className="empty">No valuations updated in the last 3 months.</p>
       ) : (
         <table className="trades-table">
           <thead>
             <tr>
-              <th>Market</th>
-              <th>Code</th>
               <th>Date</th>
+              <th>Code</th>
               <th>Consensus</th>
-              <th>Price</th>
-              <th>Target</th>
-              <th>Potential</th>
               <th>Buy</th>
               <th>Hold</th>
               <th>Sell</th>
+              <th>Price</th>
+              <th>Potential</th>
             </tr>
           </thead>
           <tbody>
             {state.data.map(v => (
               <tr key={`${v.market}-${v.code}`}>
-                <td>{v.market}</td>
-                <td>{v.code}</td>
                 <td>{v.date}</td>
+                <td>{v.code}</td>
                 <td className={consensusClass(v.consensus)}>
                   {CONSENSUS_LABEL[v.consensus] ?? v.consensus}
-                </td>
-                <td>{v.price ?? '—'}</td>
-                <td>{v.target}</td>
-                <td className={v.potential == null ? '' : Number(v.potential) >= 0 ? 'pnl-positive' : 'pnl-negative'}>
-                  {v.potential == null ? '—' : `${Number(v.potential) >= 0 ? '+' : ''}${v.potential}%`}
                 </td>
                 <td>{v.buy}</td>
                 <td>{v.hold}</td>
                 <td>{v.sell}</td>
+                <td>{fmtPrice(v.price)}</td>
+                <td className={potentialClass(v.potential)}>
+                  {fmtPotential(v.potential)}
+                </td>
               </tr>
             ))}
           </tbody>
