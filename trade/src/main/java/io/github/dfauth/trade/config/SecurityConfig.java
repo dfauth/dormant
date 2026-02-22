@@ -55,7 +55,7 @@ public class SecurityConfig {
                         .successHandler((request, response, authentication) -> {
                             OidcUser oidcUser = (OidcUser) authentication.getPrincipal();
                             userService.findOrCreateUser(oidcUser);
-                            response.sendRedirect("/");
+                            response.sendRedirect("http://localhost:3000");
                         })
                 )
                 .oauth2ResourceServer(rs -> rs
