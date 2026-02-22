@@ -16,9 +16,9 @@ public class PerformanceStats {
     private int totalClosedPositions;
     private int wins;
     private int losses;
-    private BigDecimal winRate;
+    private double winRate;
     private BigDecimal averageWin;
     private BigDecimal averageLoss;
-    private BigDecimal riskRewardRatio;
+    private double riskRewardRatio;
     private BigDecimal expectancy;
 }

@@ -1,13 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import PriceSheet from './PriceSheet'
 import Valuations from './Valuations'
 import MarketDepth from './MarketDepth'
 
+const NAV_ITEMS = [
+  { key: 'positions',  label: 'Positions',    subItems: ['open positions'] },
+  { key: 'trades',     label: 'Trades',       subItems: ['default'] },
+  { key: 'prices',     label: 'Prices',       subItems: ['default'] },
+  { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
+  { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
+]
+
 export default function App() {
   const [state, setState] = useState({ status: 'loading', trades: [], error: null })
-  const [page, setPage] = useState('trades')
+  const [page, setPage] = useState('positions')
+  const [subPage, setSubPage] = useState('default')
+  const [openMenu, setOpenMenu] = useState(null)
   const [positions, setPositions] = useState({ data: [], loading: false, error: null })
+  const [selectedPosition, setSelectedPosition] = useState(null)
+  const [positionTrades, setPositionTrades] = useState({ data: [], loading: false, error: null })
+  const navRef = useRef(null)
+
+  function handleSetPage(p) {
+    setPage(p)
+    setSubPage('default')
+    setSelectedPosition(null)
+  }
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (navRef.current && !navRef.current.contains(e.target)) {
+        setOpenMenu(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     fetch('/api/trades', { credentials: 'include' })
@@ -27,6 +56,7 @@ export default function App() {
 
   useEffect(() => {
     if (page !== 'positions' || state.status !== 'authenticated') return
+
     setPositions(p => ({ ...p, loading: true, error: null }))
     fetch('/api/positions', { credentials: 'include' })
       .then(res => {
@@ -36,6 +66,22 @@ export default function App() {
       .then(data => setPositions({ data, loading: false, error: null }))
       .catch(err => setPositions({ data: [], loading: false, error: err.message }))
   }, [page, state.status])
+
+  useEffect(() => {
+    if (!selectedPosition) return
+
+    setPositionTrades({ data: [], loading: true, error: null })
+    fetch(`/api/positions/market/${selectedPosition.market}/code/${selectedPosition.code}`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(positions => {
+        const trades = positions.flatMap(pos => pos.trades ?? [])
+        setPositionTrades({ data: trades, loading: false, error: null })
+      })
+      .catch(err => setPositionTrades({ data: [], loading: false, error: err.message }))
+  }, [selectedPosition])
 
   if (state.status === 'loading') return <p className="page">Loading…</p>
 
@@ -54,12 +100,33 @@ export default function App() {
 
   return (
     <>
-      <nav className="nav">
-        <span className={`nav-item ${page === 'trades' ? 'active' : ''}`} onClick={() => setPage('trades')}>Trades</span>
-        <span className={`nav-item ${page === 'positions' ? 'active' : ''}`} onClick={() => setPage('positions')}>Positions</span>
-        <span className={`nav-item ${page === 'prices' ? 'active' : ''}`} onClick={() => setPage('prices')}>Prices</span>
-        <span className={`nav-item ${page === 'valuations' ? 'active' : ''}`} onClick={() => setPage('valuations')}>Valuations</span>
-        <span className={`nav-item ${page === 'depth' ? 'active' : ''}`} onClick={() => setPage('depth')}>Market Depth</span>
+      <nav className="nav" ref={navRef}>
+        {NAV_ITEMS.map(item => (
+          <div key={item.key} className="nav-dropdown-wrapper">
+            <span
+              className={`nav-item ${page === item.key ? 'active' : ''}`}
+              onClick={() => {
+                handleSetPage(item.key)
+                setOpenMenu(openMenu === item.key ? null : item.key)
+              }}
+            >
+              {item.label}
+            </span>
+            {openMenu === item.key && (
+              <div className="nav-dropdown">
+                {item.subItems.map(sub => (
+                  <span
+                    key={sub}
+                    className={`nav-dropdown-item ${subPage === sub ? 'active' : ''}`}
+                    onClick={() => { setSubPage(sub); setOpenMenu(null) }}
+                  >
+                    {sub}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
@@ -78,25 +145,34 @@ export default function App() {
                     <th>Side</th>
                     <th>Size</th>
                     <th>Price</th>
+                    <th>Value</th>
+                    <th>Commission</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {state.trades.map((t, i) => (
-                    <tr key={t.id ?? i}>
-                      <td>{t.tradeDate ?? t.date ?? '—'}</td>
-                      <td>{t.code}</td>
-                      <td>{t.side}</td>
-                      <td>{t.size}</td>
-                      <td>{t.price}</td>
-                    </tr>
-                  ))}
+                  {state.trades.map((t, i) => {
+                    const commission = t.cost != null && t.price != null && t.size != null
+                      ? (parseFloat(t.cost) - parseFloat(t.price) * parseFloat(t.size)).toFixed(2)
+                      : '—'
+                    return (
+                      <tr key={t.id ?? i}>
+                        <td>{t.tradeDate ?? t.date ?? '—'}</td>
+                        <td>{t.code}</td>
+                        <td>{t.side}</td>
+                        <td>{t.size}</td>
+                        <td>{t.price}</td>
+                        <td>{t.cost ?? '—'}</td>
+                        <td>{commission}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}
           </>
         )}
 
-        {page === 'positions' && (
+        {page === 'positions' && !selectedPosition && (
           <>
             <h1>Open Positions</h1>
             {positions.loading ? (
@@ -122,7 +198,12 @@ export default function App() {
                   {positions.data.map((p, i) => (
                     <tr key={`${p.market}-${p.code}-${i}`}>
                       <td>{p.market}</td>
-                      <td>{p.code}</td>
+                      <td
+                        className="code-link"
+                        onClick={() => setSelectedPosition({ market: p.market, code: p.code })}
+                      >
+                        {p.code}
+                      </td>
                       <td>{p.side}</td>
                       <td>{p.size}</td>
                       <td>{p.averagePrice}</td>
@@ -130,6 +211,52 @@ export default function App() {
                       <td>{p.openDate ?? '—'}</td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+
+        {page === 'positions' && selectedPosition && (
+          <>
+            <button className="back-btn" onClick={() => setSelectedPosition(null)}>← Back</button>
+            <h1>Trades — {selectedPosition.code}</h1>
+            {positionTrades.loading ? (
+              <p>Loading…</p>
+            ) : positionTrades.error ? (
+              <p className="error">Error: {positionTrades.error}</p>
+            ) : positionTrades.data.length === 0 ? (
+              <p className="empty">No trades found.</p>
+            ) : (
+              <table className="trades-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Code</th>
+                    <th>Side</th>
+                    <th>Size</th>
+                    <th>Price</th>
+                    <th>Value</th>
+                    <th>Commission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {positionTrades.data.map((t, i) => {
+                    const commission = t.cost != null && t.price != null && t.size != null
+                      ? (parseFloat(t.cost) - parseFloat(t.price) * parseFloat(t.size)).toFixed(2)
+                      : '—'
+                    return (
+                    <tr key={t.id ?? i}>
+                      <td>{t.tradeDate ?? t.date ?? '—'}</td>
+                      <td>{t.code}</td>
+                      <td>{t.side}</td>
+                      <td>{t.size}</td>
+                      <td>{t.price}</td>
+                      <td>{t.cost ?? '—'}</td>
+                      <td>{commission}</td>
+                    </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}

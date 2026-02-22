@@ -64,7 +64,7 @@ class TradeControllerTest {
                 .date(LocalDate.of(2024, 3, 15))
                 .code("AAPL")
                 .market("NYSE")
-                .size(new BigDecimal("100"))
+                .size(100)
                 .price(new BigDecimal("172.50"))
                 .cost(new BigDecimal("17250.00"))
                 .side(Side.BUY)

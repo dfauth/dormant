@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import static io.github.dfauth.trycatch.Utils.bd;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PositionServiceTest {
@@ -17,14 +18,17 @@ class PositionServiceTest {
     private final PositionService service = new PositionService(null);
 
     private Trade trade(LocalDate date, Side side, String size, String price) {
+        int s = Integer.parseInt(size);
+        BigDecimal p = new BigDecimal(price);
+        BigDecimal c = p.multiply(bd(s));
         return Trade.builder()
                 .date(date)
                 .market("ASX")
                 .code("BHP")
                 .side(side)
-                .size(new BigDecimal(size))
-                .price(new BigDecimal(price))
-                .cost(BigDecimal.ZERO)
+                .size(s)
+                .price(p)
+                .cost(c)
                 .confirmationId("conf-" + date + "-" + side + "-" + size)
                 .build();
     }
@@ -42,13 +46,13 @@ class PositionServiceTest {
         Position p = positions.get(0);
         assertTrue(p.isOpen());
         assertEquals(Side.BUY, p.getSide());
-        assertEquals(0, new BigDecimal("150").compareTo(p.getSize()));
+        assertEquals(150, p.getSize());
         // avg price = (100*10 + 50*12) / 150 = 1600/150 ≈ 10.6667
-        BigDecimal expectedAvg = new BigDecimal("1600").divide(new BigDecimal("150"), java.math.MathContext.DECIMAL128);
-        assertEquals(0, expectedAvg.compareTo(p.getAveragePrice()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(p.getRealisedPnl()));
+        double expectedAvg = 1600.0 / 150.0;
+        assertEquals(expectedAvg, p.getAveragePrice().doubleValue(), 1e-2);
+        assertEquals(0, p.getRealisedPnl().doubleValue(), 1e-9);
         assertEquals(LocalDate.of(2024, 1, 1), p.getOpenDate());
-        assertNull(p.getCloseDate());
+        assertTrue(p.getCloseDate().isEmpty());
         assertEquals(2, p.getTrades().size());
     }
 
@@ -65,11 +69,12 @@ class PositionServiceTest {
         Position p = positions.get(0);
         assertFalse(p.isOpen());
         assertEquals(Side.BUY, p.getSide());
-        assertEquals(0, BigDecimal.ZERO.compareTo(p.getSize()));
+        assertEquals(0, p.getSize());
         // PnL = (15 - 10) * 100 = 500
-        assertEquals(0, new BigDecimal("500").compareTo(p.getRealisedPnl()));
+        assertEquals(10.00, p.getAveragePrice().doubleValue(), 1e-9);
+        assertEquals(500.0, p.getRealisedPnl().doubleValue(), 1e-9);
         assertEquals(LocalDate.of(2024, 1, 1), p.getOpenDate());
-        assertEquals(LocalDate.of(2024, 2, 1), p.getCloseDate());
+        assertEquals(LocalDate.of(2024, 2, 1), p.getCloseDate().get());
     }
 
     @Test
@@ -105,14 +110,14 @@ class PositionServiceTest {
 
         Position first = positions.get(0);
         assertFalse(first.isOpen());
-        assertEquals(0, new BigDecimal("500").compareTo(first.getRealisedPnl()));
-        assertEquals(LocalDate.of(2024, 2, 1), first.getCloseDate());
+        assertEquals(500, first.getRealisedPnl().doubleValue(), 1e-9);
+        assertEquals(LocalDate.of(2024, 2, 1), first.getCloseDate().get());
 
         Position second = positions.get(1);
         assertTrue(second.isOpen());
-        assertEquals(0, new BigDecimal("50").compareTo(second.getSize()));
+        assertEquals(50, second.getSize());
         assertEquals(0, new BigDecimal("20.00").compareTo(second.getAveragePrice()));
-        assertNull(second.getCloseDate());
+        assertTrue(second.getCloseDate().isEmpty());
     }
 
     @Test
@@ -127,10 +132,10 @@ class PositionServiceTest {
         assertEquals(1, positions.size());
         Position p = positions.get(0);
         assertTrue(p.isOpen());
-        assertEquals(0, new BigDecimal("40").compareTo(p.getSize()));
+        assertEquals(40, p.getSize());
         // Realised PnL from partial close: (12 - 10) * 60 = 120
-        assertEquals(0, new BigDecimal("120").compareTo(p.getRealisedPnl()));
-        assertEquals(0, new BigDecimal("10.00").compareTo(p.getAveragePrice()));
+        assertEquals(120, p.getRealisedPnl().doubleValue(), 1e-9);
+        assertEquals(10.00, p.getAveragePrice().doubleValue(), 1e-9);
     }
 
     @Test
@@ -158,11 +163,11 @@ class PositionServiceTest {
         assertEquals(2, stats.getTotalClosedPositions());
         assertEquals(2, stats.getWins());
         assertEquals(0, stats.getLosses());
-        assertEquals(0, new BigDecimal("100").compareTo(stats.getWinRate()));
+        assertEquals(1.0, stats.getWinRate(), 1e-9);
         // averageWin = (500 + 1000) / 2 = 750
         assertEquals(0, new BigDecimal("750").compareTo(stats.getAverageWin()));
         assertEquals(0, BigDecimal.ZERO.compareTo(stats.getAverageLoss()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getRiskRewardRatio()));
+        assertEquals(0, stats.getRiskRewardRatio(), 1e-9);
         // expectancy = 1.0 * 750 + 0.0 * 0 = 750
         assertEquals(0, new BigDecimal("750").compareTo(stats.getExpectancy()));
     }
@@ -185,15 +190,15 @@ class PositionServiceTest {
         assertEquals(1, stats.getWins());
         assertEquals(1, stats.getLosses());
         // winRate = 50%
-        assertEquals(0, new BigDecimal("50").compareTo(stats.getWinRate()));
+        assertEquals(0.5, stats.getWinRate(), 1e-9);
         // averageWin = 1000
         assertEquals(0, new BigDecimal("1000").compareTo(stats.getAverageWin()));
         // averageLoss = -500
         assertEquals(0, new BigDecimal("-500").compareTo(stats.getAverageLoss()));
         // riskRewardRatio = 1000 / 500 = 2
-        assertEquals(0, new BigDecimal("2").compareTo(stats.getRiskRewardRatio()));
+        assertEquals(2 , stats.getRiskRewardRatio(), 1e-9);
         // expectancy = 0.5 * 1000 + 0.5 * (-500) = 500 - 250 = 250
-        assertEquals(0, new BigDecimal("250").compareTo(stats.getExpectancy()));
+        assertEquals(250, stats.getExpectancy().doubleValue(), 1e-9);
     }
 
     @Test
@@ -208,11 +213,11 @@ class PositionServiceTest {
         assertEquals(0, stats.getTotalClosedPositions());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getLosses());
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getWinRate()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getAverageWin()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getAverageLoss()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getRiskRewardRatio()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getExpectancy()));
+        assertEquals(0, stats.getWinRate(), 1e-9);
+        assertEquals(0, stats.getAverageWin().doubleValue(), 1e-9);
+        assertEquals(0, stats.getAverageLoss().doubleValue(), 1e-9);
+        assertEquals(0, stats.getRiskRewardRatio(), 1e-9);
+        assertEquals(0, stats.getExpectancy().doubleValue(), 1e-9);
     }
 
     @Test
@@ -232,13 +237,13 @@ class PositionServiceTest {
         assertEquals(2, stats.getTotalClosedPositions());
         assertEquals(0, stats.getWins());
         assertEquals(2, stats.getLosses());
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getWinRate()));
+        assertEquals(0, stats.getWinRate(), 1e-9);
         assertEquals(0, BigDecimal.ZERO.compareTo(stats.getAverageWin()));
         // averageLoss = (-500 + -800) / 2 = -650
         assertEquals(0, new BigDecimal("-650").compareTo(stats.getAverageLoss()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getRiskRewardRatio()));
+        assertEquals(0, stats.getRiskRewardRatio(), 1e-9);
         // expectancy = 0 * 0 + 1.0 * (-650) = -650
-        assertEquals(0, new BigDecimal("-650").compareTo(stats.getExpectancy()));
+        assertEquals(-650, stats.getExpectancy().doubleValue(), 1e-9);
     }
 
     @Test
@@ -255,7 +260,7 @@ class PositionServiceTest {
         assertEquals(1, stats.getTotalClosedPositions());
         assertEquals(0, stats.getWins());
         assertEquals(1, stats.getLosses());
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getWinRate()));
+        assertEquals(0, stats.getWinRate(), 1e-9);
     }
 
     @Test
@@ -295,13 +300,13 @@ class PositionServiceTest {
         assertEquals(2, stats.getTotalClosedPositions());
         assertEquals(1, stats.getWins());
         assertEquals(1, stats.getLosses());
-        assertEquals(0, new BigDecimal("50").compareTo(stats.getWinRate()));
-        assertEquals(0, new BigDecimal("1000").compareTo(stats.getAverageWin()));
-        assertEquals(0, new BigDecimal("-800").compareTo(stats.getAverageLoss()));
+        assertEquals(0.5, stats.getWinRate(), 1e-9);
+        assertEquals(1000, stats.getAverageWin().doubleValue(), 1e-9);
+        assertEquals(-800, stats.getAverageLoss().doubleValue(), 1e-9);
         // riskRewardRatio = 1000 / 800 = 1.25
-        assertEquals(0, new BigDecimal("1.25").compareTo(stats.getRiskRewardRatio()));
+        assertEquals(1.25, stats.getRiskRewardRatio(), 1e-9);
         // expectancy = 0.5 * 1000 + 0.5 * (-800) = 100
-        assertEquals(0, new BigDecimal("100").compareTo(stats.getExpectancy()));
+        assertEquals(100, stats.getExpectancy().doubleValue(), 1e-9);
     }
 
     @Test
@@ -325,14 +330,14 @@ class PositionServiceTest {
         assertEquals(2, stats.getWins());
         assertEquals(1, stats.getLosses());
         // winRate = 2/3 * 100 ≈ 66.6666666667
-        assertTrue(stats.getWinRate().compareTo(new BigDecimal("66")) > 0);
-        assertTrue(stats.getWinRate().compareTo(new BigDecimal("67")) < 0);
+        assertTrue(stats.getWinRate()>0.66);
+        assertTrue(stats.getWinRate() < 67);
         // averageWin = (200 + 300) / 2 = 250
         assertEquals(0, new BigDecimal("250").compareTo(stats.getAverageWin()));
         // averageLoss = -200
-        assertEquals(0, new BigDecimal("-200").compareTo(stats.getAverageLoss()));
+        assertEquals(-200, stats.getAverageLoss().doubleValue(), 1e-9);
         // riskRewardRatio = 250 / 200 = 1.25
-        assertEquals(0, new BigDecimal("1.25").compareTo(stats.getRiskRewardRatio()));
+        assertEquals(1.25, stats.getRiskRewardRatio(), 1e-9);
     }
 
     @Test
@@ -342,7 +347,7 @@ class PositionServiceTest {
         assertEquals(0, stats.getTotalClosedPositions());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getLosses());
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getWinRate()));
-        assertEquals(0, BigDecimal.ZERO.compareTo(stats.getExpectancy()));
+        assertEquals(0, stats.getWinRate(), 1e-9);
+        assertEquals(0, stats.getExpectancy().doubleValue(), 1e-9);
     }
 }

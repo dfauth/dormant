@@ -5,6 +5,7 @@ import io.github.dfauth.trade.model.Position;
 import io.github.dfauth.trade.model.Side;
 import io.github.dfauth.trade.model.Trade;
 import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.trade.utils.PositionCollector;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,9 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
+
+import static io.github.dfauth.trycatch.Utils.bd;
 
 @Service
 @RequiredArgsConstructor
@@ -26,15 +30,14 @@ public class PositionService {
     }
 
     public List<Position> getOpenPositions(Long userId) {
-        List<Object[]> pairs = tradeRepository.findDistinctMarketAndCodeByUserId(userId);
-        List<Position> open = new ArrayList<>();
-        for (Object[] pair : pairs) {
-            String market = (String) pair[0];
-            String code = (String) pair[1];
-            List<Position> positions = getPositions(userId, market, code);
-            positions.stream().filter(Position::isOpen).forEach(open::add);
-        }
-        return open;
+        return getPositions(userId, Position::isOpen);
+    }
+
+    public List<Position> getPositions(long userId, Predicate<Position> p) {
+        return tradeRepository.findByUserId(userId).stream()
+                .collect(new PositionCollector()).stream()
+                .filter(_p -> p.test(_p))
+                .toList();
     }
 
     public List<Position> getPositionsByMarket(Long userId, String market) {
@@ -69,10 +72,10 @@ public class PositionService {
                     .totalClosedPositions(0)
                     .wins(0)
                     .losses(0)
-                    .winRate(BigDecimal.ZERO)
+                    .winRate(0.0)
                     .averageWin(BigDecimal.ZERO)
                     .averageLoss(BigDecimal.ZERO)
-                    .riskRewardRatio(BigDecimal.ZERO)
+                    .riskRewardRatio(0.0)
                     .expectancy(BigDecimal.ZERO)
                     .build();
         }
@@ -84,12 +87,10 @@ public class PositionService {
                 .filter(p -> p.getRealisedPnl().compareTo(BigDecimal.ZERO) <= 0)
                 .toList();
 
-        int wins = winners.size();
-        int losses = losers.size();
+        double wins = winners.size();
+        double losses = losers.size();
 
-        BigDecimal winRate = new BigDecimal(wins)
-                .divide(new BigDecimal(total), 10, RoundingMode.HALF_UP)
-                .multiply(new BigDecimal("100"));
+        double winRate = wins / total;
 
         BigDecimal averageWin = winners.isEmpty() ? BigDecimal.ZERO
                 : winners.stream().map(Position::getRealisedPnl).reduce(BigDecimal.ZERO, BigDecimal::add)
@@ -99,8 +100,8 @@ public class PositionService {
                 : losers.stream().map(Position::getRealisedPnl).reduce(BigDecimal.ZERO, BigDecimal::add)
                 .divide(new BigDecimal(losses), 10, RoundingMode.HALF_UP);
 
-        BigDecimal riskRewardRatio = averageLoss.compareTo(BigDecimal.ZERO) == 0 ? BigDecimal.ZERO
-                : averageWin.divide(averageLoss.abs(), 10, RoundingMode.HALF_UP);
+        double riskRewardRatio = averageLoss.compareTo(BigDecimal.ZERO) == 0 ? 0.0
+                : averageWin.divide(averageLoss.abs(), 10, RoundingMode.HALF_UP).doubleValue();
 
         BigDecimal lossRate = new BigDecimal(losses)
                 .divide(new BigDecimal(total), 10, RoundingMode.HALF_UP);
@@ -111,8 +112,8 @@ public class PositionService {
 
         return PerformanceStats.builder()
                 .totalClosedPositions(total)
-                .wins(wins)
-                .losses(losses)
+                .wins((int)wins)
+                .losses((int)losses)
                 .winRate(winRate)
                 .averageWin(averageWin)
                 .averageLoss(averageLoss)
@@ -128,7 +129,7 @@ public class PositionService {
         }
 
         Position current = null;
-        BigDecimal runningSize = BigDecimal.ZERO;
+        int runningSize = 0;
         BigDecimal totalCost = BigDecimal.ZERO; // total cost basis for average price
         BigDecimal realisedPnl = BigDecimal.ZERO;
 
@@ -138,11 +139,9 @@ public class PositionService {
                 current = Position.builder()
                         .market(trade.getMarket())
                         .code(trade.getCode())
-                        .side(trade.getSide())
-                        .openDate(trade.getDate())
                         .trades(new ArrayList<>())
                         .build();
-                runningSize = BigDecimal.ZERO;
+                runningSize = 0;
                 totalCost = BigDecimal.ZERO;
                 realisedPnl = BigDecimal.ZERO;
             }
@@ -152,43 +151,34 @@ public class PositionService {
 
             if (adding) {
                 // Adding to position
-                totalCost = totalCost.add(trade.getSize().multiply(trade.getPrice()));
-                runningSize = runningSize.add(trade.getSize());
+                totalCost = totalCost.add(trade.getPrice()).multiply(bd(trade.getSize()));
+                runningSize += trade.getSize();
             } else {
                 // Reducing position
-                BigDecimal avgPrice = totalCost.divide(runningSize, MathContext.DECIMAL128);
+                BigDecimal avgPrice = totalCost.divide(bd(runningSize), MathContext.DECIMAL128);
                 BigDecimal pnl;
                 if (current.getSide() == Side.BUY) {
-                    pnl = trade.getPrice().subtract(avgPrice).multiply(trade.getSize());
+                    pnl = trade.getPrice().subtract(avgPrice).multiply(bd(trade.getSize()));
                 } else {
-                    pnl = avgPrice.subtract(trade.getPrice()).multiply(trade.getSize());
+                    pnl = avgPrice.subtract(trade.getPrice()).multiply(bd(trade.getSize()));
                 }
                 realisedPnl = realisedPnl.add(pnl);
-                runningSize = runningSize.subtract(trade.getSize());
-                totalCost = runningSize.compareTo(BigDecimal.ZERO) == 0
+                runningSize = runningSize - trade.getSize();
+                totalCost = runningSize == 0
                         ? BigDecimal.ZERO
-                        : avgPrice.multiply(runningSize);
+                        : avgPrice.multiply(bd(runningSize));
             }
 
-            BigDecimal avgEntryPrice = runningSize.compareTo(BigDecimal.ZERO) == 0
+            BigDecimal avgEntryPrice = runningSize == 0
                     ? BigDecimal.ZERO
-                    : totalCost.divide(runningSize, MathContext.DECIMAL128);
+                    : totalCost.divide(bd(runningSize), MathContext.DECIMAL128);
 
-            if (runningSize.compareTo(BigDecimal.ZERO) == 0) {
+            if (runningSize == 0) {
                 // Position closed
-                current.setSize(BigDecimal.ZERO);
-                current.setAveragePrice(avgEntryPrice);
-                current.setRealisedPnl(realisedPnl);
-                current.setCloseDate(trade.getDate());
-                current.setOpen(false);
                 positions.add(current);
                 current = null;
             } else {
                 // Position still open
-                current.setSize(runningSize);
-                current.setAveragePrice(avgEntryPrice);
-                current.setRealisedPnl(realisedPnl);
-                current.setOpen(true);
             }
         }
 

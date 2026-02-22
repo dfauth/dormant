@@ -45,6 +45,13 @@ public class PositionController {
         return positionService.getOpenPositions(resolveUserId(authentication));
     }
 
+    @Operation(summary = "Get all closed positions", description = "Returns all closed positions across all markets for the authenticated user.")
+    @ApiResponse(responseCode = "200", description = "List of closed positions")
+    @GetMapping("/closed")
+    public List<Position> getClosedPositions(Authentication authentication) {
+        return positionService.getPositions(resolveUserId(authentication), Position::isClosed);
+    }
+
     @Operation(summary = "Get open positions by market", description = "Returns open positions in the specified market for the authenticated user.")
     @ApiResponse(responseCode = "200", description = "List of open positions in the market")
     @GetMapping("/market/{market}")

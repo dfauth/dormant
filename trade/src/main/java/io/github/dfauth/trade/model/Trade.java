@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import static io.github.dfauth.trycatch.Utils.bd;
+
 @Entity
 @Table(name = "trades")
 @Data
@@ -38,7 +40,7 @@ public class Trade {
     private Side side;
 
     @Column(nullable = false)
-    private BigDecimal size;
+    private int size;
 
     @Column(nullable = false, precision = 19, scale = 6)
     private BigDecimal price;
@@ -52,4 +54,7 @@ public class Trade {
     @Column(nullable = true, length = Integer.MAX_VALUE)
     private String notes;
 
+    public BigDecimal getCommission() {
+        return cost.subtract(price.multiply(bd(size)));
+    }
 }
