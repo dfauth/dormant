@@ -115,7 +115,7 @@ export default function App() {
     if (page !== 'positions' || state.status !== 'authenticated') return
 
     setPositions(p => ({ ...p, loading: true, error: null }))
-    fetch('/api/positions', { credentials: 'include' })
+    fetch('/api/positions/open', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
