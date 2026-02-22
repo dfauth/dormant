@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.PerformanceStats;
 import io.github.dfauth.trade.model.Position;
 import io.github.dfauth.trade.service.PositionService;
@@ -8,12 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/positions")
@@ -30,8 +29,11 @@ public class PositionController extends BaseController {
     @Operation(summary = "Get all open positions", description = "Returns all open positions across all markets for the authenticated user.")
     @ApiResponse(responseCode = "200", description = "List of open positions")
     @GetMapping
-    public List<Position> getOpenPositions() {
-        return authorize(u -> positionService.getOpenPositions(u.getId()));
+    public List<Position> getPositions(@Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
+                                       @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
+                                       @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
+        return authorize(u -> positionService.getPositions(u.getId(), p -> true));
     }
 
     @Operation(summary = "Get all closed positions", description = "Returns all closed positions across all markets for the authenticated user.")
