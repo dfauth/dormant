@@ -32,6 +32,14 @@ public class UserService {
                         .build()));
     }
 
+    public Optional<User> findById(OidcUser oidcUser) {
+        return findById(oidcUser.getSubject());
+    }
+
+    public Optional<User> findById(Jwt jwt) {
+        return findById(jwt.getSubject());
+    }
+
     public Optional<User> findById(String googleId) {
         return userRepository.findByGoogleId(googleId);
     }
