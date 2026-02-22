@@ -5,12 +5,61 @@ import Valuations from './Valuations'
 import MarketDepth from './MarketDepth'
 
 const NAV_ITEMS = [
-  { key: 'positions',  label: 'Positions',    subItems: ['open positions'] },
+  { key: 'positions',  label: 'Positions',    subItems: ['open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
   { key: 'prices',     label: 'Prices',       subItems: ['default'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
 ]
+
+function useSort(initialCol, initialDir = 'asc') {
+  const [sortCol, setSortCol] = useState(initialCol)
+  const [sortDir, setSortDir] = useState(initialDir)
+
+  function onSort(col) {
+    if (col === sortCol) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortCol(col)
+      setSortDir('asc')
+    }
+  }
+
+  function icon(col) {
+    if (col !== sortCol) return '↕'
+    return sortDir === 'asc' ? '↑' : '↓'
+  }
+
+  function sort(data, getVal) {
+    return [...data].sort((a, b) => {
+      const av = getVal(a, sortCol)
+      const bv = getVal(b, sortCol)
+      if (av == null && bv == null) return 0
+      if (av == null) return 1
+      if (bv == null) return -1
+      const cmp = typeof av === 'string' ? av.localeCompare(bv) : av < bv ? -1 : av > bv ? 1 : 0
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+  }
+
+  return { sortCol, onSort, icon, sort }
+}
+
+function positionVal(p, col) {
+  if (col === 'trades')       return p.trades?.length ?? 0
+  if (col === 'size')         return parseFloat(p.size ?? 0)
+  if (col === 'averagePrice') return parseFloat(p.averagePrice ?? 0)
+  if (col === 'realisedPnl')  return parseFloat(p.realisedPnl ?? 0)
+  return p[col] ?? ''
+}
+
+function SortTh({ label, col, sort }) {
+  return (
+    <th className="th-sortable" onClick={() => sort.onSort(col)}>
+      {label}<span className="th-sort-icon">{sort.icon(col)}</span>
+    </th>
+  )
+}
 
 export default function App() {
   const [state, setState] = useState({ status: 'loading', trades: [], error: null })
@@ -20,12 +69,20 @@ export default function App() {
   const [positions, setPositions] = useState({ data: [], loading: false, error: null })
   const [selectedPosition, setSelectedPosition] = useState(null)
   const [positionTrades, setPositionTrades] = useState({ data: [], loading: false, error: null })
+  const [selectedCode, setSelectedCode] = useState(null)
+  const [codePositions, setCodePositions] = useState({ data: [], loading: false, error: null })
+  const [closedPositions, setClosedPositions] = useState({ data: [], loading: false, error: null })
   const navRef = useRef(null)
+
+  const openSort   = useSort('openDate')
+  const closedSort = useSort('openDate')
+  const historySort = useSort('openDate')
 
   function handleSetPage(p) {
     setPage(p)
     setSubPage('default')
     setSelectedPosition(null)
+    setSelectedCode(null)
   }
 
   useEffect(() => {
@@ -83,6 +140,32 @@ export default function App() {
       .catch(err => setPositionTrades({ data: [], loading: false, error: err.message }))
   }, [selectedPosition])
 
+  useEffect(() => {
+    if (!selectedCode) return
+
+    setCodePositions({ data: [], loading: true, error: null })
+    fetch(`/api/positions/market/${selectedCode.market}/code/${selectedCode.code}`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(data => setCodePositions({ data, loading: false, error: null }))
+      .catch(err => setCodePositions({ data: [], loading: false, error: err.message }))
+  }, [selectedCode])
+
+  useEffect(() => {
+    if (page !== 'positions' || subPage !== 'closed positions' || state.status !== 'authenticated') return
+
+    setClosedPositions(p => ({ ...p, loading: true, error: null }))
+    fetch('/api/positions/closed', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(data => setClosedPositions({ data, loading: false, error: null }))
+      .catch(err => setClosedPositions({ data: [], loading: false, error: err.message }))
+  }, [page, subPage, state.status])
+
   if (state.status === 'loading') return <p className="page">Loading…</p>
 
   if (state.status === 'error') return <p className="page error">Error: {state.error}</p>
@@ -97,6 +180,36 @@ export default function App() {
       </div>
     )
   }
+
+  // Pre-compute position history rows so all derived fields are sortable
+  const historyRows = historySort.sort(
+    codePositions.data.map(p => {
+      const trades = p.trades ?? []
+      const exitSide = p.side === 'BUY' ? 'SELL' : 'BUY'
+      const purchaseValue = trades
+        .filter(t => t.side === p.side)
+        .reduce((sum, t) => sum + parseFloat(t.cost), 0)
+      const saleValue = trades
+        .filter(t => t.side === exitSide)
+        .reduce((sum, t) => sum + parseFloat(t.cost), 0)
+      const commission = trades.reduce((sum, t) =>
+        sum + (parseFloat(t.cost) - parseFloat(t.price) * parseFloat(t.size)), 0)
+      const pnl = parseFloat(p.realisedPnl ?? 0)
+      const returnPct = purchaseValue > 0 ? (pnl / purchaseValue * 100) : null
+      let cagr = null
+      if (!p.open && p.closeDate && p.openDate && returnPct !== null) {
+        const days = (new Date(p.closeDate) - new Date(p.openDate)) / 86400000
+        if (days > 0) cagr = (Math.pow(1 + returnPct / 100, 365 / days) - 1) * 100
+      }
+      return {
+        openDate: p.openDate, closeDate: p.closeDate,
+        purchaseValue, saleValue, commission, pnl,
+        returnPct, tradeCount: trades.length, cagr,
+        realisedPnl: p.realisedPnl,
+      }
+    }),
+    (r, col) => r[col] ?? (typeof r[col] === 'number' ? 0 : '')
+  )
 
   return (
     <>
@@ -172,7 +285,7 @@ export default function App() {
           </>
         )}
 
-        {page === 'positions' && !selectedPosition && (
+        {page === 'positions' && subPage !== 'closed positions' && !selectedPosition && !selectedCode && (
           <>
             <h1>Open Positions</h1>
             {positions.loading ? (
@@ -185,23 +298,21 @@ export default function App() {
               <table className="trades-table">
                 <thead>
                   <tr>
-                    <th>Market</th>
-                    <th>Code</th>
-                    <th>Side</th>
-                    <th>Size</th>
-                    <th>Avg Price</th>
-                    <th>Realised P&amp;L</th>
-                    <th>Opened</th>
+                    <SortTh label="Market"       col="market"       sort={openSort} />
+                    <SortTh label="Code"         col="code"         sort={openSort} />
+                    <SortTh label="Side"         col="side"         sort={openSort} />
+                    <SortTh label="Size"         col="size"         sort={openSort} />
+                    <SortTh label="Avg Price"    col="averagePrice" sort={openSort} />
+                    <SortTh label="Realised P&L" col="realisedPnl"  sort={openSort} />
+                    <SortTh label="Opened"       col="openDate"     sort={openSort} />
+                    <SortTh label="Trades"       col="trades"       sort={openSort} />
                   </tr>
                 </thead>
                 <tbody>
-                  {positions.data.map((p, i) => (
+                  {openSort.sort(positions.data, positionVal).map((p, i) => (
                     <tr key={`${p.market}-${p.code}-${i}`}>
                       <td>{p.market}</td>
-                      <td
-                        className="code-link"
-                        onClick={() => setSelectedPosition({ market: p.market, code: p.code })}
-                      >
+                      <td className="code-link" onClick={() => setSelectedCode({ market: p.market, code: p.code })}>
                         {p.code}
                       </td>
                       <td>{p.side}</td>
@@ -209,6 +320,102 @@ export default function App() {
                       <td>{p.averagePrice}</td>
                       <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
                       <td>{p.openDate ?? '—'}</td>
+                      <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code })}>
+                        {p.trades?.length ?? 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+
+        {page === 'positions' && subPage === 'closed positions' && !selectedPosition && !selectedCode && (
+          <>
+            <h1>Closed Positions</h1>
+            {closedPositions.loading ? (
+              <p>Loading…</p>
+            ) : closedPositions.error ? (
+              <p className="error">Error: {closedPositions.error}</p>
+            ) : closedPositions.data.length === 0 ? (
+              <p className="empty">No closed positions.</p>
+            ) : (
+              <table className="trades-table">
+                <thead>
+                  <tr>
+                    <SortTh label="Market"       col="market"       sort={closedSort} />
+                    <SortTh label="Code"         col="code"         sort={closedSort} />
+                    <SortTh label="Side"         col="side"         sort={closedSort} />
+                    <SortTh label="Size"         col="size"         sort={closedSort} />
+                    <SortTh label="Avg Price"    col="averagePrice" sort={closedSort} />
+                    <SortTh label="Realised P&L" col="realisedPnl"  sort={closedSort} />
+                    <SortTh label="Opened"       col="openDate"     sort={closedSort} />
+                    <SortTh label="Closed"       col="closeDate"    sort={closedSort} />
+                    <SortTh label="Trades"       col="trades"       sort={closedSort} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {closedSort.sort(closedPositions.data, positionVal).map((p, i) => (
+                    <tr key={`${p.market}-${p.code}-${i}`}>
+                      <td>{p.market}</td>
+                      <td className="code-link" onClick={() => setSelectedCode({ market: p.market, code: p.code })}>
+                        {p.code}
+                      </td>
+                      <td>{p.side}</td>
+                      <td>{p.size}</td>
+                      <td>{p.averagePrice}</td>
+                      <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
+                      <td>{p.openDate ?? '—'}</td>
+                      <td>{p.closeDate ?? '—'}</td>
+                      <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code })}>
+                        {p.trades?.length ?? 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+
+        {page === 'positions' && selectedCode && (
+          <>
+            <button className="back-btn" onClick={() => setSelectedCode(null)}>← Back</button>
+            <h1>Position History — {selectedCode.code}</h1>
+            {codePositions.loading ? (
+              <p>Loading…</p>
+            ) : codePositions.error ? (
+              <p className="error">Error: {codePositions.error}</p>
+            ) : historyRows.length === 0 ? (
+              <p className="empty">No position history found.</p>
+            ) : (
+              <table className="trades-table">
+                <thead>
+                  <tr>
+                    <SortTh label="Start"          col="openDate"      sort={historySort} />
+                    <SortTh label="End"            col="closeDate"     sort={historySort} />
+                    <SortTh label="Purchase Value" col="purchaseValue" sort={historySort} />
+                    <SortTh label="Sale Value"     col="saleValue"     sort={historySort} />
+                    <SortTh label="Realised P&L"   col="pnl"           sort={historySort} />
+                    <SortTh label="Commission"     col="commission"    sort={historySort} />
+                    <SortTh label="Return %"       col="returnPct"     sort={historySort} />
+                    <SortTh label="Trades"         col="tradeCount"    sort={historySort} />
+                    <SortTh label="CAGR"           col="cagr"          sort={historySort} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyRows.map((r, i) => (
+                    <tr key={i}>
+                      <td>{r.openDate ?? '—'}</td>
+                      <td>{r.closeDate ?? '—'}</td>
+                      <td>{r.purchaseValue.toFixed(2)}</td>
+                      <td>{r.saleValue > 0 ? r.saleValue.toFixed(2) : '—'}</td>
+                      <td className={r.pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}>{r.realisedPnl ?? '—'}</td>
+                      <td>{r.commission.toFixed(2)}</td>
+                      <td>{r.returnPct !== null ? r.returnPct.toFixed(2) + '%' : '—'}</td>
+                      <td>{r.tradeCount}</td>
+                      <td>{r.cagr !== null ? r.cagr.toFixed(2) + '%' : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -246,15 +453,15 @@ export default function App() {
                       ? (parseFloat(t.cost) - parseFloat(t.price) * parseFloat(t.size)).toFixed(2)
                       : '—'
                     return (
-                    <tr key={t.id ?? i}>
-                      <td>{t.tradeDate ?? t.date ?? '—'}</td>
-                      <td>{t.code}</td>
-                      <td>{t.side}</td>
-                      <td>{t.size}</td>
-                      <td>{t.price}</td>
-                      <td>{t.cost ?? '—'}</td>
-                      <td>{commission}</td>
-                    </tr>
+                      <tr key={t.id ?? i}>
+                        <td>{t.tradeDate ?? t.date ?? '—'}</td>
+                        <td>{t.code}</td>
+                        <td>{t.side}</td>
+                        <td>{t.size}</td>
+                        <td>{t.price}</td>
+                        <td>{t.cost ?? '—'}</td>
+                        <td>{commission}</td>
+                      </tr>
                     )
                   })}
                 </tbody>
