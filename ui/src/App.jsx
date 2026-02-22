@@ -3,9 +3,13 @@ import './App.css'
 import PriceSheet from './PriceSheet'
 import Valuations from './Valuations'
 import MarketDepth from './MarketDepth'
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  Cell, LabelList, ResponsiveContainer, ReferenceLine,
+} from 'recharts'
 
 const NAV_ITEMS = [
-  { key: 'positions',  label: 'Positions',    subItems: ['open positions', 'closed positions'] },
+  { key: 'positions',  label: 'Positions',    subItems: ['1Y performance', 'open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
   { key: 'prices',     label: 'Prices',       subItems: ['default'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
@@ -64,7 +68,7 @@ function SortTh({ label, col, sort }) {
 export default function App() {
   const [state, setState] = useState({ status: 'loading', trades: [], error: null })
   const [page, setPage] = useState('positions')
-  const [subPage, setSubPage] = useState('default')
+  const [subPage, setSubPage] = useState('1Y performance')
   const [openMenu, setOpenMenu] = useState(null)
   const [positions, setPositions] = useState({ data: [], loading: false, error: null })
   const [selectedPosition, setSelectedPosition] = useState(null)
@@ -72,6 +76,8 @@ export default function App() {
   const [selectedCode, setSelectedCode] = useState(null)
   const [codePositions, setCodePositions] = useState({ data: [], loading: false, error: null })
   const [closedPositions, setClosedPositions] = useState({ data: [], loading: false, error: null })
+  const [perfPositions, setPerfPositions] = useState({ data: [], loading: false, error: null })
+  const [perfTenor, setPerfTenor] = useState('1Y')
   const navRef = useRef(null)
 
   const openSort   = useSort('openDate')
@@ -166,6 +172,19 @@ export default function App() {
       .catch(err => setClosedPositions({ data: [], loading: false, error: err.message }))
   }, [page, subPage, state.status])
 
+  useEffect(() => {
+    if (page !== 'positions' || subPage !== '1Y performance' || state.status !== 'authenticated') return
+
+    setPerfPositions(p => ({ ...p, loading: true, error: null }))
+    fetch(`/api/positions?predicate=CLOSED&tenor=${perfTenor}`, { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(data => setPerfPositions({ data, loading: false, error: null }))
+      .catch(err => setPerfPositions({ data: [], loading: false, error: err.message }))
+  }, [page, subPage, state.status, perfTenor])
+
   if (state.status === 'loading') return <p className="page">Loading…</p>
 
   if (state.status === 'error') return <p className="page error">Error: {state.error}</p>
@@ -243,7 +262,7 @@ export default function App() {
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
-      <div className={page === 'prices' ? 'page-prices' : 'page'}>
+      <div className={page === 'prices' ? 'page-prices' : page === 'positions' && subPage === '1Y performance' ? 'page page-wide' : 'page'}>
         {page === 'trades' && (
           <>
             <h1>Trades — ASX</h1>
@@ -285,7 +304,7 @@ export default function App() {
           </>
         )}
 
-        {page === 'positions' && subPage !== 'closed positions' && !selectedPosition && !selectedCode && (
+        {page === 'positions' && subPage !== 'closed positions' && subPage !== '1Y performance' && !selectedPosition && !selectedCode && (
           <>
             <h1>Open Positions</h1>
             {positions.loading ? (
@@ -376,6 +395,110 @@ export default function App() {
                 </tbody>
               </table>
             )}
+          </>
+        )}
+
+        {page === 'positions' && subPage === '1Y performance' && !selectedPosition && !selectedCode && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+              <h1 style={{ margin: 0 }}>{perfTenor} Performance</h1>
+              <select
+                value={perfTenor}
+                onChange={e => setPerfTenor(e.target.value)}
+                className="tenor-select"
+              >
+                {['20Y', '10Y', '5Y', '2Y', '1Y', '6M', '3M'].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            {perfPositions.loading ? (
+              <p>Loading…</p>
+            ) : perfPositions.error ? (
+              <p className="error">Error: {perfPositions.error}</p>
+            ) : perfPositions.data.length === 0 ? (
+              <p className="empty">No closed positions in the last year.</p>
+            ) : (() => {
+              const chartData = perfPositions.data
+                .map(p => {
+                  const trades = p.trades ?? []
+                  const pnl = parseFloat(p.realisedPnl ?? 0)
+                  const purchaseValue = trades
+                    .filter(t => t.side === p.side)
+                    .reduce((sum, t) => sum + parseFloat(t.cost), 0)
+                  const returnPct = purchaseValue > 0 ? (pnl / purchaseValue * 100) : null
+                  let cagr = null
+                  if (p.closeDate && p.openDate && returnPct !== null) {
+                    const days = (new Date(p.closeDate) - new Date(p.openDate)) / 86400000
+                    if (days > 0) cagr = (Math.pow(1 + returnPct / 100, 365 / days) - 1) * 100
+                  }
+                  return {
+                    date: p.closeDate ?? '—',
+                    openDate: p.openDate ?? '—',
+                    code: p.code,
+                    pnl,
+                    returnPct,
+                    cagr,
+                  }
+                })
+                .sort((a, b) => a.date.localeCompare(b.date))
+              const scrollable = ['2Y', '5Y', '10Y', '20Y'].includes(perfTenor)
+              const chartWidth = scrollable ? Math.max(chartData.length * 40, 900) : '100%'
+              return (
+              <div style={{ overflowX: scrollable ? 'auto' : 'visible' }}>
+                <div style={{ width: chartWidth }}>
+                <ResponsiveContainer width="100%" height={560}>
+                  <BarChart data={chartData} margin={{ top: 28, right: 24, bottom: 64, left: 64 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
+                    <XAxis
+                      dataKey="date"
+                      stroke="#aaa"
+                      tick={{ fontSize: 11, fill: '#aaa' }}
+                      angle={-45}
+                      textAnchor="end"
+                      interval={0}
+                    />
+                    <YAxis
+                      stroke="#aaa"
+                      tick={{ fontSize: 11, fill: '#aaa' }}
+                      tickFormatter={v => v.toLocaleString()}
+                      label={{ value: 'Realised P&L', angle: -90, position: 'insideLeft', offset: -48, fill: '#aaa', fontSize: 12 }}
+                    />
+                    <ReferenceLine y={0} stroke="#555" />
+                    <Tooltip content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null
+                      const d = payload[0].payload
+                      const rows = [
+                        ['Code',         d.code],
+                        ['Start',        d.openDate],
+                        ['End',          d.date],
+                        ['Realised P&L', d.pnl.toFixed(2)],
+                        ['Return',       d.returnPct !== null ? d.returnPct.toFixed(2) + '%' : '—'],
+                        ['CAGR',         d.cagr !== null ? d.cagr.toFixed(2) + '%' : '—'],
+                      ]
+                      return (
+                        <div style={{ background: '#1e1e38', border: '1px solid #2e2e50', borderRadius: 6, padding: '0.6rem 0.9rem', fontSize: 13, color: '#e0e0f0', lineHeight: 1.7 }}>
+                          {rows.map(([label, val]) => (
+                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '1.5rem' }}>
+                              <span style={{ color: '#aaa' }}>{label}</span>
+                              <span style={{ fontWeight: 500 }}>{val}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }} />
+                    <Bar dataKey="pnl" radius={[3, 3, 0, 0]}>
+                      {chartData.map((entry, i) => (
+                        <Cell key={i} fill={entry.pnl >= 0 ? '#22c55e' : '#ef4444'} />
+                      ))}
+                      <LabelList dataKey="code" position="top" style={{ fontSize: 10, fill: '#aaa' }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                </div>
+              </div>
+              )
+            })()}
           </>
         )}
 

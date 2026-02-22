@@ -364,6 +364,23 @@ td.consensus-strong-sell {
   background: #d1d5db;
 }
 
+/* ---------- Tenor select ---------- */
+
+.tenor-select {
+  background: #1e1e38;
+  color: #e0e0f0;
+  border: 1px solid #2e2e50;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.tenor-select:focus {
+  outline: none;
+  border-color: #4f46e5;
+}
+
 /* ---------- Market Depth ---------- */
 
 .depth-code-link {
