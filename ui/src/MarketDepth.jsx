@@ -90,20 +90,25 @@ function DepthTable({ data, columns, onCodeClick }) {
   )
 }
 
+const TENOR_OPTIONS = ['1D', '3D', '5D', '1M']
+const DEFAULT_TENOR = '3D'
+
 export default function MarketDepth() {
   const [summary, setSummary] = useState({ data: [], loading: true, error: null })
   const [selectedCode, setSelectedCode] = useState(null)
   const [detail, setDetail] = useState({ data: [], loading: false, error: null })
+  const [tenor, setTenor] = useState(DEFAULT_TENOR)
 
   useEffect(() => {
-    fetch('/api/depth/recent', { credentials: 'include' })
+    setSummary(s => ({ ...s, loading: true, error: null }))
+    fetch(`/api/depth/recent?tenor=${tenor}`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
       .then(data => setSummary({ data, loading: false, error: null }))
       .catch(err => setSummary({ data: [], loading: false, error: err.message }))
-  }, [])
+  }, [tenor])
 
   useEffect(() => {
     if (!selectedCode) return
@@ -139,9 +144,20 @@ export default function MarketDepth() {
 
   return (
     <>
-      <h1>Market Depth — Last 3 Days</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+        <h1 style={{ margin: 0 }}>Market Depth — Last {tenor}</h1>
+        <select
+          value={tenor}
+          onChange={e => setTenor(e.target.value)}
+          className="tenor-select"
+        >
+          {TENOR_OPTIONS.map(t => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </div>
       {summary.data.length === 0 ? (
-        <p className="empty">No market depth data for the last 3 days.</p>
+        <p className="empty">No market depth data for the last {tenor}.</p>
       ) : (
         <DepthTable data={summary.data} columns={COLUMNS} onCodeClick={setSelectedCode} />
       )}
