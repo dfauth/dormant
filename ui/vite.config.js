@@ -12,4 +12,17 @@ export default defineConfig({
       '/logout': 'http://localhost:8081',
     },
   },
+  test: {
+    environment: 'jsdom',
+    environmentOptions: { url: 'http://localhost' },
+    setupFiles: ['./src/test/setup.js'],
+    globals: true,
+    css: false,
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{js,jsx}'],
+      exclude: ['src/test/**'],
+      reporter: ['text', 'lcov'],
+    },
+  },
 })

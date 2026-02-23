@@ -334,6 +334,17 @@ td.consensus-strong-sell {
   overflow: hidden;
 }
 
+.sheet-save-status {
+  font-size: 0.8rem;
+  color: #6b7280;
+  font-style: italic;
+  margin-left: 0.25rem;
+}
+
+.sheet-save-status--saved {
+  color: #16a34a;
+}
+
 /* ---------- Shared drill-down ---------- */
 
 .code-link {

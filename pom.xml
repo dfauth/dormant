@@ -13,6 +13,7 @@
         <module>dormant</module>
         <module>trade</module>
         <module>ta</module>
+        <module>ui</module>
     </modules>
 
     <properties>

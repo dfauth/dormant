@@ -5,6 +5,28 @@ import SheetsLocaleEnUS from '@univerjs/preset-sheets-core/locales/en-US'
 import '@univerjs/presets/lib/styles/preset-sheets-core.css'
 import '@univerjs/preset-sheets-core/lib/index.css'
 
+const SETTINGS_KEY = 'SPREADSHEET_CONFIG'
+const SAVE_DEBOUNCE_MS = 1500
+
+async function loadSpreadsheetConfig() {
+  try {
+    const res = await fetch(`/api/settings/${SETTINGS_KEY}`, { credentials: 'include' })
+    if (res.ok) return await res.json()
+  } catch {
+    // network error — proceed with default
+  }
+  return null
+}
+
+async function saveSpreadsheetConfig(snapshot) {
+  await fetch(`/api/settings/${SETTINGS_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(snapshot),
+  })
+}
+
 function parseFormula(value) {
   if (typeof value !== 'string') return null
   const m = value.match(/^=PRICES\((\w+),(\w+)(?:,(\w+))?\)$/i)
@@ -28,25 +50,86 @@ export default function PriceSheet() {
   const anchorRef = useRef(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [saveStatus, setSaveStatus] = useState(null) // null | 'saving' | 'saved'
 
   useEffect(() => {
+    let cancelled = false
+    const disposables = []
+    let saveTimer = null
+    let savedTimer = null
+
     // Create the container ourselves outside React's management so React
     // reconciliation can never touch the children UniverJS adds to it.
     const container = document.createElement('div')
     container.className = 'sheet-container'
     anchorRef.current.insertAdjacentElement('afterend', container)
 
-    const { univerAPI } = createUniver({
-      locale: LocaleType.EN_US,
-      locales: { [LocaleType.EN_US]: merge({}, SheetsLocaleEnUS) },
-      theme: defaultTheme,
-      presets: [UniverSheetsCorePreset({ container })],
-    })
-    univerAPI.createWorkbook({ name: 'Prices' })
-    univerRef.current = univerAPI
+    let univerAPI = null
+
+    // Debounced persist: exports the workbook snapshot and POSTs to user settings
+    const persist = () => {
+      clearTimeout(saveTimer)
+      clearTimeout(savedTimer)
+      if (!cancelled) setSaveStatus('saving')
+
+      saveTimer = setTimeout(async () => {
+        const workbook = univerAPI?.getActiveWorkbook()
+        if (!workbook || cancelled) return
+        try {
+          await saveSpreadsheetConfig(workbook.save())
+          if (!cancelled) {
+            setSaveStatus('saved')
+            savedTimer = setTimeout(() => {
+              if (!cancelled) setSaveStatus(null)
+            }, 2000)
+          }
+        } catch (err) {
+          console.error('Failed to persist spreadsheet config:', err)
+          if (!cancelled) setSaveStatus(null)
+        }
+      }, SAVE_DEBOUNCE_MS)
+    }
+
+    const init = async () => {
+      // Load saved config before creating the workbook so we can restore it
+      const savedConfig = await loadSpreadsheetConfig()
+      if (cancelled) return
+
+      const { univerAPI: api } = createUniver({
+        locale: LocaleType.EN_US,
+        locales: { [LocaleType.EN_US]: merge({}, SheetsLocaleEnUS) },
+        theme: defaultTheme,
+        presets: [UniverSheetsCorePreset({ container })],
+      })
+      univerAPI = api
+      univerRef.current = univerAPI
+
+      // Restore from saved snapshot, or create a blank workbook
+      univerAPI.createWorkbook(savedConfig ?? { name: 'Prices' })
+
+      // Listen for any sheet mutation (value edits, structural changes, formatting…)
+      // after a short settling delay so workbook initialisation doesn't trigger a save.
+      const listenTimer = setTimeout(() => {
+        if (cancelled) return
+        disposables.push(
+          univerAPI.addEvent(univerAPI.Event.CommandExecuted, ({ id }) => {
+            if (typeof id === 'string' && id.startsWith('sheet.mutation.')) {
+              persist()
+            }
+          })
+        )
+      }, 300)
+      disposables.push({ dispose: () => clearTimeout(listenTimer) })
+    }
+
+    init()
 
     return () => {
-      univerAPI.dispose()
+      cancelled = true
+      clearTimeout(saveTimer)
+      clearTimeout(savedTimer)
+      disposables.forEach(d => d.dispose())
+      if (univerAPI) univerAPI.dispose()
       container.remove()
       univerRef.current = null
     }
@@ -108,6 +191,8 @@ export default function PriceSheet() {
           Clear
         </button>
         {error && <span className="error">{error}</span>}
+        {saveStatus === 'saving' && <span className="sheet-save-status">Saving…</span>}
+        {saveStatus === 'saved' && <span className="sheet-save-status sheet-save-status--saved">Saved</span>}
       </div>
       {/* anchor: UniverJS container is inserted after this div by useEffect */}
       <div ref={anchorRef} style={{ display: 'none' }} />

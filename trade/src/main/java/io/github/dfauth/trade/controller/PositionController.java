@@ -57,7 +57,7 @@ public class PositionController extends BaseController {
                                        @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
         Optional<Predicate<Position>> dateRangePredicate = DateRange.resolve(tenor, startFrom, endAt)
                 .map(dr -> p ->
-                        (p.getOpenDate().isAfter(dr.start()) && p.getCloseDate().map(cd -> dr.end().isBefore(cd)).orElse(true))
+                        (p.getOpenDate().isAfter(dr.start()) && p.getCloseDate().map(cd -> dr.end().isAfter(cd)).orElse(true))
                 );
         Optional<Predicate<Position>> openClosePredicate = positionPredicate.map(_p -> (Predicate<Position>) _p);
         return authorize(u -> positionService.getPositions(u.getId(), or(Predicate::and, dateRangePredicate, openClosePredicate).orElse(always())));
