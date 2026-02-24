@@ -392,6 +392,52 @@ td.consensus-strong-sell {
   border-color: #4f46e5;
 }
 
+/* ---------- Reconciliation ---------- */
+
+.reconcile-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.reconcile-summary--ok {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.reconcile-summary--error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.trades-table tbody tr.reconcile-discrepancy td {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.trades-table tbody tr.reconcile-discrepancy-first td {
+  background: #fca5a5;
+  color: #7f1d1d;
+  font-weight: 600;
+}
+
+.reconcile-status--ok {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.reconcile-status--error {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 /* ---------- Market Depth ---------- */
 
 .depth-code-link {

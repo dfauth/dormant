@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { key: 'prices',     label: 'Prices',       subItems: ['default'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
+  { key: 'payments',   label: 'Payments',     subItems: ['reconciliation'] },
 ]
 
 function useSort(initialCol, initialDir = 'asc') {
@@ -79,6 +80,7 @@ export default function App() {
   const [closedPositions, setClosedPositions] = useState({ data: [], loading: false, error: null })
   const [perfPositions, setPerfPositions] = useState({ data: [], loading: false, error: null })
   const [perfTenor, setPerfTenor] = useState('1Y')
+  const [payments, setPayments] = useState({ data: [], loading: false, error: null })
   const navRef = useRef(null)
 
   const openSort   = useSort('openDate')
@@ -185,6 +187,18 @@ export default function App() {
       .then(data => setPerfPositions({ data, loading: false, error: null }))
       .catch(err => setPerfPositions({ data: [], loading: false, error: err.message }))
   }, [page, subPage, state.status, perfTenor])
+
+  useEffect(() => {
+    if (page !== 'payments' || state.status !== 'authenticated') return
+    setPayments(p => ({ ...p, loading: true, error: null }))
+    fetch('/api/payments', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(data => setPayments({ data, loading: false, error: null }))
+      .catch(err => setPayments({ data: [], loading: false, error: err.message }))
+  }, [page, state.status])
 
   if (state.status === 'loading') return <p className="page">Loading…</p>
 
@@ -603,6 +617,81 @@ export default function App() {
                 </tbody>
               </table>
             )}
+          </>
+        )}
+
+        {page === 'payments' && subPage === 'reconciliation' && (
+          <>
+            <h1>Payment Reconciliation</h1>
+            {payments.loading ? (
+              <p>Loading…</p>
+            ) : payments.error ? (
+              <p className="error">Error: {payments.error}</p>
+            ) : payments.data.length === 0 ? (
+              <p className="empty">No payments found.</p>
+            ) : (() => {
+              // For each entry i > 0, check: entries[i-1].balance - entries[i-1].value === entries[i].balance
+              const rows = payments.data.map((p, i, arr) => {
+                if (i === 0) return { ...p, expectedBalance: null, discrepancy: false }
+                const prev = arr[i - 1]
+                const expectedBalance = parseFloat(prev.balance) - parseFloat(prev.value)
+                const actualBalance = parseFloat(p.balance)
+                const discrepancy = Math.abs(expectedBalance - actualBalance) > 0.005
+                return { ...p, expectedBalance, discrepancy }
+              })
+              const discrepantRows = rows.filter(r => r.discrepancy)
+              const firstBadIdx = rows.findIndex(r => r.discrepancy)
+              return (
+                <>
+                  <div className={`reconcile-summary ${discrepantRows.length === 0 ? 'reconcile-summary--ok' : 'reconcile-summary--error'}`}>
+                    {discrepantRows.length === 0
+                      ? `✓ All ${rows.length} payments reconcile correctly.`
+                      : `⚠ ${discrepantRows.length} discrepanc${discrepantRows.length === 1 ? 'y' : 'ies'} found — first at ${rows[firstBadIdx].date ?? '—'}`
+                    }
+                  </div>
+                  <table className="trades-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Code</th>
+                        <th>Detail</th>
+                        <th>Value</th>
+                        <th>Balance</th>
+                        <th>Expected Balance</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, i) => {
+                        const rowClass = r.discrepancy
+                          ? (i === firstBadIdx ? 'reconcile-discrepancy-first' : 'reconcile-discrepancy')
+                          : ''
+                        return (
+                          <tr key={r.id ?? i} className={rowClass}>
+                            <td>{r.date ?? '—'}</td>
+                            <td>{r.transactionType}</td>
+                            <td>{r.code ?? '—'}</td>
+                            <td>{r.detail}</td>
+                            <td>{parseFloat(r.value).toFixed(2)}</td>
+                            <td>{parseFloat(r.balance).toFixed(2)}</td>
+                            <td>{r.expectedBalance !== null ? r.expectedBalance.toFixed(2) : '—'}</td>
+                            <td>
+                              {i === 0
+                                ? <span>—</span>
+                                : r.discrepancy
+                                  ? <span className="reconcile-status--error">⚠ Discrepancy</span>
+                                  : <span className="reconcile-status--ok">✓</span>
+                              }
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              )
+            })()}
           </>
         )}
 
