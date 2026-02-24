@@ -25,4 +25,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByUserIdAndCodeAndDateRange(@Param("userId") Long userId, @Param("code") String code, @Param("start") LocalDate start, @Param("end") LocalDate end);
 
     Optional<Payment> findByIdAndUserId(Long id, Long userId);
+
+    List<Payment> findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(Long userId, String code, TransactionType transactionType);
+
+    List<Payment> findByUserIdAndMarketAndTransactionTypeOrderByDateAsc(Long userId, String market, TransactionType transactionType);
 }

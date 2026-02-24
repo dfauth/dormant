@@ -1,9 +1,7 @@
 package io.github.dfauth.trade.service;
 
-import io.github.dfauth.trade.model.PerformanceStats;
-import io.github.dfauth.trade.model.Position;
-import io.github.dfauth.trade.model.Side;
-import io.github.dfauth.trade.model.Trade;
+import io.github.dfauth.trade.model.*;
+import io.github.dfauth.trade.repository.PaymentRepository;
 import io.github.dfauth.trade.repository.TradeRepository;
 import io.github.dfauth.trade.utils.PositionCollector;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +10,12 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static io.github.dfauth.trycatch.Utils.bd;
 
@@ -23,10 +24,14 @@ import static io.github.dfauth.trycatch.Utils.bd;
 public class PositionService {
 
     private final TradeRepository tradeRepository;
+    private final PaymentRepository paymentRepository;
 
     public List<Position> getPositions(Long userId, String market, String code) {
         List<Trade> trades = tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(userId, market, code);
-        return buildPositions(trades);
+        List<Position> positions = buildPositions(trades);
+        List<Payment> divs = paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(userId, market+":"+code, TransactionType.DIV);
+        assignDividends(positions, divs);
+        return positions;
     }
 
     public List<Position> getOpenPositions(Long userId) {
@@ -34,14 +39,27 @@ public class PositionService {
     }
 
     public List<Position> getPositions(long userId, Predicate<Position> p) {
-        return tradeRepository.findByUserId(userId).stream()
+        List<Position> filtered = tradeRepository.findByUserId(userId).stream()
                 .collect(new PositionCollector()).stream()
                 .filter(_p -> p.test(_p))
                 .toList();
+        List<Payment> allDivs = paymentRepository.findByUserIdAndTransactionTypeOrderByDateAsc(userId, TransactionType.DIV);
+        Map<String, List<Payment>> divsByKey = allDivs.stream()
+                .filter(d -> d.getCode() != null)
+                .collect(Collectors.groupingBy(Payment::getCode));
+        filtered.forEach(pos -> assignDividends(
+                List.of(pos),
+                divsByKey.getOrDefault(pos.getMarket() + ":" + pos.getCode(), List.of())
+        ));
+        return filtered;
     }
 
     public List<Position> getPositionsByMarket(Long userId, String market) {
         List<Trade> allTrades = tradeRepository.findByUserIdAndMarketOrderByDateAsc(userId, market);
+        List<Payment> allDivs = paymentRepository.findByUserIdAndMarketAndTransactionTypeOrderByDateAsc(userId, market, TransactionType.DIV);
+        Map<String, List<Payment>> divsByCode = allDivs.stream()
+                .filter(d -> d.getCode() != null)
+                .collect(Collectors.groupingBy(Payment::getCode));
         List<Position> result = new ArrayList<>();
         // Group trades by code while preserving order within each group
         allTrades.stream()
@@ -51,7 +69,9 @@ public class PositionService {
                     List<Trade> tradesForCode = allTrades.stream()
                             .filter(t -> t.getCode().equals(code))
                             .toList();
-                    result.addAll(buildPositions(tradesForCode));
+                    List<Position> codePositions = buildPositions(tradesForCode);
+                    assignDividends(codePositions, divsByCode.getOrDefault(code, List.of()));
+                    result.addAll(codePositions);
                 });
         return result;
     }
@@ -120,6 +140,25 @@ public class PositionService {
                 .riskRewardRatio(riskRewardRatio)
                 .expectancy(expectancy)
                 .build();
+    }
+
+    private void assignDividends(List<Position> positions, List<Payment> dividends) {
+        for (Payment div : dividends) {
+            LocalDate effectiveDate = div.getExDividendDate() != null
+                    ? div.getExDividendDate()
+                    : div.getDate();
+            if (effectiveDate == null) continue;
+            for (Position pos : positions) {
+                boolean afterOpen = !effectiveDate.isBefore(pos.getOpenDate());
+                boolean beforeClose = pos.isOpen() || pos.getCloseDate()
+                        .map(cd -> !effectiveDate.isAfter(cd))
+                        .orElse(true);
+                if (afterOpen && beforeClose) {
+                    pos.setDividends(pos.getDividends().add(div.getValue()));
+                    break;
+                }
+            }
+        }
     }
 
     List<Position> buildPositions(List<Trade> trades) {

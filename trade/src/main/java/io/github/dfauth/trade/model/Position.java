@@ -24,6 +24,8 @@ public class Position {
     private String code;
     @Builder.Default
     private List<Trade> trades = new ArrayList<>();
+    @Builder.Default
+    private BigDecimal dividends = ZERO;
 
     public static Position of(Trade t) {
         return Position.builder().market(t.getMarket()).code(t.getCode()).build().addTrade(t);

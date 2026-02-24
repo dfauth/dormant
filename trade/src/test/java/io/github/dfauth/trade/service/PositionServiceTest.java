@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PositionServiceTest {
 
-    private final PositionService service = new PositionService(null);
+    private final PositionService service = new PositionService(null, null);
 
     private Trade trade(LocalDate date, Side side, String size, String price) {
         int s = Integer.parseInt(size);

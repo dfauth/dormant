@@ -24,6 +24,9 @@ public class Payment {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
+    @Column(nullable = true)
+    private String market;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
     private TransactionType transactionType;

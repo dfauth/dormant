@@ -54,6 +54,7 @@ function positionVal(p, col) {
   if (col === 'size')         return parseFloat(p.size ?? 0)
   if (col === 'averagePrice') return parseFloat(p.averagePrice ?? 0)
   if (col === 'realisedPnl')  return parseFloat(p.realisedPnl ?? 0)
+  if (col === 'dividends')    return parseFloat(p.dividends ?? 0)
   return p[col] ?? ''
 }
 
@@ -214,7 +215,9 @@ export default function App() {
       const commission = trades.reduce((sum, t) =>
         sum + (parseFloat(t.cost) - parseFloat(t.price) * parseFloat(t.size)), 0)
       const pnl = parseFloat(p.realisedPnl ?? 0)
-      const returnPct = purchaseValue > 0 ? (pnl / purchaseValue * 100) : null
+      const dividends = parseFloat(p.dividends ?? 0)
+      const totalReturn = pnl + dividends
+      const returnPct = purchaseValue > 0 ? (totalReturn / purchaseValue * 100) : null
       let cagr = null
       if (!p.open && p.closeDate && p.openDate && returnPct !== null) {
         const days = (new Date(p.closeDate) - new Date(p.openDate)) / 86400000
@@ -223,7 +226,7 @@ export default function App() {
       return {
         openDate: p.openDate, closeDate: p.closeDate,
         purchaseValue, saleValue, commission, pnl,
-        returnPct, tradeCount: trades.length, cagr,
+        dividends, returnPct, tradeCount: trades.length, cagr,
         realisedPnl: p.realisedPnl,
       }
     }),
@@ -323,6 +326,7 @@ export default function App() {
                     <SortTh label="Size"         col="size"         sort={openSort} />
                     <SortTh label="Avg Price"    col="averagePrice" sort={openSort} />
                     <SortTh label="Realised P&L" col="realisedPnl"  sort={openSort} />
+                    <SortTh label="Dividends"    col="dividends"    sort={openSort} />
                     <SortTh label="Opened"       col="openDate"     sort={openSort} />
                     <SortTh label="Trades"       col="trades"       sort={openSort} />
                   </tr>
@@ -338,6 +342,7 @@ export default function App() {
                       <td>{p.size}</td>
                       <td>{p.averagePrice}</td>
                       <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
+                      <td>{Number(p.dividends ?? 0) !== 0 ? parseFloat(p.dividends).toFixed(2) : '—'}</td>
                       <td>{p.openDate ?? '—'}</td>
                       <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code })}>
                         {p.trades?.length ?? 0}
@@ -369,6 +374,7 @@ export default function App() {
                     <SortTh label="Size"         col="size"         sort={closedSort} />
                     <SortTh label="Avg Price"    col="averagePrice" sort={closedSort} />
                     <SortTh label="Realised P&L" col="realisedPnl"  sort={closedSort} />
+                    <SortTh label="Dividends"    col="dividends"    sort={closedSort} />
                     <SortTh label="Opened"       col="openDate"     sort={closedSort} />
                     <SortTh label="Closed"       col="closeDate"    sort={closedSort} />
                     <SortTh label="Trades"       col="trades"       sort={closedSort} />
@@ -385,6 +391,7 @@ export default function App() {
                       <td>{p.size}</td>
                       <td>{p.averagePrice}</td>
                       <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
+                      <td>{Number(p.dividends ?? 0) !== 0 ? parseFloat(p.dividends).toFixed(2) : '—'}</td>
                       <td>{p.openDate ?? '—'}</td>
                       <td>{p.closeDate ?? '—'}</td>
                       <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code })}>
@@ -423,10 +430,12 @@ export default function App() {
                 .map(p => {
                   const trades = p.trades ?? []
                   const pnl = parseFloat(p.realisedPnl ?? 0)
+                  const dividends = parseFloat(p.dividends ?? 0)
                   const purchaseValue = trades
                     .filter(t => t.side === p.side)
                     .reduce((sum, t) => sum + parseFloat(t.cost), 0)
-                  const returnPct = purchaseValue > 0 ? (pnl / purchaseValue * 100) : null
+                  const totalReturn = pnl + dividends
+                  const returnPct = purchaseValue > 0 ? (totalReturn / purchaseValue * 100) : null
                   let cagr = null
                   if (p.closeDate && p.openDate && returnPct !== null) {
                     const days = (new Date(p.closeDate) - new Date(p.openDate)) / 86400000
@@ -437,6 +446,7 @@ export default function App() {
                     openDate: p.openDate ?? '—',
                     code: p.code,
                     pnl,
+                    dividends,
                     returnPct,
                     cagr,
                   }
@@ -473,6 +483,7 @@ export default function App() {
                         ['Start',        d.openDate],
                         ['End',          d.date],
                         ['Realised P&L', d.pnl.toFixed(2)],
+                        ['Dividends',    d.dividends !== 0 ? d.dividends.toFixed(2) : '—'],
                         ['Return',       d.returnPct !== null ? d.returnPct.toFixed(2) + '%' : '—'],
                         ['CAGR',         d.cagr !== null ? d.cagr.toFixed(2) + '%' : '—'],
                       ]
@@ -521,6 +532,7 @@ export default function App() {
                     <SortTh label="Purchase Value" col="purchaseValue" sort={historySort} />
                     <SortTh label="Sale Value"     col="saleValue"     sort={historySort} />
                     <SortTh label="Realised P&L"   col="pnl"           sort={historySort} />
+                    <SortTh label="Dividends"      col="dividends"     sort={historySort} />
                     <SortTh label="Commission"     col="commission"    sort={historySort} />
                     <SortTh label="Return %"       col="returnPct"     sort={historySort} />
                     <SortTh label="Trades"         col="tradeCount"    sort={historySort} />
@@ -535,6 +547,7 @@ export default function App() {
                       <td>{r.purchaseValue.toFixed(2)}</td>
                       <td>{r.saleValue > 0 ? r.saleValue.toFixed(2) : '—'}</td>
                       <td className={r.pnl >= 0 ? 'pnl-positive' : 'pnl-negative'}>{r.realisedPnl ?? '—'}</td>
+                      <td>{r.dividends !== 0 ? r.dividends.toFixed(2) : '—'}</td>
                       <td>{r.commission.toFixed(2)}</td>
                       <td>{r.returnPct !== null ? r.returnPct.toFixed(2) + '%' : '—'}</td>
                       <td>{r.tradeCount}</td>
