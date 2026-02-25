@@ -133,7 +133,7 @@ class TradeControllerTest {
     }
 
     @Test
-    void createBatch_rejectsAllOnDuplicate() throws Exception {
+    void createBatch_ignoresOnDuplicates() throws Exception {
         Trade existing = sampleTrade("EXISTING");
         existing.setMarket(MARKET);
         tradeRepository.save(existing);
@@ -147,11 +147,11 @@ class TradeControllerTest {
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(trades)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.error", containsString("EXISTING")));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$", hasSize(1)));
 
-        // Neither trade should have been committed
-        assertEquals(1, tradeRepository.count());
+        // 1 trade should have been committed
+        assertEquals(2, tradeRepository.count());
     }
 
     @Test

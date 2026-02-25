@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Payment {
+public class Payment implements Balanced {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,4 +54,9 @@ public class Payment {
 
     @Column(name = "ex_dividend_date", nullable = true)
     private LocalDate exDividendDate;
+
+    @Override
+    public int getDirection() {
+        return transactionType.multiplier();
+    }
 }

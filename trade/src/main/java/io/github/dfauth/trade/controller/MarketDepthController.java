@@ -36,7 +36,7 @@ public class MarketDepthController {
     public List<MarketDepthSummary> getRecentDepth(
             @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor
     ) {
-        LocalDateTime cutoff = TenorRange.parse(tenor.orElse("3D")).start().atStartOfDay();
+        LocalDateTime cutoff = TenorRange.parse(tenor.orElse("3D")).start().atTime(23,59,59);
         return aggregateByDay(marketDepthRepository.findByRecordedAtGreaterThanEqual(cutoff));
     }
 

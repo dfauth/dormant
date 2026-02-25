@@ -12,7 +12,8 @@
       "Bash(MAVEN_OPTS=\"\" mvn clean test:*)",
       "WebSearch",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(tail:*)"
     ]
   }
 }

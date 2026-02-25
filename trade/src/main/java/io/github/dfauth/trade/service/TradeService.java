@@ -8,6 +8,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static io.github.dfauth.trycatch.Function2.peek;
+import static java.util.function.Predicate.not;
+
 @Service
 @RequiredArgsConstructor
 public class TradeService {
@@ -16,12 +19,9 @@ public class TradeService {
 
     @Transactional
     public List<Trade> createBatch(List<Trade> trades, Long userId) {
-        for (Trade trade : trades) {
-            if (tradeRepository.existsByConfirmationId(trade.getConfirmationId())) {
-                throw new DuplicateTradeException(trade.getConfirmationId());
-            }
-            trade.setUserId(userId);
-        }
-        return tradeRepository.saveAll(trades);
+        return tradeRepository.saveAll(trades.stream()
+                .filter(not(t -> tradeRepository.existsByConfirmationId(t.getConfirmationId())))
+                        .map(peek(t -> t.setUserId(userId)))
+                .toList());
     }
 }

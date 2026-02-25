@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.trade.model.Balanced;
 import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.Payment;
 import io.github.dfauth.trade.model.TransactionType;
@@ -15,8 +16,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.TreeMap;
+
+import static io.github.dfauth.trade.model.PaymentPredicate.RECONCILE;
+import static io.github.dfauth.trycatch.Utils.oops;
 
 @Slf4j
 @RestController
@@ -81,5 +87,28 @@ public class PaymentController extends BaseController {
         return authorize(u -> paymentService.findById(id, u.getId())
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build()));
+    }
+
+    @Operation(summary = "Get payments", description = "Returns the authenticated user's payments, optionally filtered by code, transaction type, tenor, or date range.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "List of payments")
+    })
+    @GetMapping("/reconcile")
+    public List<Payment> getNonReconcilingPayments(
+            @Parameter(description = "Security code to filter by") @RequestParam("code") Optional<String> code,
+            @Parameter(description = "Transaction type to filter by") @RequestParam("type") Optional<TransactionType> transactionType,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
+            @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
+            TreeMap<LocalDate, Balanced.SortingBalancer> balanceByDate = paymentService.getPayments(u.getId(), code, transactionType, dateRange).stream()
+                    .reduce(new TreeMap<>(), (acc, p) -> {
+                        acc.computeIfPresent(p.getDate(), (k, v) -> v.add(p));
+                        acc.computeIfAbsent(p.getDate(), k -> new Balanced.SortingBalancer().add(p));
+                        return acc;
+                    }, oops());
+            return balanceByDate.values().stream().filter(RECONCILE.get()).flatMap(Balanced.SortingBalancer::stream).toList();
+        });
     }
 }
