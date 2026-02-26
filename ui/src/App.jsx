@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { key: 'prices',     label: 'Prices',       subItems: ['default'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
-  { key: 'payments',   label: 'Payments',     subItems: ['reconciliation'] },
+  { key: 'payments',   label: 'Payments',     subItems: ['reconciliation', 'dividend summary', 'dividend reconciliation'] },
 ]
 
 function useSort(initialCol, initialDir = 'asc') {
@@ -81,6 +81,9 @@ export default function App() {
   const [perfPositions, setPerfPositions] = useState({ data: [], loading: false, error: null })
   const [perfTenor, setPerfTenor] = useState('1Y')
   const [payments, setPayments] = useState({ data: [], loading: false, error: null })
+  const [dividends, setDividends] = useState({ data: [], loading: false, error: null })
+  const [dividendYear, setDividendYear] = useState(null)
+  const [divRecon, setDivRecon] = useState({ payments: [], positions: [], loading: false, error: null })
   const navRef = useRef(null)
 
   const openSort   = useSort('openDate')
@@ -189,16 +192,43 @@ export default function App() {
   }, [page, subPage, state.status, perfTenor])
 
   useEffect(() => {
-    if (page !== 'payments' || state.status !== 'authenticated') return
+    if (page !== 'payments' || subPage !== 'reconciliation' || state.status !== 'authenticated') return
     setPayments(p => ({ ...p, loading: true, error: null }))
-    fetch('/api/payments', { credentials: 'include' })
+    fetch('/api/payments/reconcile', { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
       .then(data => setPayments({ data, loading: false, error: null }))
       .catch(err => setPayments({ data: [], loading: false, error: err.message }))
-  }, [page, state.status])
+  }, [page, subPage, state.status])
+
+  useEffect(() => {
+    if (page !== 'payments' || subPage !== 'dividend summary' || state.status !== 'authenticated') return
+    setDividends(d => ({ ...d, loading: true, error: null }))
+    fetch('/api/payments?type=DIV', { credentials: 'include' })
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return res.json()
+      })
+      .then(data => setDividends({ data, loading: false, error: null }))
+      .catch(err => setDividends({ data: [], loading: false, error: err.message }))
+  }, [page, subPage, state.status])
+
+  useEffect(() => {
+    if (page !== 'payments' || subPage !== 'dividend reconciliation' || state.status !== 'authenticated') return
+    setDivRecon(d => ({ ...d, loading: true, error: null }))
+    Promise.all([
+      fetch('/api/payments?type=DIV', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
+      fetch('/api/positions', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
+    ])
+      .then(([payments, positions]) => setDivRecon({ payments, positions, loading: false, error: null }))
+      .catch(err => setDivRecon({ payments: [], positions: [], loading: false, error: err.message }))
+  }, [page, subPage, state.status])
+
+  useEffect(() => {
+    setDividendYear(null)
+  }, [subPage])
 
   if (state.status === 'loading') return <p className="page">Loading…</p>
 
@@ -627,28 +657,15 @@ export default function App() {
               <p>Loading…</p>
             ) : payments.error ? (
               <p className="error">Error: {payments.error}</p>
-            ) : payments.data.length === 0 ? (
-              <p className="empty">No payments found.</p>
-            ) : (() => {
-              // For each entry i > 0, check: entries[i-1].balance - entries[i-1].value === entries[i].balance
-              const rows = payments.data.map((p, i, arr) => {
-                if (i === 0) return { ...p, expectedBalance: null, discrepancy: false }
-                const prev = arr[i - 1]
-                const expectedBalance = parseFloat(prev.balance) - parseFloat(prev.value)
-                const actualBalance = parseFloat(p.balance)
-                const discrepancy = Math.abs(expectedBalance - actualBalance) > 0.005
-                return { ...p, expectedBalance, discrepancy }
-              })
-              const discrepantRows = rows.filter(r => r.discrepancy)
-              const firstBadIdx = rows.findIndex(r => r.discrepancy)
-              return (
-                <>
-                  <div className={`reconcile-summary ${discrepantRows.length === 0 ? 'reconcile-summary--ok' : 'reconcile-summary--error'}`}>
-                    {discrepantRows.length === 0
-                      ? `✓ All ${rows.length} payments reconcile correctly.`
-                      : `⚠ ${discrepantRows.length} discrepanc${discrepantRows.length === 1 ? 'y' : 'ies'} found — first at ${rows[firstBadIdx].date ?? '—'}`
-                    }
-                  </div>
+            ) : (
+              <>
+                <div className={`reconcile-summary ${payments.data.length === 0 ? 'reconcile-summary--ok' : 'reconcile-summary--error'}`}>
+                  {payments.data.length === 0
+                    ? '✓ All payments reconcile correctly.'
+                    : `⚠ ${payments.data.length} non-reconciling payment${payments.data.length === 1 ? '' : 's'} found.`
+                  }
+                </div>
+                {payments.data.length > 0 && (
                   <table className="trades-table">
                     <thead>
                       <tr>
@@ -658,42 +675,162 @@ export default function App() {
                         <th>Detail</th>
                         <th>Value</th>
                         <th>Balance</th>
-                        <th>Expected Balance</th>
-                        <th>Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((r, i) => {
-                        const rowClass = r.discrepancy
-                          ? (i === firstBadIdx ? 'reconcile-discrepancy-first' : 'reconcile-discrepancy')
-                          : ''
-                        return (
-                          <tr key={r.id ?? i} className={rowClass}>
-                            <td>{r.date ?? '—'}</td>
-                            <td>{r.transactionType}</td>
-                            <td>{r.code ?? '—'}</td>
-                            <td>{r.detail}</td>
-                            <td>{parseFloat(r.value).toFixed(2)}</td>
-                            <td>{parseFloat(r.balance).toFixed(2)}</td>
-                            <td>{r.expectedBalance !== null ? r.expectedBalance.toFixed(2) : '—'}</td>
-                            <td>
-                              {i === 0
-                                ? <span>—</span>
-                                : r.discrepancy
-                                  ? <span className="reconcile-status--error">⚠ Discrepancy</span>
-                                  : <span className="reconcile-status--ok">✓</span>
-                              }
-                            </td>
-                          </tr>
-                        )
-                      })}
+                      {payments.data.map((r, i) => (
+                        <tr key={r.id ?? i} className="reconcile-discrepancy">
+                          <td>{r.date ?? '—'}</td>
+                          <td>{r.transactionType}</td>
+                          <td>{r.code ?? '—'}</td>
+                          <td>{r.detail}</td>
+                          <td>{parseFloat(r.value).toFixed(2)}</td>
+                          <td>{parseFloat(r.balance).toFixed(2)}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
-                </>
-              )
-            })()}
+                )}
+              </>
+            )}
           </>
         )}
+
+        {page === 'payments' && subPage === 'dividend reconciliation' && (() => {
+          if (divRecon.loading) return <><h1>Dividend Reconciliation</h1><p>Loading…</p></>
+          if (divRecon.error) return <><h1>Dividend Reconciliation</h1><p className="error">Error: {divRecon.error}</p></>
+
+          const positionCodes = new Set(divRecon.positions.map(p => `${p.market}:${p.code}`))
+          const discrepancies = divRecon.payments.map(p => {
+            if (!p.code) return { ...p, issue: 'No code assigned' }
+            if (!positionCodes.has(p.code)) return { ...p, issue: 'No matching position' }
+            return null
+          }).filter(Boolean)
+
+          return (
+            <>
+              <h1>Dividend Reconciliation</h1>
+              <div className={`reconcile-summary ${discrepancies.length === 0 ? 'reconcile-summary--ok' : 'reconcile-summary--error'}`}>
+                {discrepancies.length === 0
+                  ? `✓ All ${divRecon.payments.length} dividend payments are correctly allocated to a position.`
+                  : `⚠ ${discrepancies.length} dividend payment${discrepancies.length === 1 ? '' : 's'} could not be matched to a position.`
+                }
+              </div>
+              {discrepancies.length > 0 && (
+                <table className="trades-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Code</th>
+                      <th>Detail</th>
+                      <th>Value</th>
+                      <th>Issue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {discrepancies.map((r, i) => (
+                      <tr key={r.id ?? i} className="reconcile-discrepancy">
+                        <td>{r.date ?? '—'}</td>
+                        <td>{r.code ?? '—'}</td>
+                        <td>{r.detail}</td>
+                        <td>{parseFloat(r.value).toFixed(2)}</td>
+                        <td><span className="reconcile-status--error">{r.issue}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </>
+          )
+        })()}
+
+        {page === 'payments' && subPage === 'dividend summary' && (() => {
+          if (dividends.loading) return <><h1>Dividend Summary</h1><p>Loading…</p></>
+          if (dividends.error) return <><h1>Dividend Summary</h1><p className="error">Error: {dividends.error}</p></>
+
+          // Group by year
+          const byYear = dividends.data.reduce((acc, p) => {
+            const year = p.date?.slice(0, 4) ?? 'Unknown'
+            if (!acc[year]) acc[year] = []
+            acc[year].push(p)
+            return acc
+          }, {})
+          const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a))
+
+          if (dividendYear) {
+            const rows = byYear[dividendYear] ?? []
+            return (
+              <>
+                <button className="back-btn" onClick={() => setDividendYear(null)}>← Back</button>
+                <h1>Dividends — {dividendYear}</h1>
+                {rows.length === 0 ? (
+                  <p className="empty">No dividends found.</p>
+                ) : (
+                  <table className="trades-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Code</th>
+                        <th>Detail</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((r, i) => (
+                        <tr key={r.id ?? i}>
+                          <td>{r.date ?? '—'}</td>
+                          <td>{r.code ?? '—'}</td>
+                          <td>{r.detail}</td>
+                          <td>{parseFloat(r.value).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      <tr className="summary-row">
+                        <td colSpan={3}><strong>Total</strong></td>
+                        <td><strong>{rows.reduce((s, r) => s + parseFloat(r.value), 0).toFixed(2)}</strong></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                )}
+              </>
+            )
+          }
+
+          return (
+            <>
+              <h1>Dividend Summary</h1>
+              {years.length === 0 ? (
+                <p className="empty">No dividend payments found.</p>
+              ) : (
+                <table className="trades-table">
+                  <thead>
+                    <tr>
+                      <th>Year</th>
+                      <th>Payments</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {years.map(year => {
+                      const rows = byYear[year]
+                      const total = rows.reduce((s, r) => s + parseFloat(r.value), 0)
+                      return (
+                        <tr key={year} className="code-link" onClick={() => setDividendYear(year)}>
+                          <td>{year}</td>
+                          <td>{rows.length}</td>
+                          <td>{total.toFixed(2)}</td>
+                        </tr>
+                      )
+                    })}
+                    <tr className="summary-row">
+                      <td colSpan={2}><strong>Total</strong></td>
+                      <td><strong>{dividends.data.reduce((s, r) => s + parseFloat(r.value), 0).toFixed(2)}</strong></td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </>
+          )
+        })()}
 
         {page === 'prices' && <PriceSheet />}
         {page === 'valuations' && <Valuations />}

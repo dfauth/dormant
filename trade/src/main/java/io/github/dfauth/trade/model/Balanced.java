@@ -16,7 +16,7 @@ public interface Balanced {
     int getDirection();
     BigDecimal getBalance();
 
-    default BigDecimal getDirectioalValue() {
+    default BigDecimal getDirectionalValue() {
         return getValue().multiply(bd(getDirection()));
     }
 
@@ -25,7 +25,7 @@ public interface Balanced {
     }
 
     default boolean reconcilesBefore(Balanced next) {
-        return getBalance().add(next.getDirectioalValue()).compareTo(next.getBalance()) == 0;
+        return getBalance().add(next.getDirectionalValue()).compareTo(next.getBalance()) == 0;
     }
 
     class SortingBalancer implements Balanced {
@@ -69,18 +69,18 @@ public interface Balanced {
         @Override
         public BigDecimal getValue() {
             assertTidy();
-            return balances.stream().map(Balanced::getDirectioalValue).reduce(BigDecimal::add).orElseThrow();
+            return balances.stream().map(Balanced::getDirectionalValue).reduce(BigDecimal::add).orElseThrow();
         }
 
         @Override
-        public BigDecimal getDirectioalValue() {
+        public BigDecimal getDirectionalValue() {
             return getValue();
         }
 
         @Override
         public int getDirection() {
             assertTidy();
-            return getDirectioalValue().divide(getValue(), MathContext.DECIMAL128).intValue();
+            return getDirectionalValue().divide(getValue(), MathContext.DECIMAL128).intValue();
         }
 
         @Override

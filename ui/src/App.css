@@ -392,6 +392,15 @@ td.consensus-strong-sell {
   border-color: #4f46e5;
 }
 
+/* ---------- Summary row ---------- */
+
+.trades-table tbody tr.summary-row td {
+  border-top: 2px solid #3e3e6e;
+  background: #2e2e58;
+  color: #ffffff;
+  font-weight: 600;
+}
+
 /* ---------- Reconciliation ---------- */
 
 .reconcile-summary {
