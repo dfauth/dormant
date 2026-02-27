@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import PriceSheet from './PriceSheet'
+import Trending from './Trending'
 import Valuations from './Valuations'
 import MarketDepth from './MarketDepth'
 import {
@@ -11,7 +12,7 @@ import {
 const NAV_ITEMS = [
   { key: 'positions',  label: 'Positions',    subItems: ['1Y performance', 'open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
-  { key: 'prices',     label: 'Prices',       subItems: ['default'] },
+  { key: 'prices',     label: 'Prices',       subItems: ['trending', 'default'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
   { key: 'payments',   label: 'Payments',     subItems: ['reconciliation', 'dividend summary', 'dividend reconciliation'] },
@@ -92,7 +93,7 @@ export default function App() {
 
   function handleSetPage(p) {
     setPage(p)
-    setSubPage('default')
+    setSubPage(NAV_ITEMS.find(i => i.key === p)?.subItems[0] ?? 'default')
     setSelectedPosition(null)
     setSelectedCode(null)
   }
@@ -309,7 +310,7 @@ export default function App() {
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
-      <div className={page === 'prices' ? 'page-prices' : page === 'positions' && subPage === '1Y performance' ? 'page page-wide' : 'page'}>
+      <div className={page === 'prices' && subPage !== 'trending' ? 'page-prices' : page === 'positions' && subPage === '1Y performance' ? 'page page-wide' : 'page'}>
         {page === 'trades' && (
           <>
             <h1>Trades — ASX</h1>
@@ -832,7 +833,8 @@ export default function App() {
           )
         })()}
 
-        {page === 'prices' && <PriceSheet />}
+        {page === 'prices' && subPage !== 'trending' && <PriceSheet />}
+        {page === 'prices' && subPage === 'trending' && <Trending />}
         {page === 'valuations' && <Valuations />}
         {page === 'depth' && <MarketDepth />}
       </div>

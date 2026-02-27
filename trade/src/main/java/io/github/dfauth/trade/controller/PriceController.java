@@ -1,7 +1,9 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.ta.TrendCalculator;
 import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.Price;
+import io.github.dfauth.trade.model.TrendSummary;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,8 +15,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -37,6 +41,27 @@ public class PriceController {
         priceRepository.saveAll(newPrices);
         log.info("Persisted {} of {} prices ({} duplicates skipped)", newPrices.size(), prices.size(), prices.size() - newPrices.size());
         return ResponseEntity.status(HttpStatus.CREATED).body(newPrices.size());
+    }
+
+    @Operation(summary = "Get trending stocks", description = "Calculates the current trend state for every stock in the given market and optionally filters by sentiment.")
+    @ApiResponse(responseCode = "200", description = "List of trend summaries")
+    @GetMapping("/trending")
+    public List<TrendSummary> getTrending(
+            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") String market,
+            @Parameter(description = "Trend state filter (e.g. BULL, BEAR)") @RequestParam("sentiment") Optional<String> sentiment) {
+        return priceRepository.findDistinctCodesByMarket(market).stream()
+                .flatMap(code -> {
+                    double[] prices = priceRepository.findByMarketAndCodeOrderByDateAsc(market, code)
+                            .stream()
+                            .mapToDouble(p -> p.getClose().doubleValue())
+                            .toArray();
+                    return TrendCalculator.trend(prices, 8, 21, 200)
+                            .stream()
+                            .map(trend -> new TrendSummary(market, code, trend.getPrice(), trend));
+                })
+                .filter(ts -> sentiment.isEmpty() || ts.getTrendState().getTrendState().name().equals(sentiment.get()))
+                .sorted(Comparator.comparing(TrendSummary::getCode))
+                .collect(Collectors.toList());
     }
 
     @Operation(summary = "Get prices for a security", description = "Returns OHLCV prices ordered by date ascending, optionally filtered by date range or tenor.")

@@ -17,4 +17,8 @@ public class Trend {
     public boolean isDiverging() {
         return false;
     }
+
+    public double distanceFromEma() {
+        return (price - fast.getLast()) / price;
+    }
 }
