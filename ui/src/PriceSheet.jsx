@@ -81,7 +81,12 @@ class FetchFunction extends AsyncCustomFunction {
       return Object.entries(data).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : v])
     }
 
-    // JSON primitive or simple array
+    // Array of primitives → single column (each value in its own row)
+    if (Array.isArray(data)) {
+      return data.map(v => [v])
+    }
+
+    // JSON primitive → single cell
     return data
   }
 }
