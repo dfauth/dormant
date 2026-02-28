@@ -56,6 +56,14 @@ vi.mock('@univerjs/preset-sheets-core', () => ({
 
 vi.mock('@univerjs/preset-sheets-core/locales/en-US', () => ({ default: {} }))
 
+vi.mock('jsonpath-plus', () => ({
+  JSONPath: vi.fn(({ path, json }) => {
+    // Minimal stub: return the json unchanged so component-level tests are unaffected.
+    // FetchFunction.calculateCustom is not invoked by these tests.
+    return json
+  }),
+}))
+
 vi.mock('@univerjs/engine-formula', () => ({
   AsyncCustomFunction: class {
     constructor(name) { this._name = name }

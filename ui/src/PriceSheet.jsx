@@ -5,6 +5,7 @@ import SheetsLocaleEnUS from '@univerjs/preset-sheets-core/locales/en-US'
 import '@univerjs/presets/lib/styles/preset-sheets-core.css'
 import '@univerjs/preset-sheets-core/lib/index.css'
 import { AsyncCustomFunction, IFunctionService } from '@univerjs/engine-formula'
+import { JSONPath } from 'jsonpath-plus'
 
 // ---------------------------------------------------------------------------
 // Custom spreadsheet functions
@@ -27,15 +28,20 @@ class DoubleFunction extends AsyncCustomFunction {
   }
 }
 
-// =FETCH(url) — calls a backend endpoint and spills the result into the sheet.
+// =FETCH(url [, jsonPath]) — calls a backend endpoint and spills the result
+// into the sheet.
+//
+// The optional second argument is a JSONPath expression applied to the parsed
+// JSON before the result is returned.  Examples:
+//   =FETCH("/api/prices/BHP")                    — spills entire response
+//   =FETCH("/api/prices/BHP","$[*].close")        — single column of close prices
+//   =FETCH("/api/account","$.summary")            — object → two-column table
 //
 // The response is converted to a 2-D array so UniverJS can spill it cleanly:
 //   • JSON array of objects  → header row + one data row per object
 //   • JSON object            → two-column table of [key, value] pairs
 //   • JSON primitive         → single cell
 //   • Non-JSON text          → single cell
-//
-// The url is relative to the page origin: =FETCH("/api/prices/BHP")
 //
 // NOTE: ValueObjectFactory.create() interprets any string containing "{...}"
 // as a spreadsheet array literal, which causes #SPILL!.  Returning a real
@@ -44,17 +50,25 @@ class FetchFunction extends AsyncCustomFunction {
   constructor() {
     super('FETCH')
     this.minParams = 1
-    this.maxParams = 1
+    this.maxParams = 2
   }
 
-  async calculateCustom(arg) {
-    const url = typeof arg?.getValue === 'function' ? String(arg.getValue()) : String(arg)
+  async calculateCustom(urlArg, jsonPathArg) {
+    const url = typeof urlArg?.getValue === 'function' ? String(urlArg.getValue()) : String(urlArg)
     const res = await fetch(url, { credentials: 'include' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const text = await res.text()
 
     let data
     try { data = JSON.parse(text) } catch { return text }
+
+    // Apply JSONPath filter if provided
+    if (jsonPathArg != null) {
+      const expr = typeof jsonPathArg?.getValue === 'function' ? String(jsonPathArg.getValue()) : String(jsonPathArg)
+      if (expr) {
+        data = JSONPath({ path: expr, json: data })
+      }
+    }
 
     // JSON array of objects → header row + data rows
     if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
