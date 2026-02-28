@@ -4,6 +4,81 @@ import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import SheetsLocaleEnUS from '@univerjs/preset-sheets-core/locales/en-US'
 import '@univerjs/presets/lib/styles/preset-sheets-core.css'
 import '@univerjs/preset-sheets-core/lib/index.css'
+import { AsyncCustomFunction, IFunctionService } from '@univerjs/engine-formula'
+
+// ---------------------------------------------------------------------------
+// Custom spreadsheet functions
+//
+// Each class extends AsyncCustomFunction. Return a plain JS value (number,
+// string, boolean, or a 2-D array) from calculateCustom — no wrapper needed.
+// Add as many classes as you like and include them in registerCustomFunctions.
+// ---------------------------------------------------------------------------
+
+class DoubleFunction extends AsyncCustomFunction {
+  constructor() {
+    super('DOUBLE')
+    this.minParams = 1
+    this.maxParams = 1
+  }
+
+  calculateCustom(arg) {
+    const n = typeof arg?.getValue === 'function' ? Number(arg.getValue()) : Number(arg)
+    return n * 2
+  }
+}
+
+// =FETCH(url) — calls a backend endpoint and spills the result into the sheet.
+//
+// The response is converted to a 2-D array so UniverJS can spill it cleanly:
+//   • JSON array of objects  → header row + one data row per object
+//   • JSON object            → two-column table of [key, value] pairs
+//   • JSON primitive         → single cell
+//   • Non-JSON text          → single cell
+//
+// The url is relative to the page origin: =FETCH("/api/prices/BHP")
+//
+// NOTE: ValueObjectFactory.create() interprets any string containing "{...}"
+// as a spreadsheet array literal, which causes #SPILL!.  Returning a real
+// PrimitiveValueType[][] bypasses that path entirely.
+class FetchFunction extends AsyncCustomFunction {
+  constructor() {
+    super('FETCH')
+    this.minParams = 1
+    this.maxParams = 1
+  }
+
+  async calculateCustom(arg) {
+    const url = typeof arg?.getValue === 'function' ? String(arg.getValue()) : String(arg)
+    const res = await fetch(url, { credentials: 'include' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const text = await res.text()
+
+    let data
+    try { data = JSON.parse(text) } catch { return text }
+
+    // JSON array of objects → header row + data rows
+    if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
+      const keys = Object.keys(data[0])
+      return [keys, ...data.map(row => keys.map(k => row[k] ?? ''))]
+    }
+
+    // JSON object → two-column key/value table
+    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+      return Object.entries(data).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : v])
+    }
+
+    // JSON primitive or simple array
+    return data
+  }
+}
+
+function registerCustomFunctions(univer) {
+  const functionService = univer.__getInjector().get(IFunctionService)
+  functionService.registerExecutors(
+    new DoubleFunction(),
+    new FetchFunction(),
+  )
+}
 
 const SETTINGS_KEY = 'SPREADSHEET_CONFIG'
 const SAVE_DEBOUNCE_MS = 1500
@@ -27,29 +102,9 @@ async function saveSpreadsheetConfig(snapshot) {
   })
 }
 
-function parseFormula(value) {
-  if (typeof value !== 'string') return null
-  const m = value.match(/^=PRICES\((\w+),(\w+)(?:,(\w+))?\)$/i)
-  if (!m) return null
-  return { market: m[1], code: m[2], tenor: m[3] || undefined }
-}
-
-function buildUrl({ market, code, tenor }) {
-  const params = new URLSearchParams({ market })
-  if (tenor) params.set('tenor', tenor)
-  return `/api/prices/${code}?${params}`
-}
-
-const HEADERS = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
-const FIELDS = ['date', 'open', 'high', 'low', 'close', 'volume']
-const SCAN_ROWS = 200
-const SCAN_COLS = 50
-
 export default function PriceSheet() {
   const univerRef = useRef(null)
   const anchorRef = useRef(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
   const [saveStatus, setSaveStatus] = useState(null) // null | 'saving' | 'saved'
 
   useEffect(() => {
@@ -95,7 +150,7 @@ export default function PriceSheet() {
       const savedConfig = await loadSpreadsheetConfig()
       if (cancelled) return
 
-      const { univerAPI: api } = createUniver({
+      const { univerAPI: api, univer } = createUniver({
         locale: LocaleType.EN_US,
         locales: { [LocaleType.EN_US]: merge({}, SheetsLocaleEnUS) },
         theme: defaultTheme,
@@ -103,6 +158,8 @@ export default function PriceSheet() {
       })
       univerAPI = api
       univerRef.current = univerAPI
+
+      registerCustomFunctions(univer)
 
       // Restore from saved snapshot, or create a blank workbook
       univerAPI.createWorkbook(savedConfig ?? { name: 'Prices' })
@@ -135,62 +192,10 @@ export default function PriceSheet() {
     }
   }, [])
 
-  const handleFetch = async () => {
-    const univerAPI = univerRef.current
-    if (!univerAPI) return
-    const sheet = univerAPI.getActiveWorkbook()?.getActiveSheet()
-    if (!sheet) return
-
-    for (let r = 0; r < SCAN_ROWS; r++) {
-      for (let c = 0; c < SCAN_COLS; c++) {
-        const cell = sheet.getRange(r, c).getFormulas()[0][0]
-        const parsed = parseFormula(cell)
-        if (!parsed) continue
-
-        setLoading(true)
-        setError(null)
-        try {
-          const res = await fetch(buildUrl(parsed), { credentials: 'include' })
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const prices = await res.json()
-
-          sheet.getRange(r, c, 1, HEADERS.length).setValues([HEADERS])
-          if (prices.length > 0) {
-            const rows = prices.map(p => FIELDS.map(f => p[f] ?? ''))
-            sheet.getRange(r + 1, c, prices.length, FIELDS.length).setValues(rows)
-          }
-        } catch (err) {
-          setError(`Failed to fetch prices: ${err.message}`)
-        } finally {
-          setLoading(false)
-        }
-        return // process one formula at a time
-      }
-    }
-  }
-
-  const handleClear = () => {
-    const univerAPI = univerRef.current
-    if (!univerAPI) return
-    const sheet = univerAPI.getActiveWorkbook()?.getActiveSheet()
-    sheet?.clear()
-  }
-
   return (
     <>
       <h1>Prices</h1>
-      <p className="sheet-hint">
-        Type <code>=PRICES(market,code,tenor)</code> in any cell then press Fetch.
-        Example: <code>=PRICES(ASX,BHP,1Y)</code>
-      </p>
       <div className="sheet-toolbar">
-        <button className="sheet-btn" onClick={handleFetch} disabled={loading}>
-          {loading ? 'Fetching…' : 'Fetch'}
-        </button>
-        <button className="sheet-btn sheet-btn-secondary" onClick={handleClear}>
-          Clear
-        </button>
-        {error && <span className="error">{error}</span>}
         {saveStatus === 'saving' && <span className="sheet-save-status">Saving…</span>}
         {saveStatus === 'saved' && <span className="sheet-save-status sheet-save-status--saved">Saved</span>}
       </div>

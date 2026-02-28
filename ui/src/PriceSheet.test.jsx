@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeAll, afterAll, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
+import { render, screen, act, cleanup } from '@testing-library/react'
 import { setupServer } from 'msw/node'
 import { http, HttpResponse } from 'msw'
 
@@ -11,8 +11,6 @@ import { http, HttpResponse } from 'msw'
 // objects that the factory functions can safely close over.
 // ---------------------------------------------------------------------------
 const {
-  mockRange,
-  mockSheet,
   mockWorkbook,
   mockAPI,
   state,
@@ -22,18 +20,7 @@ const {
     workbookCreatedWith: null,
   }
 
-  const mockRange = {
-    getFormulas: vi.fn(() => [['']]),
-    setValues: vi.fn(),
-  }
-
-  const mockSheet = {
-    getRange: vi.fn(() => mockRange),
-    clear: vi.fn(),
-  }
-
   const mockWorkbook = {
-    getActiveSheet: vi.fn(() => mockSheet),
     save: vi.fn(() => ({ name: 'Prices', sheets: {} })),
   }
 
@@ -50,11 +37,14 @@ const {
     Event: { CommandExecuted: 'CommandExecuted' },
   }
 
-  return { mockRange, mockSheet, mockWorkbook, mockAPI, state }
+  return { mockWorkbook, mockAPI, state }
 })
 
 vi.mock('@univerjs/presets', () => ({
-  createUniver: vi.fn(() => ({ univerAPI: mockAPI })),
+  createUniver: vi.fn(() => ({
+    univerAPI: mockAPI,
+    univer: { __getInjector: vi.fn(() => ({ get: vi.fn(() => ({ registerExecutors: vi.fn() })) })) },
+  })),
   defaultTheme: {},
   LocaleType: { EN_US: 'en-US' },
   merge: vi.fn((a, b) => ({ ...a, ...b })),
@@ -65,6 +55,15 @@ vi.mock('@univerjs/preset-sheets-core', () => ({
 }))
 
 vi.mock('@univerjs/preset-sheets-core/locales/en-US', () => ({ default: {} }))
+
+vi.mock('@univerjs/engine-formula', () => ({
+  AsyncCustomFunction: class {
+    constructor(name) { this._name = name }
+    isAsync() { return true }
+    isCustom() { return true }
+  },
+  IFunctionService: Symbol('IFunctionService'),
+}))
 
 // ---------------------------------------------------------------------------
 // MSW server
@@ -81,11 +80,6 @@ const server = setupServer(
     lastSavedBody = await request.json()
     return HttpResponse.json({})
   }),
-  http.get('/api/prices/:code', () =>
-    HttpResponse.json([
-      { date: '2024-01-01', open: 30, high: 32, low: 29, close: 31, volume: 100_000 },
-    ])
-  ),
 )
 
 // ---------------------------------------------------------------------------
@@ -124,9 +118,6 @@ describe('PriceSheet', () => {
     lastSavedBody = null
     vi.clearAllMocks()
     // Restore implementations cleared by clearAllMocks
-    mockSheet.getRange.mockReturnValue(mockRange)
-    mockRange.getFormulas.mockReturnValue([['']])
-    mockWorkbook.getActiveSheet.mockReturnValue(mockSheet)
     mockWorkbook.save.mockReturnValue({ name: 'Prices', sheets: {} })
     mockAPI.getActiveWorkbook.mockReturnValue(mockWorkbook)
     mockAPI.addEvent.mockImplementation((event, handler) => {
@@ -149,12 +140,6 @@ describe('PriceSheet', () => {
     it('renders the page heading', () => {
       render(<PriceSheet />)
       expect(screen.getByRole('heading', { name: 'Prices' })).toBeInTheDocument()
-    })
-
-    it('renders enabled Fetch and Clear buttons', () => {
-      render(<PriceSheet />)
-      expect(screen.getByRole('button', { name: 'Fetch' })).toBeEnabled()
-      expect(screen.getByRole('button', { name: 'Clear' })).toBeEnabled()
     })
 
     it('shows no save status indicator initially', () => {
@@ -312,136 +297,6 @@ describe('PriceSheet', () => {
     })
   })
 
-  // ── Fetch button — parseFormula + buildUrl behaviour ─────────────────────
-
-  describe('Fetch button', () => {
-    it('does nothing when the sheet contains no PRICES() formula', async () => {
-      mockRange.getFormulas.mockReturnValue([['']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(100)
-      expect(screen.queryByText('Fetching…')).not.toBeInTheDocument()
-    })
-
-    it('calls the price API with the correct path and market param', async () => {
-      let captured = null
-      server.use(
-        http.get('/api/prices/:code', ({ request }) => {
-          captured = new URL(request.url)
-          return HttpResponse.json([])
-        })
-      )
-      mockRange.getFormulas.mockReturnValue([['=PRICES(ASX,BHP)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(200)
-      expect(captured).not.toBeNull()
-      expect(captured.pathname).toBe('/api/prices/BHP')
-      expect(captured.searchParams.get('market')).toBe('ASX')
-      expect(captured.searchParams.has('tenor')).toBe(false)
-    })
-
-    it('appends the tenor query param when provided', async () => {
-      let captured = null
-      server.use(
-        http.get('/api/prices/:code', ({ request }) => {
-          captured = new URL(request.url)
-          return HttpResponse.json([])
-        })
-      )
-      mockRange.getFormulas.mockReturnValue([['=PRICES(ASX,BHP,1Y)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(200)
-      expect(captured.searchParams.get('tenor')).toBe('1Y')
-    })
-
-    it('is case-insensitive — =prices(asx,bhp,6m) is recognised', async () => {
-      let captured = null
-      server.use(
-        http.get('/api/prices/:code', ({ request }) => {
-          captured = new URL(request.url)
-          return HttpResponse.json([])
-        })
-      )
-      mockRange.getFormulas.mockReturnValue([['=prices(asx,bhp,6m)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(200)
-      expect(captured).not.toBeNull()
-    })
-
-    it('writes the header row to the sheet', async () => {
-      server.use(
-        http.get('/api/prices/:code', () =>
-          HttpResponse.json([
-            { date: '2024-01-01', open: 30, high: 32, low: 29, close: 31, volume: 100000 },
-          ])
-        )
-      )
-      mockRange.getFormulas.mockReturnValue([['=PRICES(ASX,BHP)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(200)
-      expect(mockRange.setValues).toHaveBeenCalledWith([
-        ['Date', 'Open', 'High', 'Low', 'Close', 'Volume'],
-      ])
-    })
-
-    it('writes the data rows to the sheet', async () => {
-      const prices = [
-        { date: '2024-01-01', open: 30, high: 32, low: 29, close: 31, volume: 100_000 },
-        { date: '2024-01-02', open: 31, high: 33, low: 30, close: 32, volume: 90_000 },
-      ]
-      server.use(http.get('/api/prices/:code', () => HttpResponse.json(prices)))
-      mockRange.getFormulas.mockReturnValue([['=PRICES(ASX,BHP)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(200)
-      expect(mockRange.setValues).toHaveBeenCalledWith(
-        prices.map(p => [p.date, p.open, p.high, p.low, p.close, p.volume])
-      )
-    })
-
-    it('shows an error message when the price API responds with non-2xx', async () => {
-      server.use(
-        http.get('/api/prices/:code', () => new HttpResponse(null, { status: 500 }))
-      )
-      mockRange.getFormulas.mockReturnValue([['=PRICES(ASX,BHP)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(200)
-      expect(screen.getByText(/Failed to fetch prices: HTTP 500/)).toBeInTheDocument()
-    })
-
-    it('shows "Fetching…" label while the request is in-flight', async () => {
-      // Never-resolving request so loading stays true
-      server.use(http.get('/api/prices/:code', () => new Promise(() => {})))
-      mockRange.getFormulas.mockReturnValue([['=PRICES(ASX,BHP)']])
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Fetch' }))
-      await vi.advanceTimersByTimeAsync(50)
-      expect(screen.getByText('Fetching…')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Fetching…' })).toBeDisabled()
-    })
-  })
-
-  // ── Clear button ──────────────────────────────────────────────────────────
-
-  describe('Clear button', () => {
-    it('calls sheet.clear() on the active sheet', async () => {
-      await renderAndInit()
-      fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
-      expect(mockSheet.clear).toHaveBeenCalled()
-    })
-
-    it('does nothing before the workbook is ready', () => {
-      // No renderAndInit — univerRef.current is still null
-      render(<PriceSheet />)
-      fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
-      expect(mockSheet.clear).not.toHaveBeenCalled()
-    })
-  })
 
   // ── Cleanup on unmount ────────────────────────────────────────────────────
 
