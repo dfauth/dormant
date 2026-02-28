@@ -1,5 +1,7 @@
 package io.github.dfauth.ta;
 
+import io.github.dfauth.trycatch.TriPredicate;
+
 import java.util.function.Function;
 import java.util.function.Predicate;
 
