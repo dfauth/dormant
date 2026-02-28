@@ -5,11 +5,11 @@ import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.Price;
 import io.github.dfauth.trade.model.TrendSummary;
 import io.github.dfauth.trade.repository.PriceRepository;
+import io.github.dfauth.trade.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,11 +23,15 @@ import java.util.stream.Collectors;
 @Slf4j
 @RestController
 @RequestMapping("/api/prices")
-@RequiredArgsConstructor
 @Tag(name = "Prices", description = "Manage historical OHLCV price data")
-public class PriceController {
+public class PriceController extends BaseController {
 
     private final PriceRepository priceRepository;
+
+    public PriceController(PriceRepository priceRepository, UserService userService) {
+        super(userService);
+        this.priceRepository = priceRepository;
+    }
 
     @Operation(summary = "Batch insert prices", description = "Persists a list of prices for a security, silently skipping any that already exist for the same market, code, and date.")
     @ApiResponse(responseCode = "201", description = "Number of new prices persisted")
@@ -68,14 +72,16 @@ public class PriceController {
     @ApiResponse(responseCode = "200", description = "List of prices")
     @GetMapping("/{code}")
     public List<Price> getPrices(
-            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") String market,
+            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") Optional<String> market,
             @Parameter(description = "Security code (e.g. BHP)") @PathVariable("code") String code,
             @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
             @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
             @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
-        Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
-        return dateRange
-                .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market, code, dr.start(), dr.end()))
-                .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(market, code));
+        return authorize(u -> {
+            Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
+            return dateRange
+                    .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market.orElse(u.getDefaultMarket()), code, dr.start(), dr.end()))
+                    .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(market.orElse(u.getDefaultMarket()), code));
+        });
     }
 }

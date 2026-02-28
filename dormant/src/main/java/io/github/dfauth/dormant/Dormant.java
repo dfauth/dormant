@@ -47,6 +47,22 @@ public interface Dormant extends Externalizable {
         read(serde);
     }
 
+    static void readLenient(Runnable runnable) {
+        try {
+            runnable.run();
+        } catch (RuntimeException e) {
+            switch(e.getCause()) {
+                case EOFException eof:
+                    // short read, ignore
+                    break;
+                default:
+                    // rethrow
+                    throw e;
+            }
+        }
+    }
+
+
     ClassValue<Integer> TYPE_ID_CACHE = new ClassValue<>() {
         @Override
         protected Integer computeValue(Class<?> type) {
