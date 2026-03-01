@@ -44,6 +44,16 @@ function applyJsonPath(data, jsonPathArg) {
   return expr ? JSONPath({ path: expr, json: data }) : data
 }
 
+// Apply a mustache-style template to each element of an array of objects.
+// e.g. template "{code}:{market}" applied to {code:"BHP",market:"ASX"} → "BHP:ASX"
+// Non-array data is returned unchanged.
+function applyTemplate(data, templateArg) {
+  if (templateArg == null) return data
+  const template = typeof templateArg?.getValue === 'function' ? String(templateArg.getValue()) : String(templateArg)
+  if (!template || !Array.isArray(data)) return data
+  return data.map(item => template.replace(/\{(\w+)\}/g, (_, key) => item?.[key] ?? ''))
+}
+
 class DoubleFunction extends AsyncCustomFunction {
   constructor() {
     super('DOUBLE')
@@ -57,15 +67,21 @@ class DoubleFunction extends AsyncCustomFunction {
   }
 }
 
-// =FETCH(url [, jsonPath]) — calls a backend endpoint and spills the result
-// into the sheet.  The raw JSON response is cached under the URL key so that
-// =CACHE(url [, jsonPath]) can retrieve it without another network round-trip.
+// =FETCH(url [, jsonPath [, template]]) — calls a backend endpoint and spills
+// the result into the sheet.  The raw JSON response is cached under the URL
+// key so that =CACHE(url …) can retrieve it without another network round-trip.
 //
-// The optional second argument is a JSONPath expression applied to the parsed
-// JSON before the result is returned.  Examples:
-//   =FETCH("/api/prices/BHP")                    — spills entire response
-//   =FETCH("/api/prices/BHP","$[*].close")        — single column of close prices
-//   =FETCH("/api/account","$.summary")            — object → two-column table
+// Arguments:
+//   url      — backend URL including any query-string parameters
+//   jsonPath — (optional) JSONPath expression to narrow the response
+//   template — (optional) mustache-style template applied to each object after
+//              the JSONPath step, producing a single derived column.
+//              Use {fieldName} placeholders, e.g. "{code}:{market}".
+//
+// Examples:
+//   =FETCH("/api/prices/BHP")                         — spills entire response
+//   =FETCH("/api/prices/BHP","$[*].close")             — single column of close prices
+//   =FETCH("/api/prices","$[*]","{code}:{market}")     — derived "BHP:ASX" column
 //
 // NOTE: ValueObjectFactory.create() interprets any string containing "{...}"
 // as a spreadsheet array literal, which causes #SPILL!.  Returning a real
@@ -74,10 +90,10 @@ class FetchFunction extends AsyncCustomFunction {
   constructor() {
     super('FETCH')
     this.minParams = 1
-    this.maxParams = 2
+    this.maxParams = 3
   }
 
-  async calculateCustom(urlArg, jsonPathArg) {
+  async calculateCustom(urlArg, jsonPathArg, templateArg) {
     const url = typeof urlArg?.getValue === 'function' ? String(urlArg.getValue()) : String(urlArg)
     const res = await fetch(url, { credentials: 'include' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -89,30 +105,31 @@ class FetchFunction extends AsyncCustomFunction {
     // Cache raw JSON (before JSONPath) so CACHE() can apply its own path.
     fetchCache.set(url, data)
 
-    return toSpreadsheetValue(applyJsonPath(data, jsonPathArg))
+    return toSpreadsheetValue(applyTemplate(applyJsonPath(data, jsonPathArg), templateArg))
   }
 }
 
-// =CACHE(key [, jsonPath]) — reads previously fetched JSON from the in-memory
-// cache without making a network request.  The key must match a URL that was
-// previously loaded by =FETCH (including any query-string parameters).
+// =CACHE(key [, jsonPath [, template]]) — reads previously fetched JSON from
+// the in-memory cache without making a network request.  The key must match a
+// URL previously loaded by =FETCH (including any query-string parameters).
 //
-// The optional JSONPath argument works identically to the one in =FETCH,
-// allowing a different projection of the same cached payload.  Examples:
-//   =CACHE("/api/prices/BHP")               — full cached response
-//   =CACHE("/api/prices/BHP","$[*].close")  — only the close column
+// Arguments mirror =FETCH's second and third parameters exactly, so you can
+// apply a different projection or template to the same cached payload:
+//   =CACHE("/api/prices")                         — full cached response
+//   =CACHE("/api/prices","$[*].close")            — only the close column
+//   =CACHE("/api/prices","$[*]","{code}:{market}") — derived column from cache
 class CacheFunction extends AsyncCustomFunction {
   constructor() {
     super('CACHE')
     this.minParams = 1
-    this.maxParams = 2
+    this.maxParams = 3
   }
 
-  calculateCustom(keyArg, jsonPathArg) {
+  calculateCustom(keyArg, jsonPathArg, templateArg) {
     const key = typeof keyArg?.getValue === 'function' ? String(keyArg.getValue()) : String(keyArg)
     const data = fetchCache.get(key)
     if (data === undefined) return `#CACHE! Key not found: ${key}`
-    return toSpreadsheetValue(applyJsonPath(data, jsonPathArg))
+    return toSpreadsheetValue(applyTemplate(applyJsonPath(data, jsonPathArg), templateArg))
   }
 }
 
