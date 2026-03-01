@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.ta.Candle;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +16,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Price {
+public class Price implements Candle {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -45,4 +46,23 @@ public class Price {
     @Column(nullable = false)
     private int volume;
 
+    @Override
+    public double open() {
+        return getOpen().doubleValue();
+    }
+
+    @Override
+    public double high() {
+        return getHigh().doubleValue();
+    }
+
+    @Override
+    public double low() {
+        return getLow().doubleValue();
+    }
+
+    @Override
+    public double close() {
+        return getClose().doubleValue();
+    }
 }
