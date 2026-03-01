@@ -6,7 +6,6 @@ import io.github.dfauth.trade.model.Price;
 import io.github.dfauth.trade.model.TrendSummary;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.service.UserService;
-import io.github.dfauth.trycatch.Tuple2;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -20,8 +19,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
-import static io.github.dfauth.trycatch.Tuple2.tuple2;
 
 @Slf4j
 @RestController
@@ -82,13 +79,9 @@ public class PriceController extends BaseController {
             @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
         return authorize(u -> {
             Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
-            Tuple2<String, String> marketCodeTuple = Optional.of(code.split(":"))
-                    .filter(arr -> arr.length == 2)
-                    .map(arr -> tuple2(arr[0], arr[1]))
-                    .orElse(tuple2(market.orElse(u.getDefaultMarket()), code));
-            return dateRange
-                    .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(marketCodeTuple._1(), marketCodeTuple._2(), dr.start(), dr.end()))
-                    .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(marketCodeTuple._1(), marketCodeTuple._2()));
+            return u.resolveCode(code).map((mkt, cd) -> dateRange
+                            .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dr.start(), dr.end()))
+                            .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(mkt, cd)));
         });
     }
 }
