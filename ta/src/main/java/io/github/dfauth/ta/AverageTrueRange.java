@@ -7,6 +7,10 @@ import static java.util.Optional.empty;
 
 public class AverageTrueRange {
 
+    static double trueRange(double high, double low, double prevClose) {
+        return Math.max(high - low, Math.max(Math.abs(high - prevClose), Math.abs(low - prevClose)));
+    }
+
     /**
      * Batch ATR using Wilder's smoothing. Returns an array of length
      * {@code closes.length - period}, or empty if there is insufficient data.
@@ -14,11 +18,11 @@ public class AverageTrueRange {
      * true ranges; subsequent values use Wilder's smoothing:
      * {@code ATR = (prevATR * (period - 1) + TR) / period}.
      */
-    public static double[] atr(double[] highs, double[] lows, double[] closes, int period) {
+    public static double[] atr(Candle[] candles, int period) {
         if (period < 1) {
             throw new IllegalArgumentException("Period must be at least 1");
         }
-        int n = closes.length;
+        int n = candles.length;
         if (n < period + 1) {
             return new double[0];
         }
@@ -26,7 +30,8 @@ public class AverageTrueRange {
         // True ranges: index i corresponds to bar i+1 (needs previous close)
         double[] trueRanges = new double[n - 1];
         for (int i = 1; i < n; i++) {
-            trueRanges[i - 1] = Candle.trueRange(highs[i], lows[i], closes[i - 1]);
+            Candle candle = candles[i];
+            trueRanges[i - 1] = AverageTrueRange.trueRange(candle.high(), candle.low(), candles[i - 1].close());
         }
 
         int resultLength = trueRanges.length - period + 1;
@@ -56,12 +61,12 @@ public class AverageTrueRange {
             throw new IllegalArgumentException("Period must be at least 1");
         }
         RingBuffer<Double> trBuffer = RingBuffer.create(new double[period]);
-        double[] prevClose = {Double.NaN};
+        final Candle[] previous = {null};
         double[] prevAtr = {Double.NaN};
 
         return candle -> {
-            if (!Double.isNaN(prevClose[0])) {
-                double tr = candle.trueRange(prevClose[0]);
+            if (previous[0] != null) {
+                double tr = candle.trueRange(previous[0]);
                 trBuffer.write(tr);
                 if (trBuffer.isFull()) {
                     if (Double.isNaN(prevAtr[0])) {
@@ -69,11 +74,11 @@ public class AverageTrueRange {
                     } else {
                         prevAtr[0] = (prevAtr[0] * (period - 1) + tr) / period;
                     }
-                    prevClose[0] = candle.close();
+                    previous[0] = candle;
                     return Optional.of(prevAtr[0]);
                 }
             }
-            prevClose[0] = candle.close();
+            previous[0] = candle;
             return empty();
         };
     }

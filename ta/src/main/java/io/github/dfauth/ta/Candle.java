@@ -1,12 +1,23 @@
 package io.github.dfauth.ta;
 
-public record Candle(double high, double low, double close) {
+public interface Candle {
 
-    public static double trueRange(double high, double low, double prevClose) {
-        return Math.max(high - low, Math.max(Math.abs(high - prevClose), Math.abs(low - prevClose)));
+    double open();
+
+    double high();
+
+    double low();
+
+    double close();
+
+    default double trueRange(Candle previous) {
+        return AverageTrueRange.trueRange(high(), low(), previous.close());
     }
 
-    public double trueRange(double prevClose) {
-        return trueRange(high, low, prevClose);
+    static Candle candle(double open, double high, double low, double close) {
+        return new CandleRecord(open, high, low, close);
     }
+
+}
+record CandleRecord(double open, double high, double low, double close) implements Candle {
 }

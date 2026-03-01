@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static io.github.dfauth.ta.Candle.candle;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AverageTrueRangeTest {
@@ -23,10 +24,17 @@ class AverageTrueRangeTest {
     private static final double[] HIGHS  = {10, 11, 12, 14, 15};
     private static final double[] LOWS   = { 8,  9, 10, 11, 13};
     private static final double[] CLOSES = { 9, 10, 11, 13, 14};
+    private static final Candle[] CANDLES = {
+            candle(0, HIGHS[0], LOWS[0], CLOSES[0]),
+            candle(0, HIGHS[1], LOWS[1], CLOSES[1]),
+            candle(0, HIGHS[2], LOWS[2], CLOSES[2]),
+            candle(0, HIGHS[3], LOWS[3], CLOSES[3]),
+            candle(0, HIGHS[4], LOWS[4], CLOSES[4]),
+    };
 
     @Test
     void testBatchAtr() {
-        double[] result = AverageTrueRange.atr(HIGHS, LOWS, CLOSES, 2);
+        double[] result = AverageTrueRange.atr(CANDLES, 2);
 
         assertEquals(3, result.length);
         assertEquals(2.0,  result[0], 1e-9);
@@ -36,7 +44,7 @@ class AverageTrueRangeTest {
 
     @Test
     void testBatchAtrInsufficientData() {
-        double[] result = AverageTrueRange.atr(HIGHS, LOWS, CLOSES, 10);
+        double[] result = AverageTrueRange.atr(CANDLES, 10);
 
         assertEquals(0, result.length);
     }
@@ -44,7 +52,7 @@ class AverageTrueRangeTest {
     @Test
     void testBatchAtrInvalidPeriod() {
         assertThrows(IllegalArgumentException.class,
-                () -> AverageTrueRange.atr(HIGHS, LOWS, CLOSES, 0));
+                () -> AverageTrueRange.atr(CANDLES, 0));
     }
 
     @Test
@@ -52,15 +60,15 @@ class AverageTrueRangeTest {
         Function<Candle, Optional<Double>> atr = AverageTrueRange.atrStream(2);
 
         // First candle: no previous close, no output
-        assertEquals(Optional.empty(), atr.apply(new Candle(10, 8, 9)));
+        assertEquals(Optional.empty(), atr.apply(candle(0, 10, 8, 9)));
         // Second candle: TR1 = 2.0, buffer not yet full
-        assertEquals(Optional.empty(), atr.apply(new Candle(11, 9, 10)));
+        assertEquals(Optional.empty(), atr.apply(candle(0, 11, 9, 10)));
         // Third candle: TR2 = 2.0, buffer full → SMA seed = 2.0
-        assertEquals(2.0, atr.apply(new Candle(12, 10, 11)).orElseThrow(), 1e-9);
+        assertEquals(2.0, atr.apply(candle(0, 12, 10, 11)).orElseThrow(), 1e-9);
         // Fourth candle: TR3 = 3.0 → Wilder: (2.0*1 + 3.0)/2 = 2.5
-        assertEquals(2.5, atr.apply(new Candle(14, 11, 13)).orElseThrow(), 1e-9);
+        assertEquals(2.5, atr.apply(candle(0, 14, 11, 13)).orElseThrow(), 1e-9);
         // Fifth candle: TR4 = 2.0 → Wilder: (2.5*1 + 2.0)/2 = 2.25
-        assertEquals(2.25, atr.apply(new Candle(15, 13, 14)).orElseThrow(), 1e-9);
+        assertEquals(2.25, atr.apply(candle(0, 15, 13, 14)).orElseThrow(), 1e-9);
     }
 
     @Test
@@ -71,13 +79,13 @@ class AverageTrueRangeTest {
     @Test
     void testTrueRangeGapUp() {
         // High-low range is narrow, but gap from previous close dominates
-        double tr = Candle.trueRange(20, 19, 15);
+        double tr = AverageTrueRange.trueRange(20, 19, 15);
         assertEquals(5.0, tr, 1e-9);  // |20 - 15| = 5 dominates
     }
 
     @Test
     void testTrueRangeGapDown() {
-        double tr = Candle.trueRange(10, 9, 14);
+        double tr = AverageTrueRange.trueRange(10, 9, 14);
         assertEquals(5.0, tr, 1e-9);  // |9 - 14| = 5 dominates
     }
 }
