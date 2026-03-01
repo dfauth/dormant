@@ -3,6 +3,7 @@ package io.github.dfauth.ta;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static java.util.Arrays.stream;
 import static java.util.Optional.empty;
 
 public class AverageTrueRange {
@@ -19,36 +20,12 @@ public class AverageTrueRange {
      * {@code ATR = (prevATR * (period - 1) + TR) / period}.
      */
     public static double[] atr(Candle[] candles, int period) {
-        if (period < 1) {
-            throw new IllegalArgumentException("Period must be at least 1");
-        }
-        int n = candles.length;
-        if (n < period + 1) {
-            return new double[0];
-        }
-
-        // True ranges: index i corresponds to bar i+1 (needs previous close)
-        double[] trueRanges = new double[n - 1];
-        for (int i = 1; i < n; i++) {
-            Candle candle = candles[i];
-            trueRanges[i - 1] = AverageTrueRange.trueRange(candle.high(), candle.low(), candles[i - 1].close());
-        }
-
-        int resultLength = trueRanges.length - period + 1;
-        double[] result = new double[resultLength];
-
-        // Seed first ATR with SMA of the first `period` true ranges
-        double sum = 0;
-        for (int i = 0; i < period; i++) {
-            sum += trueRanges[i];
-        }
-        result[0] = sum / period;
-
-        // Wilder's smoothing for remaining values
-        for (int i = 1; i < resultLength; i++) {
-            result[i] = (result[i - 1] * (period - 1) + trueRanges[period + i - 1]) / period;
-        }
-        return result;
+        Function<Candle, Optional<Double>> f = atrStream(period);
+        return stream(candles)
+                .map(f)
+                .flatMap(Optional::stream)
+                .mapToDouble(Double::doubleValue)
+                .toArray();
     }
 
     /**
