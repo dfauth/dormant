@@ -15,6 +15,35 @@ import { JSONPath } from 'jsonpath-plus'
 // Add as many classes as you like and include them in registerCustomFunctions.
 // ---------------------------------------------------------------------------
 
+// Shared cache: full URL string (including query params) → raw parsed JSON.
+// Populated by FETCH; read by CACHE.
+const fetchCache = new Map()
+
+// Convert parsed JSON to a 2-D array suitable for UniverJS to spill:
+//   • Array of objects  → header row + one data row per object
+//   • Plain object      → two-column [key, value] table
+//   • Array of scalars  → single column, one value per row
+//   • Scalar / text     → single cell (returned as-is)
+function toSpreadsheetValue(data) {
+  if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
+    const keys = Object.keys(data[0])
+    return [keys, ...data.map(row => keys.map(k => row[k] ?? ''))]
+  }
+  if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
+    return Object.entries(data).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : v])
+  }
+  if (Array.isArray(data)) {
+    return data.map(v => [v])
+  }
+  return data
+}
+
+function applyJsonPath(data, jsonPathArg) {
+  if (jsonPathArg == null) return data
+  const expr = typeof jsonPathArg?.getValue === 'function' ? String(jsonPathArg.getValue()) : String(jsonPathArg)
+  return expr ? JSONPath({ path: expr, json: data }) : data
+}
+
 class DoubleFunction extends AsyncCustomFunction {
   constructor() {
     super('DOUBLE')
@@ -29,19 +58,14 @@ class DoubleFunction extends AsyncCustomFunction {
 }
 
 // =FETCH(url [, jsonPath]) — calls a backend endpoint and spills the result
-// into the sheet.
+// into the sheet.  The raw JSON response is cached under the URL key so that
+// =CACHE(url [, jsonPath]) can retrieve it without another network round-trip.
 //
 // The optional second argument is a JSONPath expression applied to the parsed
 // JSON before the result is returned.  Examples:
 //   =FETCH("/api/prices/BHP")                    — spills entire response
 //   =FETCH("/api/prices/BHP","$[*].close")        — single column of close prices
 //   =FETCH("/api/account","$.summary")            — object → two-column table
-//
-// The response is converted to a 2-D array so UniverJS can spill it cleanly:
-//   • JSON array of objects  → header row + one data row per object
-//   • JSON object            → two-column table of [key, value] pairs
-//   • JSON primitive         → single cell
-//   • Non-JSON text          → single cell
 //
 // NOTE: ValueObjectFactory.create() interprets any string containing "{...}"
 // as a spreadsheet array literal, which causes #SPILL!.  Returning a real
@@ -62,32 +86,33 @@ class FetchFunction extends AsyncCustomFunction {
     let data
     try { data = JSON.parse(text) } catch { return text }
 
-    // Apply JSONPath filter if provided
-    if (jsonPathArg != null) {
-      const expr = typeof jsonPathArg?.getValue === 'function' ? String(jsonPathArg.getValue()) : String(jsonPathArg)
-      if (expr) {
-        data = JSONPath({ path: expr, json: data })
-      }
-    }
+    // Cache raw JSON (before JSONPath) so CACHE() can apply its own path.
+    fetchCache.set(url, data)
 
-    // JSON array of objects → header row + data rows
-    if (Array.isArray(data) && data.length > 0 && typeof data[0] === 'object' && data[0] !== null) {
-      const keys = Object.keys(data[0])
-      return [keys, ...data.map(row => keys.map(k => row[k] ?? ''))]
-    }
+    return toSpreadsheetValue(applyJsonPath(data, jsonPathArg))
+  }
+}
 
-    // JSON object → two-column key/value table
-    if (typeof data === 'object' && data !== null && !Array.isArray(data)) {
-      return Object.entries(data).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v) : v])
-    }
+// =CACHE(key [, jsonPath]) — reads previously fetched JSON from the in-memory
+// cache without making a network request.  The key must match a URL that was
+// previously loaded by =FETCH (including any query-string parameters).
+//
+// The optional JSONPath argument works identically to the one in =FETCH,
+// allowing a different projection of the same cached payload.  Examples:
+//   =CACHE("/api/prices/BHP")               — full cached response
+//   =CACHE("/api/prices/BHP","$[*].close")  — only the close column
+class CacheFunction extends AsyncCustomFunction {
+  constructor() {
+    super('CACHE')
+    this.minParams = 1
+    this.maxParams = 2
+  }
 
-    // Array of primitives → single column (each value in its own row)
-    if (Array.isArray(data)) {
-      return data.map(v => [v])
-    }
-
-    // JSON primitive → single cell
-    return data
+  calculateCustom(keyArg, jsonPathArg) {
+    const key = typeof keyArg?.getValue === 'function' ? String(keyArg.getValue()) : String(keyArg)
+    const data = fetchCache.get(key)
+    if (data === undefined) return `#CACHE! Key not found: ${key}`
+    return toSpreadsheetValue(applyJsonPath(data, jsonPathArg))
   }
 }
 
@@ -96,6 +121,7 @@ function registerCustomFunctions(univer) {
   functionService.registerExecutors(
     new DoubleFunction(),
     new FetchFunction(),
+    new CacheFunction(),
   )
 }
 
