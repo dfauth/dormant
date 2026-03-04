@@ -15,10 +15,10 @@ public class BaseController {
     private final UserService userService;
 
     protected <T> T authorize(Function<User, T> f) {
-        return Authorization.authorize(e -> {
-            return e.isLeft() ? e.mapLeft(oidcUser -> f.apply(userService.findById(oidcUser).orElseThrow())) :
-                    e.mapRight(jwt -> f.apply(userService.findById(jwt).orElseThrow()));
-        });
+        return Authorization.authorize(e ->
+                e.isLeft() ? e.mapLeft(oAuthUser -> f.apply(userService.findByEmail(oAuthUser).orElseThrow())) :
+                        e.mapRight(jwt -> f.apply(userService.findByEmail(jwt).orElseThrow()))
+        );
     }
 
 }

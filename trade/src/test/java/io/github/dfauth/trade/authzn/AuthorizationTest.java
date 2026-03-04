@@ -40,9 +40,10 @@ class AuthorizationTest {
         when(auth.getPrincipal()).thenReturn(oidcUser);
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        Either<OidcUser, Jwt> result = Authorization.authorize(e -> e);
+        Either<OAuthUser, Jwt> result = Authorization.authorize(e -> e);
         assertTrue(result.isLeft());
-        assertSame(oidcUser, result.left());
+        assertSame(oidcUser, result.left().user());
+        assertEquals("google", result.left().registrationId());
     }
 
     // --- Jwt principal ---
@@ -66,7 +67,7 @@ class AuthorizationTest {
         when(auth.getPrincipal()).thenReturn(jwt);
         SecurityContextHolder.getContext().setAuthentication(auth);
 
-        Either<OidcUser, Jwt> result = Authorization.authorize(e -> e);
+        Either<OAuthUser, Jwt> result = Authorization.authorize(e -> e);
         assertTrue(result.isRight());
         assertSame(jwt, result.right());
     }

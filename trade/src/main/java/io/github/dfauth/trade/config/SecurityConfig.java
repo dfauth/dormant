@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.config;
 
+import io.github.dfauth.trade.authzn.OAuthUser;
 import io.github.dfauth.trade.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -8,7 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -53,8 +55,11 @@ public class SecurityConfig {
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .successHandler((request, response, authentication) -> {
-                            OidcUser oidcUser = (OidcUser) authentication.getPrincipal();
-                            userService.findOrCreateUser(oidcUser);
+                            OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
+                            userService.findOrCreateUser(new OAuthUser(
+                                    (OAuth2User) authentication.getPrincipal(),
+                                    token.getAuthorizedClientRegistrationId()
+                            ));
                             response.sendRedirect("http://localhost:3000");
                         })
                 )

@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.util.Optional;
 import java.util.function.BiFunction;
@@ -31,6 +32,11 @@ public class User {
     private String email;
 
     private String name;
+
+    @Column(nullable = false)
+    @ColumnDefault("'google'")
+    @Builder.Default
+    private String provider = "google";
 
     @Column(nullable = false)
     @Builder.Default
