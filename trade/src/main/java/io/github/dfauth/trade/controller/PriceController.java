@@ -86,7 +86,7 @@ public class PriceController extends BaseController {
                 TenorRange tenorRange = TenorRange.parse(tenor.orElse("1Y"));
                 Watermark.Direction direction = optDirection.orElse(HIGH);
                 return priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(m, c, tenorRange.start(), tenorRange.end())
-                        .stream().reduce(new Watermark<Price>(direction, p -> p.getClose().doubleValue()), Watermark::update, oops());
+                        .stream().reduce(new Watermark<>(direction, p -> p.getClose().doubleValue()), Watermark::update, oops());
             });
         });
     }

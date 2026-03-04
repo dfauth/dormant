@@ -5,11 +5,11 @@ const MARKETS = ['ASX']
 
 const SENTIMENTS = [
   { value: 'BULL',       label: 'Bull' },
-  { value: 'LATE_BULL',  label: 'Late Bull' },
   { value: 'EARLY_BULL', label: 'Early Bull' },
-  { value: 'BEAR',       label: 'Bear' },
   { value: 'LATE_BEAR',  label: 'Late Bear' },
+  { value: 'BEAR',       label: 'Bear' },
   { value: 'EARLY_BEAR', label: 'Early Bear' },
+  { value: 'LATE_BULL',  label: 'Late Bull' },
 ]
 
 function sentimentLabel(value) {
