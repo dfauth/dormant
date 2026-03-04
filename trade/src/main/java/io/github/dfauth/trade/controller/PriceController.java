@@ -1,9 +1,7 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.ta.TrendCalculator;
-import io.github.dfauth.trade.model.DateRange;
-import io.github.dfauth.trade.model.Price;
-import io.github.dfauth.trade.model.TrendSummary;
+import io.github.dfauth.trade.model.*;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,6 +17,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+
+import static io.github.dfauth.trade.model.Watermark.Direction.HIGH;
+import static io.github.dfauth.trycatch.Utils.oops;
+import static java.lang.Math.abs;
 
 @Slf4j
 @RestController
@@ -45,6 +47,48 @@ public class PriceController extends BaseController {
         priceRepository.saveAll(newPrices);
         log.info("Persisted {} of {} prices ({} duplicates skipped)", newPrices.size(), prices.size(), prices.size() - newPrices.size());
         return ResponseEntity.status(HttpStatus.CREATED).body(newPrices.size());
+    }
+
+    @Operation(summary = "Stocks near recent high / low", description = "Returns stocks whose current price is within a configurable threshold of their proximity to a recent high / low, sorted by proximity to that watermark.")
+    @ApiResponse(responseCode = "200", description = "List of high / low summaries")
+    @GetMapping("/watermark")
+    public List<Watermark<Price>> getWatermark(
+            @Parameter(description = "Market code (e.g. ASX) defaults to users default market") @RequestParam("market") Optional<String> market,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") Optional<String> tenor,
+            @Parameter(description = "threshold as a % of the high / low (e.g. 0.15, defaults to 0.1)") @RequestParam("threshold") Optional<Double> optThreshold,
+            @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Watermark.Direction> optDirection
+    ) {
+        return authorize(u -> {
+            String mkt = market.orElse(u.getDefaultMarket());
+            double threshold = optThreshold.orElse(0.1);
+            return priceRepository.findDistinctCodesByMarket(mkt).stream()
+                    .map(code -> {
+                        return getWatermarkByCode(code, tenor, optDirection);
+                    })
+                    .filter(w ->
+                            abs(w.getDistance()) < threshold)
+                    .sorted(Comparator.comparingDouble(Watermark::getDistance))
+                    .collect(Collectors.toList());
+        });
+    }
+
+
+    @Operation(summary = "Stocks near recent high / low", description = "Returns stocks whose current price is within a configurable threshold of their proximity to a recent high / low, sorted by proximity to that watermark.")
+    @ApiResponse(responseCode = "200", description = "List of high / low summaries")
+    @GetMapping("/watermark/{code}")
+    public Watermark<Price> getWatermarkByCode(
+            @Parameter(description = "code") @PathVariable("code") String code,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") Optional<String> tenor,
+            @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Watermark.Direction> optDirection
+    ) {
+        return authorize(u -> {
+            return u.resolveCode(code, (m, c) -> {
+                TenorRange tenorRange = TenorRange.parse(tenor.orElse("1Y"));
+                Watermark.Direction direction = optDirection.orElse(HIGH);
+                return priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(m, c, tenorRange.start(), tenorRange.end())
+                        .stream().reduce(new Watermark<Price>(direction, p -> p.getClose().doubleValue()), Watermark::update, oops());
+            });
+        });
     }
 
     @Operation(summary = "Get trending stocks", description = "Calculates the current trend state for every stock in the given market and optionally filters by sentiment.")

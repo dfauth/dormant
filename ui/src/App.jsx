@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import PriceSheet from './PriceSheet'
 import Trending from './Trending'
+import FiftyTwoWeekLow from './FiftyTwoWeekLow'
 import Valuations from './Valuations'
 import MarketDepth from './MarketDepth'
 import {
@@ -12,7 +13,7 @@ import {
 const NAV_ITEMS = [
   { key: 'positions',  label: 'Positions',    subItems: ['1Y performance', 'open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
-  { key: 'prices',     label: 'Prices',       subItems: ['trending', 'default'] },
+  { key: 'prices',     label: 'Prices',       subItems: ['trending', '1Y High', 'default'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
   { key: 'payments',   label: 'Payments',     subItems: ['reconciliation', 'dividend summary', 'dividend reconciliation'] },
@@ -310,7 +311,7 @@ export default function App() {
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
-      <div className={page === 'prices' && subPage !== 'trending' ? 'page-prices' : page === 'positions' && subPage === '1Y performance' ? 'page page-wide' : 'page'}>
+      <div className={page === 'prices' && subPage === 'default' ? 'page-prices' : page === 'positions' && subPage === '1Y performance' ? 'page page-wide' : 'page'}>
         {page === 'trades' && (
           <>
             <h1>Trades — ASX</h1>
@@ -833,8 +834,9 @@ export default function App() {
           )
         })()}
 
-        {page === 'prices' && subPage !== 'trending' && <PriceSheet />}
+        {page === 'prices' && subPage === 'default' && <PriceSheet />}
         {page === 'prices' && subPage === 'trending' && <Trending />}
+        {page === 'prices' && subPage === '1Y High' && <FiftyTwoWeekLow />}
         {page === 'valuations' && <Valuations />}
         {page === 'depth' && <MarketDepth />}
       </div>

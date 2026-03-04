@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
@@ -206,6 +207,114 @@ class PriceControllerTest {
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    // ── /api/prices/watermark ────────────────────────────────────────────────
+
+    private Price price(String code, LocalDate date, double close) {
+        BigDecimal c = BigDecimal.valueOf(close);
+        return Price.builder()
+                .market(MARKET).code(code).date(date)
+                .open(c).high(c).low(c).close(c)
+                .volume(1_000_000).build();
+    }
+
+    @Test
+    void getWatermark_unauthenticated_returns401() throws Exception {
+        mockMvc.perform(get("/api/prices/watermark").param("market", MARKET))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getWatermark_highDirection_returnsStockNearHigh() throws Exception {
+        // Prices climb to 100 then drop to 96 — 4% below the high, within the 10% default threshold
+        LocalDate base = LocalDate.now().minusDays(12);
+        for (int i = 0; i < 10; i++) {
+            priceRepository.save(price(CODE, base.plusDays(i), 91 + i)); // 91 … 100
+        }
+        priceRepository.save(price(CODE, base.plusDays(10), 96));
+
+        mockMvc.perform(get("/api/prices/watermark")
+                        .param("market", MARKET)
+                        .param("direction", "HIGH")
+                        .param("tenor", "1Y")
+                        .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].waterMark.code").value(CODE))
+                .andExpect(jsonPath("$[0].current.code").value(CODE))
+                .andExpect(jsonPath("$[0].intervalsSince").value(1))
+                .andExpect(jsonPath("$[0].distance", closeTo(-0.04, 0.001)));
+    }
+
+    @Test
+    void getWatermark_lowDirection_returnsStockNearLow() throws Exception {
+        // Prices fall to 50 then recover to 52 — 4% above the low, within the 10% default threshold
+        LocalDate base = LocalDate.now().minusDays(8);
+        double[] closes = {100, 90, 80, 70, 60, 50, 52};
+        for (int i = 0; i < closes.length; i++) {
+            priceRepository.save(price(CODE, base.plusDays(i), closes[i]));
+        }
+
+        mockMvc.perform(get("/api/prices/watermark")
+                        .param("market", MARKET)
+                        .param("direction", "LOW")
+                        .param("tenor", "1Y")
+                        .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].waterMark.code").value(CODE))
+                .andExpect(jsonPath("$[0].intervalsSince").value(1))
+                .andExpect(jsonPath("$[0].distance", closeTo(0.04, 0.001)));
+    }
+
+    @Test
+    void getWatermark_thresholdFiltersOutDistantStocks() throws Exception {
+        // BHP: 4% below its high → within 10% threshold → included
+        LocalDate base = LocalDate.now().minusDays(12);
+        for (int i = 0; i < 10; i++) {
+            priceRepository.save(price(CODE, base.plusDays(i), 91 + i));
+        }
+        priceRepository.save(price(CODE, base.plusDays(10), 96));
+
+        // CBA: 40% below its high → beyond 10% threshold → excluded
+        String cba = "CBA";
+        for (int i = 0; i < 10; i++) {
+            priceRepository.save(price(cba, base.plusDays(i), 91 + i));
+        }
+        priceRepository.save(price(cba, base.plusDays(10), 60));
+
+        mockMvc.perform(get("/api/prices/watermark")
+                        .param("market", MARKET)
+                        .param("direction", "HIGH")
+                        .param("tenor", "1Y")
+                        .param("threshold", "0.1")
+                        .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].waterMark.code").value(CODE));
+    }
+
+    @Test
+    void getWatermark_tenorExcludesPricesOutsideWindow() throws Exception {
+        // A price from 2 years ago would be the all-time high (200); the 1Y window high is 100
+        priceRepository.save(price(CODE, LocalDate.now().minusYears(2), 200));
+
+        LocalDate base = LocalDate.now().minusDays(12);
+        for (int i = 0; i < 10; i++) {
+            priceRepository.save(price(CODE, base.plusDays(i), 91 + i)); // 91 … 100
+        }
+        priceRepository.save(price(CODE, base.plusDays(10), 96));
+
+        // With tenor=1Y the 2-year-old price is excluded; watermark should be 100, distance -0.04
+        mockMvc.perform(get("/api/prices/watermark")
+                        .param("market", MARKET)
+                        .param("direction", "HIGH")
+                        .param("tenor", "1Y")
+                        .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].distance", closeTo(-0.04, 0.001)));
     }
 
     @Test
