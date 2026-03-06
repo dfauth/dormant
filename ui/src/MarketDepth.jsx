@@ -41,7 +41,7 @@ function fmtRatio(val) {
 }
 
 function DepthTable({ data, columns, onCodeClick }) {
-  const [sortCol, setSortCol] = useState('date')
+  const [sortCol, setSortCol] = useState('ratio')
   const [sortDir, setSortDir] = useState('desc')
 
   const sorted = useMemo(() => sortData(data, sortCol, sortDir), [data, sortCol, sortDir])
@@ -91,7 +91,7 @@ function DepthTable({ data, columns, onCodeClick }) {
 }
 
 const TENOR_OPTIONS = ['1D', '3D', '5D', '1M']
-const DEFAULT_TENOR = '3D'
+const DEFAULT_TENOR = '1D'
 
 export default function MarketDepth() {
   const [summary, setSummary] = useState({ data: [], loading: true, error: null })

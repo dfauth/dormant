@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.trade.utils.JsonNodeConverter;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

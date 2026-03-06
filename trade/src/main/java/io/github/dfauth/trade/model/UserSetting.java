@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.trade.utils.JsonNodeConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -1,4 +1,4 @@
-package io.github.dfauth.trade.model;
+package io.github.dfauth.trade.utils;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

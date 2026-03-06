@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import PriceChart from './PriceChart'
 
 const MARKETS = ['ASX']
-const TENORS = ['3M', '6M', '1Y', '2Y', '3Y', '5Y']
+const TENORS = ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y']
 const DIRECTIONS = ['HIGH', 'LOW']
 
 function SortTh({ label, col, sortCol, sortDir, onSort }) {
@@ -53,6 +53,7 @@ export default function FiftyTwoWeekLow() {
           currentPrice: r.current?.close,
           distancePct: r.distance != null ? r.distance * 100 : null,
           intervalsSince: r.intervalsSince,
+          touches: r.touches,
         })),
         loading: false,
         error: null,
@@ -158,6 +159,7 @@ export default function FiftyTwoWeekLow() {
               <SortTh label="Current Price"  col="currentPrice"   {...sortProps} />
               <SortTh label="Distance %"     col="distancePct"    {...sortProps} />
               <SortTh label="Days Since"     col="intervalsSince" {...sortProps} />
+              <SortTh label="Touches"        col="touches"        {...sortProps} />
             </tr>
           </thead>
           <tbody>
@@ -171,6 +173,7 @@ export default function FiftyTwoWeekLow() {
                 <td>{fmt2(r.currentPrice)}</td>
                 <td>{r.distancePct != null ? fmt2(r.distancePct) + '%' : '—'}</td>
                 <td>{r.intervalsSince ?? '—'}</td>
+                <td>{r.touches ?? '—'}</td>
               </tr>
             ))}
           </tbody>
