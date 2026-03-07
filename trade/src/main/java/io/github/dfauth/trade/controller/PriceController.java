@@ -18,7 +18,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static io.github.dfauth.trade.model.Watermark.Direction.HIGH;
 import static io.github.dfauth.trycatch.Utils.oops;
 import static java.lang.Math.abs;
 
@@ -56,7 +55,7 @@ public class PriceController extends BaseController {
             @Parameter(description = "Market code (e.g. ASX) defaults to users default market") @RequestParam("market") Optional<String> market,
             @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") Optional<String> tenor,
             @Parameter(description = "threshold as a % of the high / low (e.g. 0.15, defaults to 0.1)") @RequestParam("threshold") Optional<Double> optThreshold,
-            @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Watermark.Direction> optDirection
+            @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Direction> optDirection
     ) {
         return authorize(u -> {
             String mkt = market.orElse(u.getDefaultMarket());
@@ -79,12 +78,12 @@ public class PriceController extends BaseController {
     public Watermark<Price> getWatermarkByCode(
             @Parameter(description = "code") @PathVariable("code") String code,
             @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") Optional<String> tenor,
-            @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Watermark.Direction> optDirection
+            @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Direction> optDirection
     ) {
         return authorize(u -> {
             return u.resolveCode(code, (m, c) -> {
                 TenorRange tenorRange = TenorRange.parse(tenor.orElse("1Y"));
-                Watermark.Direction direction = optDirection.orElse(HIGH);
+                Direction direction = optDirection.orElse(Direction.RISING);
                 return priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(m, c, tenorRange.start(), tenorRange.end())
                         .stream().reduce(new Watermark<>(direction, p -> p.getClose().doubleValue()), Watermark::update, oops());
             });

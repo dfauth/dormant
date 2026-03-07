@@ -55,11 +55,11 @@ describe('FiftyTwoWeekLow', () => {
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 
-  it('defaults to direction=HIGH, tenor=1Y, threshold=5', async () => {
+  it('defaults to direction=RISING, tenor=1Y, threshold=5', async () => {
     render(<FiftyTwoWeekLow />)
     await waitFor(() => expect(screen.getByText('BHP')).toBeInTheDocument())
 
-    expect(screen.getByDisplayValue('HIGH')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('RISING')).toBeInTheDocument()
     expect(screen.getByDisplayValue('1Y')).toBeInTheDocument()
     // slider value
     expect(screen.getByRole('slider')).toHaveValue('5')
@@ -115,9 +115,9 @@ describe('FiftyTwoWeekLow', () => {
     render(<FiftyTwoWeekLow />)
     await waitFor(() => expect(screen.getByText('BHP')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByDisplayValue('HIGH'), { target: { value: 'LOW' } })
+    fireEvent.change(screen.getByDisplayValue('RISING'), { target: { value: 'FALLING' } })
 
-    await waitFor(() => expect(capturedUrl).toContain('direction=LOW'))
+    await waitFor(() => expect(capturedUrl).toContain('direction=FALLING'))
   })
 
   it('changing tenor triggers a re-fetch with the new param', async () => {

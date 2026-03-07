@@ -236,7 +236,7 @@ class PriceControllerTest {
 
         mockMvc.perform(get("/api/prices/watermark")
                         .param("market", MARKET)
-                        .param("direction", "HIGH")
+                        .param("direction", "RISING")
                         .param("tenor", "1Y")
                         .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
@@ -258,7 +258,7 @@ class PriceControllerTest {
 
         mockMvc.perform(get("/api/prices/watermark")
                         .param("market", MARKET)
-                        .param("direction", "LOW")
+                        .param("direction", "FALLING")
                         .param("tenor", "1Y")
                         .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
@@ -286,7 +286,7 @@ class PriceControllerTest {
 
         mockMvc.perform(get("/api/prices/watermark")
                         .param("market", MARKET)
-                        .param("direction", "HIGH")
+                        .param("direction", "RISING")
                         .param("tenor", "1Y")
                         .param("threshold", "0.1")
                         .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
@@ -309,7 +309,7 @@ class PriceControllerTest {
         // With tenor=1Y the 2-year-old price is excluded; watermark should be 100, distance -0.04
         mockMvc.perform(get("/api/prices/watermark")
                         .param("market", MARKET)
-                        .param("direction", "HIGH")
+                        .param("direction", "RISING")
                         .param("tenor", "1Y")
                         .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())

@@ -5,7 +5,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 import static java.lang.Double.NaN;
@@ -26,7 +25,7 @@ public class Watermark<T> {
     private ThresholdState touches = new WithinThreshold(0);
 
     public Watermark(Function<T, Double> extractor) {
-        this(Direction.HIGH, extractor);
+        this(Direction.RISING, extractor);
     }
 
     public Watermark(Direction direction, Function<T, Double> extractor) {
@@ -37,7 +36,7 @@ public class Watermark<T> {
         if(waterMark == null) {
             waterMark = t;
             intervalsSince = 0;
-        } else if(direction.test(extractor.apply(t), extractor.apply(waterMark))) {
+        } else if(direction.<Double>getBiPredicate().test(extractor.apply(t), extractor.apply(waterMark))) {
             waterMark = t;
             intervalsSince = 0;
         } else {
@@ -46,7 +45,7 @@ public class Watermark<T> {
         this.current = t;
 
         // look for support / resistance
-        if(direction.test(extractor.apply(t), extractor.apply(waterMark) * (1.0 + direction.signed(threshold)))) {
+        if(direction.<Double>getBiPredicate().test(extractor.apply(t), extractor.apply(waterMark) * (1.0 + direction.signed(threshold)))) {
             touches = touches.inside();
         } else {
             touches = touches.outside();
@@ -68,34 +67,6 @@ public class Watermark<T> {
 
     public static Watermark<Price> priceWatermarker() {
         return new Watermark<>(p -> p.getClose().doubleValue());
-    }
-
-    public enum Direction implements BiPredicate<Double, Double> {
-        HIGH((l, r) -> l.doubleValue() > r.doubleValue()),
-        LOW((l, r) -> l.doubleValue() < r.doubleValue());
-
-        private BiPredicate<Double, Double> p2;
-
-        Direction(BiPredicate<Double, Double> p2) {
-            this.p2 = p2;
-        }
-
-        @Override
-        public boolean test(Double l, Double r) {
-            return p2.test(l, r);
-        }
-
-        public Double signed(double threshold) {
-            return this.isLow() ? threshold : -1 * threshold;
-        }
-
-        public boolean isLow() {
-            return this == LOW;
-        }
-
-        public boolean isHigh() {
-            return this == HIGH;
-        }
     }
 
     @AllArgsConstructor

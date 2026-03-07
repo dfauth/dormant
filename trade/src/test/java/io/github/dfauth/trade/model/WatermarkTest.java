@@ -4,18 +4,19 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static io.github.dfauth.trade.model.Watermark.Direction.HIGH;
-import static io.github.dfauth.trade.model.Watermark.Direction.LOW;
-import static org.junit.jupiter.api.Assertions.*;
+import static io.github.dfauth.trade.model.Direction.FALLING;
+import static io.github.dfauth.trade.model.Direction.RISING;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WatermarkTest {
 
     private Watermark<Double> high() {
-        return new Watermark<>(HIGH, d -> d);
+        return new Watermark<>(RISING, d -> d);
     }
 
     private Watermark<Double> low() {
-        return new Watermark<>(LOW, d -> d);
+        return new Watermark<>(FALLING, d -> d);
     }
 
     @Test
@@ -122,7 +123,7 @@ class WatermarkTest {
         List<Double> prices = List.of(91.0, 92.0, 93.0, 94.0, 95.0, 96.0, 97.0, 98.0, 99.0, 100.0, 96.0);
         Watermark<Double> result = prices.stream()
                 .reduce(
-                        new Watermark<>(HIGH, d -> d),
+                        new Watermark<>(RISING, d -> d),
                         Watermark::update,
                         (a, b) -> { throw new UnsupportedOperationException("combiner should not be called on sequential stream"); }
                 );
