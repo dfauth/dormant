@@ -433,6 +433,65 @@ td.consensus-strong-sell {
   color: #e0e0f0;
 }
 
+/* ---------- Watchlist controls ---------- */
+
+.watchlist-input {
+  background: #1e1e38;
+  color: #e0e0f0;
+  border: 1px solid #2e2e50;
+  border-radius: 4px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.watchlist-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+}
+
+.watchlist-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.wl-btn {
+  background: #1e1e38;
+  color: #aaa;
+  border: 1px solid #2e2e50;
+  border-radius: 4px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.wl-btn:hover {
+  background: #2e2e50;
+  color: #e0e0f0;
+}
+
+.wl-btn--primary {
+  background: #4f46e5;
+  color: #fff;
+  border-color: #4f46e5;
+}
+
+.wl-btn--primary:hover {
+  background: #4338ca;
+  border-color: #4338ca;
+}
+
+.wl-btn--danger {
+  color: #ef4444;
+  border-color: #7f1d1d;
+}
+
+.wl-btn--danger:hover {
+  background: #7f1d1d;
+  color: #fff;
+}
+
 /* ---------- Summary row ---------- */
 
 .trades-table tbody tr.summary-row td {
