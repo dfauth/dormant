@@ -1,7 +1,9 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.DateRange;
+import io.github.dfauth.trade.model.Direction;
 import io.github.dfauth.trade.model.Valuation;
+import io.github.dfauth.trade.model.ValuationChange;
 import io.github.dfauth.trade.model.ValuationSummary;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.repository.ValuationRepository;
@@ -17,6 +19,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -61,6 +65,37 @@ public class ValuationController {
                                 .map(p -> p.getClose())
                                 .orElse(null)))
                 .toList();
+    }
+
+    @Operation(summary = "Get stocks whose analyst target price has changed in the most recent valuation")
+    @ApiResponse(responseCode = "200", description = "Stocks with a risen or fallen target vs the previous valuation")
+    @GetMapping("/changes")
+    public List<ValuationChange> getValuationChanges(
+            @Parameter(description = "Direction of target change (RISING or FALLING, default RISING)") @RequestParam(value = "direction", defaultValue = "RISING") Direction direction) {
+        return valuationService.findTargetChanges(direction).stream().map(pair -> {
+            Valuation curr = pair.get(0);
+            Valuation prev = pair.get(1);
+            BigDecimal price = priceRepository.findTopByMarketAndCodeOrderByDateDesc(curr.getMarket(), curr.getCode())
+                    .map(p -> p.getClose())
+                    .orElse(null);
+            BigDecimal targetChange = curr.getTarget().subtract(prev.getTarget());
+            BigDecimal targetChangePct = prev.getTarget().compareTo(BigDecimal.ZERO) != 0
+                    ? targetChange.divide(prev.getTarget(), 6, RoundingMode.HALF_UP)
+                            .multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP)
+                    : null;
+            BigDecimal potential = null;
+            if (price != null && price.compareTo(BigDecimal.ZERO) != 0) {
+                potential = curr.getTarget().subtract(price)
+                        .divide(price, 6, RoundingMode.HALF_UP)
+                        .multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP);
+            }
+            return new ValuationChange(
+                    curr.getMarket(), curr.getCode(),
+                    curr.getDate(), prev.getDate(),
+                    curr.getTarget(), prev.getTarget(),
+                    targetChange, targetChangePct,
+                    price, potential, curr.getConsensus());
+        }).toList();
     }
 
     @Operation(summary = "Get valuations for a security", description = "Returns analyst valuations ordered by date ascending, optionally filtered by date range or tenor. Price and potential are enriched from the most recent closing price.")

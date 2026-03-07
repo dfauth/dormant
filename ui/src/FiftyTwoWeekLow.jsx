@@ -3,7 +3,7 @@ import PriceChart from './PriceChart'
 
 const MARKETS = ['ASX']
 const TENORS = ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y']
-const DIRECTIONS = ['HIGH', 'LOW']
+const DIRECTIONS = ['RISING', 'FALLING']
 
 function SortTh({ label, col, sortCol, sortDir, onSort }) {
   const icon = col !== sortCol ? '↕' : sortDir === 'asc' ? '↑' : '↓'
@@ -21,7 +21,7 @@ function fmt2(n) {
 export default function FiftyTwoWeekLow() {
   const [market, setMarket] = useState('ASX')
   const [tenor, setTenor] = useState('1Y')
-  const [direction, setDirection] = useState('HIGH')
+  const [direction, setDirection] = useState('RISING')
   const [threshold, setThreshold] = useState(5)
   const [fetchThreshold, setFetchThreshold] = useState(5)
   const [data, setData] = useState({ rows: [], loading: false, error: null })
@@ -87,8 +87,8 @@ export default function FiftyTwoWeekLow() {
   }, [data.rows, sortCol, sortDir])
 
   const sortProps = { sortCol, sortDir, onSort }
-  const title = `${tenor} ${direction === 'HIGH' ? 'High' : 'Low'}`
-  const watermarkLabel = direction === 'HIGH' ? `${tenor} High` : `${tenor} Low`
+  const title = `${tenor} ${direction === 'RISING' ? 'High' : 'Low'}`
+  const watermarkLabel = direction === 'RISING' ? `${tenor} High` : `${tenor} Low`
 
   if (selectedStock) {
     return (

@@ -4,6 +4,7 @@ import PriceSheet from './PriceSheet'
 import Trending from './Trending'
 import FiftyTwoWeekLow from './FiftyTwoWeekLow'
 import Valuations from './Valuations'
+import ValuationChanges from './ValuationChanges'
 import MarketDepth from './MarketDepth'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,7 +15,7 @@ const NAV_ITEMS = [
   { key: 'positions',  label: 'Positions',    subItems: ['1Y performance', 'open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
   { key: 'prices',     label: 'Prices',       subItems: ['trending', '1Y High', 'default'] },
-  { key: 'valuations', label: 'Valuations',   subItems: ['default'] },
+  { key: 'valuations', label: 'Valuations',   subItems: ['default', 'rising target prices'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
   { key: 'payments',   label: 'Payments',     subItems: ['reconciliation', 'dividend summary', 'dividend reconciliation'] },
 ]
@@ -840,7 +841,8 @@ export default function App() {
         {page === 'prices' && subPage === 'default' && <PriceSheet />}
         {page === 'prices' && subPage === 'trending' && <Trending />}
         {page === 'prices' && subPage === '1Y High' && <FiftyTwoWeekLow />}
-        {page === 'valuations' && <Valuations />}
+        {page === 'valuations' && subPage === 'default' && <Valuations />}
+        {page === 'valuations' && subPage === 'rising target prices' && <ValuationChanges />}
         {page === 'depth' && <MarketDepth />}
       </div>
     </>

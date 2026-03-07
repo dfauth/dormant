@@ -401,6 +401,38 @@ td.consensus-strong-sell {
   border-color: #4f46e5;
 }
 
+/* ---------- Toggle button group ---------- */
+
+.toggle-group {
+  display: flex;
+  border: 1px solid #2e2e50;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.toggle-btn {
+  background: #1e1e38;
+  color: #aaa;
+  border: none;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.toggle-btn + .toggle-btn {
+  border-left: 1px solid #2e2e50;
+}
+
+.toggle-btn--active {
+  background: #4f46e5;
+  color: #fff;
+}
+
+.toggle-btn:hover:not(.toggle-btn--active) {
+  background: #2e2e50;
+  color: #e0e0f0;
+}
+
 /* ---------- Summary row ---------- */
 
 .trades-table tbody tr.summary-row td {
