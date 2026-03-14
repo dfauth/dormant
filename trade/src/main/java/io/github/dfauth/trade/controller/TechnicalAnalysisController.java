@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.ta.RelativeStrengthIndex;
 import io.github.dfauth.trade.model.CodeAware;
 import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.EMA;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static io.github.dfauth.trycatch.Utils.oops;
 import static java.util.Arrays.asList;
@@ -31,6 +33,60 @@ public class TechnicalAnalysisController extends BaseController {
     public TechnicalAnalysisController(PriceRepository priceRepository, UserService userService) {
         super(userService);
         this.priceRepository = priceRepository;
+    }
+
+    @Operation(summary = "Get RSI for all securities in a market", description = "Returns the latest RSI for every code in the market, excluding codes with insufficient price history.")
+    @ApiResponse(responseCode = "200", description = "List of RSI values")
+    @GetMapping("/rsi")
+    public List<CodeAware<Double>> getRsiAll(
+            @Parameter(description = "Market (default: user's default market)") @RequestParam("market") Optional<String> optMarket,
+            @Parameter(description = "RSI period (default 14)") @RequestParam("period") Optional<Integer> optPeriod,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            String market = optMarket.orElse(u.getDefaultMarket());
+            int period = optPeriod.orElse(14);
+            Optional<DateRange> dateRange = DateRange.resolve(empty(), empty(), endAt);
+            return priceRepository.findDistinctCodesByMarket(market).stream()
+                    .map(code -> {
+                        Function<Double, Optional<Double>> rsi = RelativeStrengthIndex.rsiStream(period);
+                        Optional<Double> last = dateRange
+                                .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market, code, dr.start(), dr.end()))
+                                .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(market, code))
+                                .stream()
+                                .map(p -> rsi.apply(p.getClose().doubleValue()))
+                                .filter(Optional::isPresent)
+                                .reduce((a, b) -> b)
+                                .flatMap(o -> o);
+                        return new CodeAware<>(market, code, last.orElse(Double.NaN));
+                    })
+                    .filter(ca -> !Double.isNaN(ca.getPayload()))
+                    .collect(Collectors.toList());
+        });
+    }
+
+    @Operation(summary = "Get RSI for a security", description = "Returns the latest RSI value for the security using Wilder's smoothing.")
+    @ApiResponse(responseCode = "200", description = "RSI value")
+    @GetMapping("/rsi/{code}")
+    public CodeAware<Double> getRsi(
+            @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @PathVariable("code") String marketCodeString,
+            @Parameter(description = "RSI period (default 14)") @RequestParam("period") Optional<Integer> optPeriod,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            Optional<DateRange> dateRange = DateRange.resolve(empty(), empty(), endAt);
+            int period = optPeriod.orElse(14);
+            Function<Double, Optional<Double>> rsi = RelativeStrengthIndex.rsiStream(period);
+            return u.resolveCode(marketCodeString, (mkt, cd) -> {
+                Optional<Double> last = dateRange
+                        .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dr.start(), dr.end()))
+                        .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(mkt, cd))
+                        .stream()
+                        .map(p -> rsi.apply(p.getClose().doubleValue()))
+                        .filter(Optional::isPresent)
+                        .reduce((a, b) -> b)
+                        .flatMap(o -> o);
+                return new CodeAware<>(mkt, cd, last.orElse(Double.NaN));
+            });
+        });
     }
 
     @Operation(summary = "Get prices for a security", description = "Returns OHLCV prices ordered by date ascending, optionally filtered by date range or tenor.")

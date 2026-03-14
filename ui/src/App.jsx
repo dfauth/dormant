@@ -8,6 +8,7 @@ import ValuationChanges from './ValuationChanges'
 import Watchlists from './Watchlists'
 import MarketDepth from './MarketDepth'
 import PriceGrid from './PriceGrid'
+import RsiScanner from './RsiScanner'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Cell, LabelList, ResponsiveContainer, ReferenceLine,
@@ -16,7 +17,7 @@ import {
 const NAV_ITEMS = [
   { key: 'positions',  label: 'Positions',    subItems: ['1Y performance', 'open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
-  { key: 'prices',     label: 'Prices',       subItems: ['trending', '1Y High', 'default', 'grid'] },
+  { key: 'prices',     label: 'Prices',       subItems: ['trending', '1Y High', 'default', 'grid', 'rsi'] },
   { key: 'valuations', label: 'Valuations',   subItems: ['default', 'rising target prices'] },
   { key: 'watchlists', label: 'Watchlists',    subItems: ['default'] },
   { key: 'depth',      label: 'Market Depth', subItems: ['default'] },
@@ -845,6 +846,7 @@ export default function App() {
         {page === 'prices' && subPage === 'trending' && <Trending />}
         {page === 'prices' && subPage === '1Y High' && <FiftyTwoWeekLow />}
         {page === 'prices' && subPage === 'grid' && <PriceGrid />}
+        {page === 'prices' && subPage === 'rsi' && <RsiScanner />}
         {page === 'valuations' && subPage === 'default' && <Valuations />}
         {page === 'valuations' && subPage === 'rising target prices' && <ValuationChanges />}
         {page === 'watchlists' && <Watchlists />}
