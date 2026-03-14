@@ -115,6 +115,15 @@ body {
   max-width: 1400px;
 }
 
+.page-grid {
+  margin: 2rem 0;
+  padding: 0 1.5rem;
+}
+
+.page-grid .reactgrid-content .rg-pane .rg-cell {
+  min-height: unset !important;
+}
+
 .page-prices {
   display: flex;
   flex-direction: column;

@@ -12,11 +12,15 @@
     "coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@silevis/reactgrid": "^4.1.17",
     "@univerjs/preset-sheets-core": "^0.5.0",
     "@univerjs/presets": "^0.5.0",
+    "axios": "^1.13.6",
+    "hot-formula-parser": "^4.0.0",
     "jsonpath-plus": "^10.4.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "reactgrid": "^0.1.1",
     "recharts": "^3.7.0",
     "rxjs": "^7.8.2",
     "scheduler": "^0.27.0"
