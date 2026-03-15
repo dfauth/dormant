@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -42,6 +43,13 @@ public class WatchlistController extends BaseController {
     @GetMapping
     public List<Watchlist> getWatchlists() {
         return authorize(u -> watchlistRepository.findByUserId(u.getId()));
+    }
+
+    @Operation(summary = "Get a named watchlist for the current user")
+    @ApiResponse(responseCode = "200", description = "the named watchlist items")
+    @GetMapping("/{name}")
+    public Optional<Watchlist> getWatchlist(@PathVariable("name") String name) {
+        return authorize(u -> watchlistRepository.findByUserIdAndName(u.getId(), name));
     }
 
     @Operation(summary = "upsert watchlist", description = "Creates or replaces a watchlist by name. Existing items are replaced.")

@@ -16,7 +16,27 @@
       "Bash(tail:*)",
       "Bash(xargs grep:*)",
       "Bash(ls:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(echo \"JAVA_HOME=$JAVA_HOME\")",
+      "Bash(JAVA_HOME=\"$JAVA_HOME\" PATH=\"$JAVA_HOME/bin:$PATH\" \"$MVN\" test:*)",
+      "WebFetch(domain:jsonpath-plus.github.io)",
+      "WebFetch(domain:github.com)",
+      "Read(//c/Users/dfaut/workspace/projects/dormant/trade/**)",
+      "Bash(./mvnw test)",
+      "Bash(mvn:*)",
+      "Bash(java:*)",
+      "Bash(JAVA_HOME=\"$JAVA_HOME\" \"$MAVEN\":*)",
+      "Bash(export:*)",
+      "WebFetch(domain:reactgrid.com)",
+      "Bash(npm info:*)",
+      "Read(//c/Users/dfaut/workspace/projects/dormant/**)",
+      "Bash(npm ls axios hot-formula-parser)",
+      "Bash(grep:*)",
+      "Bash(dd:*)",
+      "Bash(node:*)",
+      "Read(//c/Users/dfaut/.sdkman/candidates/maven/current/bin/**)",
+      "Read(//c/c/**)",
+      "Bash(echo:*)"
     ]
   }
 }

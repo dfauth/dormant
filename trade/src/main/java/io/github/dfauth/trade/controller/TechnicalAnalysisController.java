@@ -1,10 +1,9 @@
 package io.github.dfauth.trade.controller;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.github.dfauth.ta.RelativeStrengthIndex;
-import io.github.dfauth.trade.model.CodeAware;
-import io.github.dfauth.trade.model.DateRange;
-import io.github.dfauth.trade.model.EMA;
-import io.github.dfauth.trade.model.Price;
+import io.github.dfauth.ta.TrendVelocity;
+import io.github.dfauth.trade.model.*;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,11 +13,16 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static io.github.dfauth.trycatch.Utils.oops;
+import static io.github.dfauth.trycatch.Utils.right;
 import static java.util.Arrays.asList;
 import static java.util.Optional.empty;
 
@@ -53,10 +57,8 @@ public class TechnicalAnalysisController extends BaseController {
                                 .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(market, code, dr.start(), dr.end()))
                                 .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(market, code))
                                 .stream()
-                                .map(p -> rsi.apply(p.getClose().doubleValue()))
-                                .filter(Optional::isPresent)
-                                .reduce((a, b) -> b)
-                                .flatMap(o -> o);
+                                .flatMap(p -> rsi.apply(p.getClose().doubleValue()).stream())
+                                .reduce((a, b) -> b);
                         return new CodeAware<>(market, code, last.orElse(Double.NaN));
                     })
                     .filter(ca -> !Double.isNaN(ca.getPayload()))
@@ -89,6 +91,28 @@ public class TechnicalAnalysisController extends BaseController {
         });
     }
 
+    @Operation(summary = "Get Trend Velocity for a security", description = "Returns the latest Trend Velocity value: RoC(ema(period)) / atr(period).")
+    @ApiResponse(responseCode = "200", description = "Trend Velocity value")
+    @GetMapping("/tv/{code}/{period}")
+    public Optional<TV> getTrendVelocity(
+            @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @PathVariable("code") String marketCodeString,
+            @Parameter(description = "Period for trend velocity calculation") @PathVariable("period") int period,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            Optional<DateRange> dateRange = DateRange.resolve(empty(), empty(), endAt);
+            Function<Price, Optional<TrendVelocity.TrendVelocityRecord>> tv = TrendVelocity.trendVelocityStream(period)::apply;
+            return u.resolveCode(marketCodeString, (mkt, cd) -> {
+                Optional<TV> last = dateRange
+                        .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dr.start(), dr.end()))
+                        .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(mkt, cd))
+                        .stream()
+                        .flatMap(p -> tv.apply(p).map(d -> new TV(cd, p.getDate(), d)).stream())
+                        .reduce(right());
+                return last;
+            });
+        });
+    }
+
     @Operation(summary = "Get prices for a security", description = "Returns OHLCV prices ordered by date ascending, optionally filtered by date range or tenor.")
     @ApiResponse(responseCode = "200", description = "List of prices")
     @GetMapping("/ema/{code}")
@@ -114,5 +138,32 @@ public class TechnicalAnalysisController extends BaseController {
                                 return ca;
                             }, oops()));
         });
+    }
+
+    public record TV(String code, LocalDate date, @JsonIgnore TrendVelocity.TrendVelocityRecord tvr) implements TrendVelocity {
+        @Override
+        public int getPeriod() {
+            return tvr.period();
+        }
+
+        @Override
+        public double getEma() {
+            return tvr.ema();
+        }
+
+        @Override
+        public double getRoc() {
+            return tvr.roc();
+        }
+
+        @Override
+        public double getAtr() {
+            return tvr.atr();
+        }
+
+        @Override
+        public double getTv() {
+            return tvr.tv();
+        }
     }
 }

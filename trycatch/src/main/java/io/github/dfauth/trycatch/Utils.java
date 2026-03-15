@@ -5,6 +5,14 @@ import java.util.function.BinaryOperator;
 
 public class Utils {
 
+    public static <T> BinaryOperator<T> right() {
+        return (l, r) -> r;
+    }
+
+    public static <T> BinaryOperator<T> left() {
+        return (l, r) -> r;
+    }
+
     public static <T> BinaryOperator<T> oops() {
         return oops(new UnsupportedOperationException("Unsupported"));
     }
