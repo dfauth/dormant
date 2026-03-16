@@ -251,6 +251,9 @@ export default function App() {
         <a href="/oauth2/authorization/github">
           <button className="login-btn login-btn--github">Login with GitHub</button>
         </a>
+        <a href="/oauth2/authorization/facebook">
+          <button className="login-btn login-btn--facebook">Login with Facebook</button>
+        </a>
       </div>
     )
   }
