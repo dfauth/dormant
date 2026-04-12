@@ -1,7 +1,8 @@
 package io.github.dfauth.ta;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -40,12 +41,11 @@ public interface TrendVelocity {
             return new double[0];
         }
         Function<Candle, Optional<Double>> f = trendVelocity(period);
-        double[] result = new double[candles.length - (2 * period - 1)];
-        AtomicInteger i = new AtomicInteger(0);
+        List<Double> result = new ArrayList<>();
         for (Candle candle : candles) {
-            f.apply(candle).ifPresent(v -> result[i.getAndIncrement()] = v);
+            f.apply(candle).ifPresent(result::add);
         }
-        return result;
+        return result.stream().mapToDouble(Double::doubleValue).toArray();
     }
 
     /**

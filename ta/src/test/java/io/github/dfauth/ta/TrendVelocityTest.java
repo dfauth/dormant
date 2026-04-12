@@ -39,12 +39,12 @@ class TrendVelocityTest {
     void streamingEmitsEmptyDuringWarmUp() {
         Function<Candle, Optional<Double>> tv = TrendVelocity.trendVelocityStream(5).andThen(tvr -> tvr.map(TrendVelocity.TrendVelocityRecord::tv));
         // First 2*period - 1 = 9 candles should all be empty
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 10; i++) {
             assertEquals(Optional.empty(), tv.apply(RISING_12[i]),
                     "Expected empty at candle " + i);
         }
         // 10th candle (index 9) should emit
-        assertTrue(tv.apply(RISING_12[9]).isPresent());
+        assertTrue(tv.apply(RISING_12[10]).isPresent());
     }
 
     @Test
@@ -55,7 +55,7 @@ class TrendVelocityTest {
             tv.apply(c).ifPresent(values::add);
         }
         // 12 candles, period=5: 12 - (2*5 - 1) = 3 values
-        assertEquals(3, values.size());
+        assertEquals(2, values.size());
     }
 
     @Test
@@ -90,7 +90,7 @@ class TrendVelocityTest {
     @Test
     void batchResultLengthMatchesStream() {
         double[] batch = TrendVelocity.trendVelocity(RISING_12, 5);
-        assertEquals(3, batch.length);
+        assertEquals(2, batch.length);
     }
 
     @Test

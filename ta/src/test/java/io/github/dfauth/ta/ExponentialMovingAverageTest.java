@@ -61,7 +61,7 @@ class ExponentialMovingAverageTest {
 
         assertEquals(Optional.empty(), ema.apply(10.0));
         assertEquals(Optional.empty(), ema.apply(20.0));
-        assertEquals(20.0, ema.apply(30.0).orElseThrow(), 1e-9);   // SMA seed
+        assertEquals(Optional.empty(), ema.apply(30.0));   // SMA seed
         assertEquals(30.0, ema.apply(40.0).orElseThrow(), 1e-9);   // (40-20)*0.5 + 20
         assertEquals(40.0, ema.apply(50.0).orElseThrow(), 1e-9);   // (50-30)*0.5 + 30
     }

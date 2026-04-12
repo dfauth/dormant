@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
+import java.util.stream.DoubleStream;
 
-import static io.github.dfauth.ta.SimpleMovingAverage.sma;
+import static java.util.Arrays.stream;
 import static java.util.Optional.empty;
 
 @RequiredArgsConstructor
@@ -42,35 +44,13 @@ public class ExponentialMovingAverage implements Function<Double, Optional<Doubl
         }
         int resultLength = prices.length - period + 1;
         double[] result = new double[resultLength];
-        result[0] = sma(prices, period)[0];
+        result[0] = SimpleMovingAverage.sma(prices, period)[0];
         double prev = result[0];
         for (int i = 1; i < resultLength; i++) {
             result[i] = ema(smoothingFactor, period).apply(prices[resultLength+i-1], prev);
             prev = result[i];
         }
         return result;
-    }
-
-    public static Function<Double, Optional<Double>> emaStream(int period) {
-        return emaStream(2.0, period);
-    }
-
-    public static Function<Double, Optional<Double>> emaStream(double smoothingFactor, int period) {
-        double multiplier = smoothingFactor / (period + 1);
-        RingBuffer<Double> ringbuffer = RingBuffer.create(new double[period]);
-        double[] prev = {Double.NaN};
-        return d -> {
-            ringbuffer.write(d);
-            if (ringbuffer.isFull()) {
-                if (Double.isNaN(prev[0])) {
-                    prev[0] = ringbuffer.stream().mapToDouble(Double::doubleValue).sum() / period;
-                } else {
-                    prev[0] = (d - prev[0]) * multiplier + prev[0];
-                }
-                return Optional.of(prev[0]);
-            }
-            return empty();
-        };
     }
 
     public static Function<Double, List<Double>> ema(int period, int window) {
@@ -110,5 +90,49 @@ public class ExponentialMovingAverage implements Function<Double, Optional<Doubl
 
     public static double calculate(double multiplier, double current, double prev) {
         return (current * multiplier) + (prev * (1 - multiplier));
+    }
+
+    public static Function<Double, Optional<Double>> emaStream(int period) {
+        return emaStream(2.0, period);
+    }
+
+    public static Function<Double, Optional<Double>> emaStream(double multiplier, int period) {
+        RingBuffer<Double> ringBuffer = RingBuffer.create(new double[period]);
+        return d -> {
+            if(ringBuffer.isFull()) {
+                double prev = ringBuffer.read();
+                double result = ema(multiplier, period, d, prev);
+                ringBuffer.write(result);
+                return Optional.of(result);
+            } else {
+                ringBuffer.write(d);
+                if(ringBuffer.isFull()) {
+                    sma(ringBuffer.stream().mapToDouble(Double::doubleValue)).ifPresent(ringBuffer::write);
+                    return empty();
+                } else {
+                    return empty();
+                }
+            }
+        };
+    }
+
+    public static double ema(int period, double current, double prev) {
+        return ema(2.0, period, current, prev);
+    }
+
+    public static double ema(double multiplier, int period, double current, double prev) {
+        return ema(multiplier/(period + 1.0), current, prev);
+    }
+
+    public static double ema(double multiplier, double current, double prev) {
+        return (current * multiplier) + (prev * (1 - multiplier));
+    }
+
+    public static OptionalDouble sma(double[] doubles) {
+        return sma(stream(doubles));
+    }
+
+    public static OptionalDouble sma(DoubleStream stream) {
+        return stream.average();
     }
 }
