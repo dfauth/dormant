@@ -2,6 +2,7 @@ package io.github.dfauth.ta;
 
 import io.github.dfauth.trycatch.TriPredicate;
 
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -21,7 +22,9 @@ public enum TrendState implements TriPredicate<Double, Double, Double> {
             s < f && f < l), // s < f < l
     EARLY_BULL(f -> s -> l ->
             s < l && l < f); //s < l < f
-    
+
+    public static final List<TrendState> RISING_TREND_STATES = List.of(LATE_BEAR, EARLY_BULL, BULL);
+
     private Function<Double, Function<Double, Predicate<Double>>> p3;
 
     TrendState(Function<Double, Function<Double, Predicate<Double>>> p3) {
@@ -35,6 +38,22 @@ public enum TrendState implements TriPredicate<Double, Double, Double> {
 
     public static TrendState classify(double f, double s, double l) {
         return stream(values()).filter(t -> t.test(f, s, l)).findFirst().orElseThrow(() -> new IllegalStateException("Oops. shouldn't happen"));
+    }
+
+    public boolean isRising() {
+        return RISING_TREND_STATES.contains(this);
+    }
+
+    public boolean isFalling() {
+        return !isRising();
+    }
+
+    public boolean isBull() {
+        return this == BULL;
+    }
+
+    public boolean isBear() {
+        return this == BEAR;
     }
 }
 

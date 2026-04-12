@@ -104,9 +104,9 @@ public class PriceController extends BaseController {
                             .toArray();
                     return TrendCalculator.trend(prices, 8, 21, 200)
                             .stream()
-                            .map(trend -> new TrendSummary(market, code, trend.getPrice(), trend));
+                            .map(trend -> new TrendSummary(market, code, trend.price(), trend));
                 })
-                .filter(ts -> sentiment.isEmpty() || ts.getTrendState().getTrendState().name().equals(sentiment.get()))
+                .filter(ts -> sentiment.isEmpty() || ts.getTrendState().trendState().name().equals(sentiment.get()))
                 .sorted(Comparator.comparing(TrendSummary::getCode))
                 .collect(Collectors.toList());
     }

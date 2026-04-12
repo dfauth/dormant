@@ -67,7 +67,7 @@ class TrendCalculatorTest {
         }
         Optional<Trend> result = TrendCalculator.trend(prices, 2, 5, 10);
         assertTrue(result.isPresent());
-        assertEquals(TrendState.BULL, result.map(Trend::getTrendState).get());
+        assertEquals(TrendState.BULL, result.map(Trend::trendState).get());
     }
 
     @Test

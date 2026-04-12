@@ -2,6 +2,7 @@ package io.github.dfauth.ta;
 
 import lombok.RequiredArgsConstructor;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -14,6 +15,7 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
     private final Function<Double, List<Double>> fastEma;
     private final Function<Double, List<Double>> slowEma;
     private final Function<Double, List<Double>> longEma;
+    private Trend previous = null;
 
     public static Function<Double, Optional<Trend>> trendStream() {
         return trendStream(8, 21, 200);
@@ -21,11 +23,27 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
 
     public static Function<Double, Optional<Trend>> trendStream(int fastPeriod, int slowPeriod, int longPeriod) {
         validatePeriods(fastPeriod, slowPeriod, longPeriod);
-        return new TrendCalculator(
-                ExponentialMovingAverage.ema(fastPeriod, fastPeriod+3),
-                ExponentialMovingAverage.ema(slowPeriod, slowPeriod+3),
-                ExponentialMovingAverage.ema(longPeriod, longPeriod+3)
+        Function<Double, Optional<Double>> fast = ExponentialMovingAverage.emaStream(fastPeriod);
+        List<Double> fastList = new ArrayList<>();
+        Function<Double, Optional<Double>> slow = ExponentialMovingAverage.emaStream(slowPeriod);
+        List<Double> slowList = new ArrayList<>();
+        Function<Double, Optional<Double>> lng = ExponentialMovingAverage.emaStream(longPeriod);
+        List<Double> longList = new ArrayList<>();
+        TrendCalculator trendCalculator = new TrendCalculator(
+                d -> {
+                    fast.apply(d).ifPresent(fastList::add);
+                    return fastList;
+                },
+                d -> {
+                    slow.apply(d).ifPresent(slowList::add);
+                    return slowList;
+                },
+                d -> {
+                    lng.apply(d).ifPresent(longList::add);
+                    return longList;
+                }
         );
+        return trendCalculator;
     }
 
     public static Optional<Trend> trend(double[] prices, int fastPeriod, int slowPeriod, int longPeriod) {
@@ -43,7 +61,15 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
         return nonEmpty(fastEma.apply(price))
                 .flatMap(f -> nonEmpty(slowEma.apply(price))
                 .flatMap(s -> nonEmpty(longEma.apply(price))
-                .map(l -> new Trend(price, f, s, l, TrendState.classify(f.getLast(), s.getLast(), l.getLast())))));
+                .map(l -> {
+                    TrendState state = TrendState.classify(f.getLast(), s.getLast(), l.getLast());
+                    if(previous == null || previous.trendState() != state) {
+                        previous = new Trend(0, price, f.getLast(), s.getLast(), l.getLast(), state);
+                    } else {
+                        previous = new Trend(previous.duration()+1, price, f.getLast(), s.getLast(), l.getLast(), state);
+                    }
+                    return previous;
+                })));
     }
 
     private static <T> Optional<List<T>> nonEmpty(List<T> l) {
