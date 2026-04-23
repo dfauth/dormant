@@ -63,40 +63,33 @@ public record Drawdown<T>(Extractable<T, Double> value, List<Either<High<T>, Low
     public static <T> Function<T, Optional<Drawdown<T>>> drawdownStream(Function<T, Double> extractor) {
         List<Either<High<T>, Low<T>>> tmp = new ArrayList<>();
         AtomicReference<T> current = new AtomicReference<>();
+        AtomicReference<Trend> previousTrend = new AtomicReference<>();
         Function<Double, Optional<Trend>> stream = trendStream();
         return t -> stream.apply(extractor.apply(t))
                 .map(trend -> {
-                    return switch (trend.trendState()) {
-                        case BULL -> {
-                            if (current.get() == null || extractor.apply(t) > extractor.apply(current.get())) {
-                                current.set(t);
-                            }
-                            yield new Drawdown(new Extractable(extractor, t), tmp);
+                    if (current.get() == null) {
+                        current.set(t);
+                    } else if (trend.trendState().isRising() && extractor.apply(t) > extractor.apply(current.get())) {
+                        if (trend.duration() == 0 && previousTrend.get().trendState().isFalling()) {
+                            tmp.add(right(new Low<>(new Extractable(extractor, current.get()))));
                         }
-                        case LATE_BULL -> {
-                            if (current.get() != null && trend.duration() == 0) {
-                                tmp.add(left(new High(new Extractable(extractor, current.get()))));
-                                current.set(null);
-                            }
-                            yield new Drawdown(new Extractable(extractor, t), tmp);
+                        current.set(t);
+                    } else if (trend.trendState().isFalling() && extractor.apply(t) < extractor.apply(current.get())) {
+                        if (trend.duration() == 0 && previousTrend.get().trendState().isRising()) {
+                            tmp.add(left(new High<>(new Extractable(extractor, current.get()))));
                         }
-                        case BEAR -> {
-                            if (current.get() == null || extractor.apply(t) < extractor.apply(current.get())) {
-                                current.set(t);
-                            }
-                            yield new Drawdown(new Extractable(extractor, t), tmp);
+                        current.set(t);
+                    } else {
+                        if (trend.duration() == 0 && previousTrend.get().trendState().isRising() && trend.trendState().isFalling()) {
+                            tmp.add(left(new High(new Extractable(extractor, current.get()))));
+                            current.set(null);
+                        } else if (trend.duration() == 0 && previousTrend.get().trendState().isFalling() && trend.trendState().isRising()) {
+                            tmp.add(right(new Low(new Extractable(extractor, current.get()))));
+                            current.set(null);
                         }
-                        case LATE_BEAR -> {
-                            if (current.get() != null && trend.duration() == 0) {
-                                tmp.add(right(new Low(new Extractable(extractor, current.get()))));
-                                current.set(null);
-                            }
-                            yield new Drawdown(new Extractable(extractor, t), tmp);
-                        }
-                        default -> {
-                            yield new Drawdown(new Extractable(extractor, t), tmp);
-                        }
-                    };
+                    }
+                    previousTrend.set(trend);
+                    return new Drawdown(new Extractable(extractor, t), tmp);
                 });
 
     }
