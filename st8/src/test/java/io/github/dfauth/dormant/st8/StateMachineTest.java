@@ -7,8 +7,6 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.github.dfauth.dormant.st8.Event.onEvent;
-import static io.github.dfauth.dormant.st8.State.transitionTo;
 import static io.github.dfauth.dormant.st8.TestEvent.*;
 import static io.github.dfauth.dormant.st8.TestState.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -41,11 +39,11 @@ public class StateMachineTest {
                     .state(B, t -> t.q.offer("onEntry(B)"), t -> t.q.offer("onExit(B)"))
                     .state(C, t -> t.q.offer("onEntry(C)"), t -> t.q.offer("onExit(C)"))
                     .state(D, t -> t.q.offer("onEntry(D)"), t -> t.q.offer("onExit(D)"))
-                    .whenInState(A, onEvent(A1), ctx -> ctx.toggle.get(), transitionTo(B))
-                    .whenInState(A, onEvent(A2), transitionTo(C))
-                    .whenInState(B, onEvent(B1), transitionTo(C))
-                    .whenInState(B, onEvent(B2), transitionTo(D))
-                    .whenInState(C, onEvent(C1), transitionTo(D))
+                    .whenInState(A).onEvent(A1, ctx -> ctx.toggle.get()).transitionTo(B)
+                    .whenInState(A).onEvent(A2).transitionTo(C)
+                    .whenInState(B).onEvent(B1).transitionTo(C)
+                    .whenInState(B).onEvent(B2).transitionTo(D)
+                    .whenInState(C).onEvent(C1).transitionTo(D)
             ;
 
             {

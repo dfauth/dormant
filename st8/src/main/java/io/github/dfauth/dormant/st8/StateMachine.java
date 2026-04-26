@@ -3,6 +3,7 @@ package io.github.dfauth.dormant.st8;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -58,15 +59,17 @@ public class StateMachine<STATE, CTX> {
             return this;
         }
 
-        public <EVENT> StateMachineBuilder<STATE, CTX> whenInState(STATE s, Event<EVENT> e, State.StateLookup<STATE, CTX> stateLookup) {
-            return whenInState(s, e, alwaysTrue(), stateLookup);
-        }
+//        public <EVENT> StateMachineBuilder<STATE, CTX> whenInState(STATE s, Event<EVENT> e, State.StateLookup<STATE, CTX> stateLookup) {
+//            return whenInState(s, e, alwaysTrue(), stateLookup);
+//        }
 
-        public <EVENT> StateMachineBuilder<STATE, CTX> whenInState(STATE s, Event<EVENT> e, Predicate<CTX> guard, State.StateLookup<STATE, CTX> stateLookup) {
-            Optional.ofNullable(states.get(s)).ifPresent(state -> {
-                state.transitions().put(e.payload(), new Transition<>(guard, stateLookup.apply(this)));
-            });
-            return this;
+//        public <EVENT> StateMachineBuilder<STATE, CTX> whenInState(STATE s, Event<EVENT> e, Predicate<CTX> guard, State.StateLookup<STATE, CTX> stateLookup) {
+        public StateMachine.IntermediateGrammar<STATE, CTX> whenInState(STATE s) {
+//            Optional.ofNullable(states.get(s)).ifPresent(state -> {
+//                state.transitions().put(e.payload(), new Transition<>(guard, stateLookup.apply(this)));
+//            });
+//            return this;
+            return new IntermediateGrammar<>(this, s);
         }
 
         public StateMachineBuilder<STATE, CTX> context(CTX ctx) {
@@ -76,6 +79,43 @@ public class StateMachine<STATE, CTX> {
 
         public StateMachine<STATE, CTX> build() {
             return new StateMachine<>(ctx, initial);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class IntermediateGrammar<STATE, CTX> {
+
+        private final StateMachineBuilder<STATE, CTX> builder;
+        private final STATE state;
+
+        public <EVENT> IntermediateGrammar2<STATE, CTX, EVENT> onEvent(EVENT e) {
+            return onEvent(e, alwaysTrue());
+        }
+
+        public <EVENT> IntermediateGrammar2<STATE, CTX, EVENT> onEvent(EVENT e, Predicate<CTX> guard) {
+            return new IntermediateGrammar2<>(builder, state, e, guard);
+        }
+    }
+
+    @RequiredArgsConstructor
+    public static class IntermediateGrammar2<STATE, CTX, EVENT> {
+
+        private final StateMachineBuilder<STATE, CTX> builder;
+        private final STATE state;
+        private final EVENT event;
+        private final Predicate<CTX> guard;
+
+        public StateMachineBuilder<STATE, CTX> transitionTo(STATE next) {
+            return Optional.ofNullable(builder.states.get(state)).map(src ->
+                Optional.ofNullable(builder.states.get(next)).map(dest -> {
+                    src.transitions().put(event, new Transition<>(guard, dest));
+                    return builder;
+                }).orElseThrow(() -> new IllegalArgumentException("destination state not found: "+next))
+            ).orElseThrow(() -> new IllegalArgumentException("source state not found: "+state));
+        }
+
+        public IntermediateGrammar2<STATE, CTX, EVENT> guard(Predicate<CTX> p) {
+            return new IntermediateGrammar2<>(builder, state, event, p);
         }
     }
 }
