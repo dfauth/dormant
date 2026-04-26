@@ -34,5 +34,10 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.github.dfauth.dormant</groupId>
+            <artifactId>trycatch</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>

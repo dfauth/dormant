@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static io.github.dfauth.trycatch.Predicates.always;
 import static java.util.function.Predicate.not;
 
 @Slf4j
@@ -19,14 +20,6 @@ import static java.util.function.Predicate.not;
 @AllArgsConstructor
 @Getter
 public class StateMachine<STATE, CTX> {
-
-    public static <T> Consumer<T> noOp() {
-        return t -> {};
-    }
-
-    public static <T> Predicate<T> alwaysTrue() {
-        return t -> true;
-    }
 
     private CTX context;
     private State<STATE, CTX> state;
@@ -59,16 +52,7 @@ public class StateMachine<STATE, CTX> {
             return this;
         }
 
-//        public <EVENT> StateMachineBuilder<STATE, CTX> whenInState(STATE s, Event<EVENT> e, State.StateLookup<STATE, CTX> stateLookup) {
-//            return whenInState(s, e, alwaysTrue(), stateLookup);
-//        }
-
-//        public <EVENT> StateMachineBuilder<STATE, CTX> whenInState(STATE s, Event<EVENT> e, Predicate<CTX> guard, State.StateLookup<STATE, CTX> stateLookup) {
         public StateMachine.IntermediateGrammar<STATE, CTX> whenInState(STATE s) {
-//            Optional.ofNullable(states.get(s)).ifPresent(state -> {
-//                state.transitions().put(e.payload(), new Transition<>(guard, stateLookup.apply(this)));
-//            });
-//            return this;
             return new IntermediateGrammar<>(this, s);
         }
 
@@ -89,7 +73,7 @@ public class StateMachine<STATE, CTX> {
         private final STATE state;
 
         public <EVENT> IntermediateGrammar2<STATE, CTX, EVENT> onEvent(EVENT e) {
-            return onEvent(e, alwaysTrue());
+            return onEvent(e, always());
         }
 
         public <EVENT> IntermediateGrammar2<STATE, CTX, EVENT> onEvent(EVENT e, Predicate<CTX> guard) {
