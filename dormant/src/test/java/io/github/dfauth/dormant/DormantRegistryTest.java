@@ -11,7 +11,7 @@ class DormantRegistryTest {
         var registry = new DormantRegistry("io.github.dfauth.dormant");
 
         var original = new SimpleMessage("hello", 5);
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         SimpleMessage restored = registry.deserialize(bytes);
         assertEquals(original, restored);
@@ -22,10 +22,10 @@ class DormantRegistryTest {
         var registry = new DormantRegistry("io.github.dfauth.dormant");
 
         var msg = new SimpleMessage("test", 1);
-        byte[] msgBytes = BinarySerde.serialize(msg);
+        byte[] msgBytes = BinaryEncoder.serialize(msg);
 
         var composite = new CompositeMessage("header", new SimpleMessage("body", 2));
-        byte[] compositeBytes = BinarySerde.serialize(composite);
+        byte[] compositeBytes = BinaryEncoder.serialize(composite);
 
         Dormant restoredMsg = registry.deserialize(msgBytes);
         Dormant restoredComposite = registry.deserialize(compositeBytes);
@@ -42,7 +42,7 @@ class DormantRegistryTest {
 
         byte[] fakeData = new byte[8];
         // Write valid magic number
-        int magic = BinarySerde.MAGIC_NUMBER;
+        int magic = BinaryEncoder.MAGIC_NUMBER;
         fakeData[0] = (byte) (magic >>> 24);
         fakeData[1] = (byte) (magic >>> 16);
         fakeData[2] = (byte) (magic >>> 8);
@@ -61,7 +61,7 @@ class DormantRegistryTest {
         var registry = new DormantRegistry("io.github.dfauth.dormant");
 
         var original = new CompositeMessage("envelope", new SimpleMessage("payload", 42));
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         CompositeMessage restored = registry.deserialize(bytes);
         assertEquals(original, restored);

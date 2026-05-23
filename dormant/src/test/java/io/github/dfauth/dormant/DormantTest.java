@@ -37,10 +37,10 @@ class DormantTest {
         var original = new TestObject(null, 1, 2L, 3.0f, 4.0, false, (byte) 0, (short) 0, 'A', new NestedObject("test", 0),
                 List.of(), Map.of());
 
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         var restored = new TestObject();
-        BinarySerde.deserialize(bytes, restored);
+        BinaryDecoder.deserialize(bytes, restored);
 
         assertEquals(original, restored);
     }
@@ -50,10 +50,10 @@ class DormantTest {
         var original = new TestObject("", 0, 0L, 0.0f, 0.0, false, (byte) 0, (short) 0, 'A', new NestedObject("", 0),
                 List.of(), Map.of());
 
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         var restored = new TestObject();
-        BinarySerde.deserialize(bytes, restored);
+        BinaryDecoder.deserialize(bytes, restored);
 
         assertEquals(original, restored);
     }
@@ -75,10 +75,10 @@ class DormantTest {
                 Map.of("key", 999)
         );
 
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         var restored = new TestObject();
-        BinarySerde.deserialize(bytes, restored);
+        BinaryDecoder.deserialize(bytes, restored);
 
         assertEquals(original, restored);
     }
@@ -88,10 +88,10 @@ class DormantTest {
         var original = new TestObject("solo", 1, 2L, 3.0f, 4.0, true, (byte) 0, (short) 0, 'A', null,
                 List.of("tag"), Map.of("a", 1));
 
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         var restored = new TestObject();
-        BinarySerde.deserialize(bytes, restored);
+        BinaryDecoder.deserialize(bytes, restored);
 
         assertEquals(original, restored);
         assertNull(restored.nested);
@@ -102,10 +102,10 @@ class DormantTest {
         var original = new TestObject("nulls", 0, 0L, 0.0f, 0.0, false, (byte) 0, (short) 0, 'A', null,
                 null, null);
 
-        byte[] bytes = BinarySerde.serialize(original);
+        byte[] bytes = BinaryEncoder.serialize(original);
 
         var restored = new TestObject();
-        BinarySerde.deserialize(bytes, restored);
+        BinaryDecoder.deserialize(bytes, restored);
 
         assertEquals(original, restored);
         assertNull(restored.tags);
@@ -381,14 +381,14 @@ class DormantTest {
         EnumObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeEnum(direction)
+        public void write(Encoder encoder) {
+            encoder.writeEnum(direction)
                     .writeEnum(priority);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readEnum(Direction.class, v -> direction = v)
+        public void read(Decoder decoder) {
+            decoder.readEnum(Direction.class, v -> direction = v)
                     .readEnum(Priority.class, v -> priority = v);
         }
     }
@@ -402,14 +402,14 @@ class DormantTest {
         OrdinalObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeOrdinal(direction)
+        public void write(Encoder encoder) {
+            encoder.writeOrdinal(direction)
                     .writeOrdinal(priority);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readOrdinal(Direction.class, v -> direction = v)
+        public void read(Decoder decoder) {
+            decoder.readOrdinal(Direction.class, v -> direction = v)
                     .readOrdinal(Priority.class, v -> priority = v);
         }
     }
@@ -423,14 +423,14 @@ class DormantTest {
         LocalDateTimeObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeLocalDateTime(start)
+        public void write(Encoder encoder) {
+            encoder.writeLocalDateTime(start)
                     .writeLocalDateTime(end);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readLocalDateTime(v -> start = v)
+        public void read(Decoder decoder) {
+            decoder.readLocalDateTime(v -> start = v)
                     .readLocalDateTime(v -> end = v);
         }
     }
@@ -444,14 +444,14 @@ class DormantTest {
         InstantObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeInstant(created)
+        public void write(Encoder encoder) {
+            encoder.writeInstant(created)
                     .writeInstant(updated);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readInstant(v -> created = v)
+        public void read(Decoder decoder) {
+            decoder.readInstant(v -> created = v)
                     .readInstant(v -> updated = v);
         }
     }
@@ -464,14 +464,14 @@ class DormantTest {
         ByteArrayObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeBytes(data)
+        public void write(Encoder encoder) {
+            encoder.writeBytes(data)
                     .writeBytes(extra);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readBytes(v -> data = v)
+        public void read(Decoder decoder) {
+            decoder.readBytes(v -> data = v)
                     .readBytes(v -> extra = v);
         }
     }
@@ -486,15 +486,15 @@ class DormantTest {
         LocalDateObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeLocalDate(start)
+        public void write(Encoder encoder) {
+            encoder.writeLocalDate(start)
                     .writeLocalDate(middle)
                     .writeLocalDate(end);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readLocalDate(v -> start = v)
+        public void read(Decoder decoder) {
+            decoder.readLocalDate(v -> start = v)
                     .readLocalDate(v -> middle = v)
                     .readLocalDate(v -> end = v);
         }
@@ -510,15 +510,15 @@ class DormantTest {
         BigDecimalObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeBigDecimal(price)
+        public void write(Encoder encoder) {
+            encoder.writeBigDecimal(price)
                     .writeBigDecimal(amount)
                     .writeBigDecimal(rate);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readBigDecimal(v -> price = v)
+        public void read(Decoder decoder) {
+            decoder.readBigDecimal(v -> price = v)
                     .readBigDecimal(v -> amount = v)
                     .readBigDecimal(v -> rate = v);
         }
@@ -533,14 +533,14 @@ class DormantTest {
         public NestedObject() {}
 
         @Override
-        public void write(Serde serde) {
-            serde.writeString(label)
+        public void write(Encoder encoder) {
+            encoder.writeString(label)
                     .writeInt(value);
         }
 
         @Override
-        public void read(Serde serde) {
-            serde.readString(v -> label = v)
+        public void read(Decoder decoder) {
+            decoder.readString(v -> label = v)
                     .readInt(v -> value = v);
         }
     }
@@ -564,9 +564,9 @@ class DormantTest {
         public TestObject() {}
 
         @Override
-        public void write(Serde serde)
+        public void write(Encoder encoder)
         {
-            serde.writeString(name)
+            encoder.writeString(name)
                     .writeInt(age)
                     .writeLong(id)
                     .writeFloat(score)
@@ -576,14 +576,14 @@ class DormantTest {
                     .writeShort(rank)
                     .writeChar(grade)
                     .writeDormant(nested)
-                    .writeList(tags, Serde::writeString)
-                    .writeMap(metadata, Serde::writeString, Serde::writeInt);
+                    .writeList(tags, Encoder::writeString)
+                    .writeMap(metadata, Encoder::writeString, Encoder::writeInt);
         }
 
         @Override
-        public void read(Serde serde)
+        public void read(Decoder decoder)
         {
-            serde.readString(v -> name = v)
+            decoder.readString(v -> name = v)
                     .readInt(v -> age = v)
                     .readLong(v -> id = v)
                     .readFloat(v -> score = v)
@@ -593,8 +593,8 @@ class DormantTest {
                     .readShort(v -> rank = v)
                     .readChar(v -> grade = v)
                     .readDormant(NestedObject::new, v -> nested = v)
-                    .readList(Serde::readString, v -> tags = v)
-                    .readMap(Serde::readString, Serde::readInt, v -> metadata = v);
+                    .readList(Decoder::readString, v -> tags = v)
+                    .readMap(Decoder::readString, Decoder::readInt, v -> metadata = v);
         }
     }
 }

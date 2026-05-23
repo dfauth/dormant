@@ -18,7 +18,7 @@ public interface Dormant extends Externalizable {
         read(bytes);
     }
 
-    void write(Serde serde);
+    void write(Encoder encoder);
 
     default byte[] write() {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -27,13 +27,13 @@ public interface Dormant extends Externalizable {
     }
 
     default void write(OutputStream stream) {
-        Serde serde = SerdeFactory.create(stream);
-        serde.writeInt(serde.magicNumber());
-        serde.writeInt(typeId());
-        write(serde);
+        Encoder encoder = EncoderFactory.create(stream);
+        encoder.writeInt(encoder.magicNumber());
+        encoder.writeInt(typeId());
+        write(encoder);
     }
 
-    void read(Serde serde);
+    void read(Decoder decoder);
 
     default void read(byte[] bytes) {
         ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
@@ -41,10 +41,10 @@ public interface Dormant extends Externalizable {
     }
 
     default void read(InputStream stream) {
-        Serde serde = SerdeFactory.create(stream);
-        serde.readInt(); // magic number
-        serde.readInt(); // typeId
-        read(serde);
+        Decoder decoder = DecoderFactory.create(stream);
+        decoder.readInt(); // magic number
+        decoder.readInt(); // typeId
+        read(decoder);
     }
 
     static void readLenient(Runnable runnable) {

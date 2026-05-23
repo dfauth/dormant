@@ -60,15 +60,15 @@ public class NestedTest {
         private NestedObject nested;
 
         @Override
-        public void write(Serde serde) {
-            serde.writeInt(n).writeString(s).writeDormant(nested);
+        public void write(Encoder encoder) {
+            encoder.writeInt(n).writeString(s).writeDormant(nested);
         }
 
         @Override
-        public void read(Serde serde) {
-            n = serde.readInt();
-            s = serde.readString();
-            nested = serde.readDormant();
+        public void read(Decoder decoder) {
+            n = decoder.readInt();
+            s = decoder.readString();
+            nested = decoder.readDormant();
         }
     }
 
@@ -85,14 +85,14 @@ public class NestedTest {
         private String r;
 
         @Override
-        public void write(Serde serde) {
-            serde.writeInt(m).writeString(r);
+        public void write(Encoder encoder) {
+            encoder.writeInt(m).writeString(r);
         }
 
         @Override
-        public void read(Serde serde) {
-            m = serde.readInt();
-            r = serde.readString();
+        public void read(Decoder decoder) {
+            m = decoder.readInt();
+            r = decoder.readString();
         }
     }
 
@@ -105,13 +105,13 @@ public class NestedTest {
         private byte[] bytes;
 
         @Override
-        public void write(Serde serde) {
-            serde.writeBytes(bytes);
+        public void write(Encoder encoder) {
+            encoder.writeBytes(bytes);
         }
 
         @Override
-        public void read(Serde serde) {
-            bytes = serde.readBytes();
+        public void read(Decoder decoder) {
+            bytes = decoder.readBytes();
         }
     }
 

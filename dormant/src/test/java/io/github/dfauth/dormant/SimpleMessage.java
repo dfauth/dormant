@@ -15,14 +15,14 @@ public class SimpleMessage implements Dormant {
     public SimpleMessage() {}
 
     @Override
-    public void write(Serde serde) {
-        serde.writeString(text)
+    public void write(Encoder encoder) {
+        encoder.writeString(text)
                 .writeInt(priority);
     }
 
     @Override
-    public void read(Serde serde) {
-        serde.readString(v -> text = v)
+    public void read(Decoder decoder) {
+        decoder.readString(v -> text = v)
                 .readInt(v -> priority = v);
     }
 }

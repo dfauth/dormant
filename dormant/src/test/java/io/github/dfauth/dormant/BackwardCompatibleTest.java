@@ -86,14 +86,14 @@ public class BackwardCompatibleTest {
         }
 
         @Override
-        public void write(Serde serde) {
-            serde.writeInt(n).writeString(s);
+        public void write(Encoder encoder) {
+            encoder.writeInt(n).writeString(s);
         }
 
         @Override
-        public void read(Serde serde) {
-            n = serde.readInt();
-            s = serde.readString();
+        public void read(Decoder decoder) {
+            n = decoder.readInt();
+            s = decoder.readString();
         }
     }
 
@@ -112,16 +112,16 @@ public class BackwardCompatibleTest {
         }
 
         @Override
-        public void write(Serde serde) {
-            serde.writeInt(n).writeString(s).writeLocalDate(date);
+        public void write(Encoder encoder) {
+            encoder.writeInt(n).writeString(s).writeLocalDate(date);
         }
 
         @Override
-        public void read(Serde serde) {
+        public void read(Decoder decoder) {
             Dormant.readLenient(() -> {
-                n = serde.readInt();
-                s = serde.readString();
-                date = serde.readLocalDate();
+                n = decoder.readInt();
+                s = decoder.readString();
+                date = decoder.readLocalDate();
             });
         }
     }

@@ -1,18 +1,17 @@
 package io.github.dfauth.dormant;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.lang.reflect.Constructor;
-import java.util.concurrent.Callable;
 import java.lang.reflect.Modifier;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -82,10 +81,10 @@ public class DormantRegistry {
 
     @SuppressWarnings("unchecked")
     public <T extends Dormant> T deserialize(byte[] data) {
-        var serde = new BinarySerde(new DataInputStream(new ByteArrayInputStream(data)))
+        var serde = new BinaryDecoder(new DataInputStream(new ByteArrayInputStream(data)))
                 .withRegistry(this);
         int magic = serde.readInt();
-        if (magic != BinarySerde.MAGIC_NUMBER) {
+        if (magic != BinaryEncoder.MAGIC_NUMBER) {
             throw new IllegalArgumentException("Invalid magic number: 0x" + Integer.toHexString(magic));
         }
         int typeId = serde.readInt();

@@ -15,14 +15,14 @@ public class CompositeMessage implements Dormant {
     public CompositeMessage() {}
 
     @Override
-    public void write(Serde serde) {
-        serde.writeString(header)
+    public void write(Encoder encoder) {
+        encoder.writeString(header)
                 .writeDormant(body);
     }
 
     @Override
-    public void read(Serde serde) {
-        serde.readString(v -> header = v)
+    public void read(Decoder decoder) {
+        decoder.readString(v -> header = v)
                 .readDormant(SimpleMessage::new, v -> body = v);
     }
 }
