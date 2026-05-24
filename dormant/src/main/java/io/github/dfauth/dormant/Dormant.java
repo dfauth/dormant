@@ -3,6 +3,7 @@ package io.github.dfauth.dormant;
 import java.io.*;
 
 public interface Dormant extends Externalizable {
+
     @Override
     default void writeExternal(ObjectOutput out) throws IOException {
         byte[] bytes = write();
@@ -28,9 +29,7 @@ public interface Dormant extends Externalizable {
 
     default void write(OutputStream stream) {
         Encoder encoder = EncoderFactory.create(stream);
-        encoder.writeInt(encoder.magicNumber());
-        encoder.writeInt(typeId());
-        write(encoder);
+        encoder.writeDormant(this);
     }
 
     void read(Decoder decoder);
@@ -42,8 +41,10 @@ public interface Dormant extends Externalizable {
 
     default void read(InputStream stream) {
         Decoder decoder = DecoderFactory.create(stream);
-        decoder.readInt(); // magic number
-        decoder.readInt(); // typeId
+        int typeId;
+        if ((typeId = decoder.readInt()) != typeId()) {
+            throw new IllegalArgumentException("Invalid type ID: " + typeId);
+        }
         read(decoder);
     }
 

@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,8 +20,7 @@ public class NestedTest {
         var original = new TestObject(1, "test", new NestedObjectImpl(2, "blah"));
         var bytes = original.write();
         log.info("bytes: {}", new String(bytes));
-        var registry = new DormantRegistry(this.getClass().getPackageName());
-        var result = registry.deserialize(bytes);
+        var result = DecoderFactory.create(new ByteArrayInputStream(bytes)).readDormant();
         assertEquals(original, result);
     }
 
@@ -31,8 +31,7 @@ public class NestedTest {
         var original = new TestObject(1, "test", nested);
         var bytes = original.write();
         log.info("bytes: {}", new String(bytes));
-        var registry = new DormantRegistry(this.getClass().getPackageName());
-        Dormant result = registry.deserialize(bytes);
+        Dormant result = DecoderFactory.create(new ByteArrayInputStream(bytes)).readDormant();
         assertEquals(original, result);
         switch (result) {
             case TestObject to:

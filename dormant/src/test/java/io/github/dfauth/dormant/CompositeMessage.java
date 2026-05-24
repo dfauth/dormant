@@ -23,6 +23,6 @@ public class CompositeMessage implements Dormant {
     @Override
     public void read(Decoder decoder) {
         decoder.readString(v -> header = v)
-                .readDormant(SimpleMessage::new, v -> body = v);
+                .<SimpleMessage>readDormant(v -> body = v);
     }
 }

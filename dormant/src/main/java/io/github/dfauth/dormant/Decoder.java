@@ -7,7 +7,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public interface Decoder {
 
@@ -117,12 +116,6 @@ public interface Decoder {
     <T extends Dormant> T readDormant();
     default <T extends Dormant> Decoder readDormant(Consumer<T> consumer) {
         consumer.accept(readDormant());
-        return this;
-    }
-
-    <T extends Dormant> T readDormant(Supplier<T> factory);
-    default <T extends Dormant> Decoder readDormant(Supplier<T> factory, Consumer<T> consumer) {
-        consumer.accept(readDormant(factory));
         return this;
     }
 

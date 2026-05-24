@@ -2,43 +2,41 @@ package io.github.dfauth.dormant;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DormantRegistryTest {
 
     @Test
     void registryDiscoversImplementations() {
-        var registry = new DormantRegistry("io.github.dfauth.dormant");
 
         var original = new SimpleMessage("hello", 5);
         byte[] bytes = BinaryEncoder.serialize(original);
 
-        SimpleMessage restored = registry.deserialize(bytes);
+        SimpleMessage restored = DecoderFactory.create(new ByteArrayInputStream(bytes)).readDormant();
         assertEquals(original, restored);
     }
 
     @Test
     void registryDeserializesCorrectType() {
-        var registry = new DormantRegistry("io.github.dfauth.dormant");
-
         var msg = new SimpleMessage("test", 1);
         byte[] msgBytes = BinaryEncoder.serialize(msg);
 
         var composite = new CompositeMessage("header", new SimpleMessage("body", 2));
         byte[] compositeBytes = BinaryEncoder.serialize(composite);
 
-        Dormant restoredMsg = registry.deserialize(msgBytes);
-        Dormant restoredComposite = registry.deserialize(compositeBytes);
-
+        Dormant restoredMsg = DecoderFactory.create(new ByteArrayInputStream(msgBytes)).readDormant();
         assertInstanceOf(SimpleMessage.class, restoredMsg);
-        assertInstanceOf(CompositeMessage.class, restoredComposite);
         assertEquals(msg, restoredMsg);
+
+        Dormant restoredComposite = DecoderFactory.create(new ByteArrayInputStream(compositeBytes)).readDormant();
+        assertInstanceOf(CompositeMessage.class, restoredComposite);
         assertEquals(composite, restoredComposite);
     }
 
     @Test
     void unknownTypeIdThrowsException() {
-        var registry = new DormantRegistry("io.github.dfauth.dormant");
 
         byte[] fakeData = new byte[8];
         // Write valid magic number
@@ -53,17 +51,16 @@ class DormantRegistryTest {
         fakeData[6] = (byte) 0xFF;
         fakeData[7] = (byte) 0xFF;
 
-        assertThrows(IllegalArgumentException.class, () -> registry.deserialize(fakeData));
+        assertThrows(IllegalArgumentException.class, () -> DecoderFactory.create(new ByteArrayInputStream(fakeData)).readDormant());
     }
 
     @Test
     void nestedDormantRoundTripsCorrectly() {
-        var registry = new DormantRegistry("io.github.dfauth.dormant");
 
         var original = new CompositeMessage("envelope", new SimpleMessage("payload", 42));
         byte[] bytes = BinaryEncoder.serialize(original);
 
-        CompositeMessage restored = registry.deserialize(bytes);
+        CompositeMessage restored = DecoderFactory.create(new ByteArrayInputStream(bytes)).readDormant();
         assertEquals(original, restored);
         assertEquals("envelope", restored.header);
         assertEquals("payload", restored.body.text);

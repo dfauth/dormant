@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
 
@@ -20,19 +21,13 @@ public class BinaryEncoder implements Encoder {
 
     BinaryEncoder(DataOutputStream out) {
         this.out = out;
-    }
-
-    @Override
-    public int magicNumber() {
-        return MAGIC_NUMBER;
+        writeInt(MAGIC_NUMBER);
     }
 
     public static byte[] serialize(Dormant dormant) {
         var baos = new ByteArrayOutputStream();
-        var serde = new BinaryEncoder(new DataOutputStream(baos));
-        serde.writeInt(serde.magicNumber());
-        serde.writeInt(dormant.typeId());
-        dormant.write(serde);
+        var encoder = new BinaryEncoder(new DataOutputStream(baos));
+        encoder.writeDormant(dormant);
         return baos.toByteArray();
     }
 
@@ -165,11 +160,13 @@ public class BinaryEncoder implements Encoder {
 
     @Override
     public Encoder writeDormant(Dormant value) {
-        writeBoolean(value != null);
-        if (value != null) {
-            writeInt(value.typeId());
-            value.write(this);
-        }
+        Optional.ofNullable(value).ifPresentOrElse(
+                v -> {
+                    writeInt(value.typeId());
+                    value.write(this);
+                },
+                () -> writeInt(-1)
+        );
         return this;
     }
 

@@ -39,8 +39,7 @@ class DormantTest {
 
         byte[] bytes = BinaryEncoder.serialize(original);
 
-        var restored = new TestObject();
-        BinaryDecoder.deserialize(bytes, restored);
+        var restored = DecoderFactory.create(new ByteArrayInputStream(bytes)).readDormant();
 
         assertEquals(original, restored);
     }
@@ -50,10 +49,10 @@ class DormantTest {
         var original = new TestObject("", 0, 0L, 0.0f, 0.0, false, (byte) 0, (short) 0, 'A', new NestedObject("", 0),
                 List.of(), Map.of());
 
-        byte[] bytes = BinaryEncoder.serialize(original);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        EncoderFactory.create(baos).writeDormant(original);
 
-        var restored = new TestObject();
-        BinaryDecoder.deserialize(bytes, restored);
+        var restored = DecoderFactory.create(new ByteArrayInputStream(baos.toByteArray())).readDormant();
 
         assertEquals(original, restored);
     }
@@ -77,8 +76,7 @@ class DormantTest {
 
         byte[] bytes = BinaryEncoder.serialize(original);
 
-        var restored = new TestObject();
-        BinaryDecoder.deserialize(bytes, restored);
+        var restored = BinaryDecoder.deserialize(bytes);
 
         assertEquals(original, restored);
     }
@@ -90,8 +88,7 @@ class DormantTest {
 
         byte[] bytes = BinaryEncoder.serialize(original);
 
-        var restored = new TestObject();
-        BinaryDecoder.deserialize(bytes, restored);
+        TestObject restored = BinaryDecoder.deserialize(bytes);
 
         assertEquals(original, restored);
         assertNull(restored.nested);
@@ -104,8 +101,7 @@ class DormantTest {
 
         byte[] bytes = BinaryEncoder.serialize(original);
 
-        var restored = new TestObject();
-        BinaryDecoder.deserialize(bytes, restored);
+        TestObject restored = BinaryDecoder.deserialize(bytes);
 
         assertEquals(original, restored);
         assertNull(restored.tags);
@@ -592,7 +588,7 @@ class DormantTest {
                     .readByte(v -> level = v)
                     .readShort(v -> rank = v)
                     .readChar(v -> grade = v)
-                    .readDormant(NestedObject::new, v -> nested = v)
+                    .readDormant(v -> nested = (NestedObject) v)
                     .readList(Decoder::readString, v -> tags = v)
                     .readMap(Decoder::readString, Decoder::readInt, v -> metadata = v);
         }

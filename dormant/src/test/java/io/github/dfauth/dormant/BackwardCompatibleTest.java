@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,9 +39,9 @@ public class BackwardCompatibleTest {
 
         byte[] bytes = to1.write();
 
-        var registry = new DormantRegistry();
-        registry.register(TestObjectV2.class);
-        TestObjectV2 out = registry.deserialize(bytes);
+        BinaryDecoder decoder = (BinaryDecoder) DecoderFactory.create(new ByteArrayInputStream(bytes));
+        decoder.register(TestObjectV2.class);
+        TestObjectV2 out = decoder.readDormant();
         assertEquals(to1.n, out.n);
         assertEquals(to1.s, out.s);
         assertNull(out.date);
@@ -65,9 +66,9 @@ public class BackwardCompatibleTest {
         TestObjectV2 to2 = new TestObjectV2(n, s, now);
 
         byte[] bytes = to2.write();
-        var registry = new DormantRegistry();
-        registry.register(TestObjectV1.class);
-        TestObjectV1 out = registry.deserialize(bytes);
+        BinaryDecoder decoder = (BinaryDecoder) DecoderFactory.create(new ByteArrayInputStream(bytes));
+        decoder.register(TestObjectV1.class);
+        TestObjectV1 out = decoder.readDormant();
         assertEquals(to2.n, out.n);
         assertEquals(to2.s, out.s);
     }

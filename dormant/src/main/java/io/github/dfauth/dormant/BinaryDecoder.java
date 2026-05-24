@@ -1,7 +1,14 @@
 package io.github.dfauth.dormant;
 
+import io.github.classgraph.ClassGraph;
+import io.github.classgraph.ClassInfo;
+import io.github.classgraph.ScanResult;
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -9,28 +16,88 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
+import static io.github.dfauth.dormant.BinaryEncoder.MAGIC_NUMBER;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
+import static java.util.Optional.empty;
 
+@Slf4j
 public class BinaryDecoder implements Decoder {
 
-    public static final int MAGIC_NUMBER = 0xDECACAFE;
-
     private DataInputStream in;
-    private DormantRegistry registry;
 
-    BinaryDecoder(DataInputStream in) {
-        this.in = in;
+    private final Map<Integer, Supplier<Dormant>> factories = new ConcurrentHashMap<>();
+
+    public BinaryDecoder(String... basePackages) {
+        var classGraph = new ClassGraph()
+                .enableClassInfo();
+        if (basePackages.length > 0) {
+            classGraph.acceptPackages(basePackages);
+        }
+        try (ScanResult scanResult = classGraph.scan()) {
+            for (ClassInfo classInfo : scanResult.getClassesImplementing(Dormant.class)) {
+                if (classInfo.isAbstract() || classInfo.isInterface()) {
+                    continue;
+                }
+                try {
+                    @SuppressWarnings("unchecked")
+                    Class<? extends Dormant> clazz = (Class<? extends Dormant>) classInfo.loadClass();
+                    register(clazz);
+                }
+                catch (Exception e) {
+                    log.warn("Could not register Dormant class {}: {}", classInfo.getName(), e.getMessage());
+                }
+            }
+        }
     }
 
-    BinaryDecoder withRegistry(DormantRegistry registry) {
-        this.registry = registry;
-        return this;
+    BinaryDecoder(DataInputStream in) {
+        this();
+        this.in = in;
+        int magic;
+        if ((magic = tryCatch(in::readInt)) != MAGIC_NUMBER) {
+            throw new IllegalArgumentException("Invalid magic number: 0x" + Integer.toHexString(magic));
+        }
+    }
+
+    public void register(Class<? extends Dormant> clazz) {
+        if (Modifier.isAbstract(clazz.getModifiers()) || clazz.isInterface()) {
+            throw new IllegalArgumentException("Cannot register abstract class or interface: " + clazz.getName());
+        }
+        Constructor<? extends Dormant> ctor;
+        try {
+            ctor = clazz.getDeclaredConstructor();
+        }
+        catch (NoSuchMethodException e) {
+            throw new IllegalArgumentException("Class " + clazz.getName() + " has no no-arg constructor");
+        }
+        ctor.setAccessible(true);
+        Constructor<? extends Dormant> finalCtor = ctor;
+        Dormant sample = tryCatch((Callable<Dormant>) finalCtor::newInstance);
+        int typeId = sample.typeId();
+        Supplier<Dormant> factory = () -> tryCatch((Callable<Dormant>) finalCtor::newInstance);
+        Supplier<Dormant> existing = factories.putIfAbsent(typeId, factory);
+        if (existing != null) {
+            String existingClass = existing.get().getClass().getName();
+            if (!existingClass.equals(clazz.getName())) {
+                log.warn("TypeId collision: {} and {} both map to typeId {}", existingClass, clazz.getName(), typeId);
+            }
+        }
+    }
+
+    public Optional<Dormant> create(int typeId) {
+        if(typeId == -1) {
+            return empty();
+        }
+        Supplier<Dormant> factory = factories.get(typeId);
+        if (factory == null) {
+            throw new IllegalArgumentException("No Dormant registered for typeId: " + typeId);
+        }
+        return Optional.ofNullable(factory.get());
     }
 
     public static int peekTypeId(byte[] data) {
@@ -42,17 +109,9 @@ public class BinaryDecoder implements Decoder {
         return serde.readInt();
     }
 
-    public static void deserialize(byte[] data, Dormant dormant) {
-        var serde = new BinaryDecoder(new DataInputStream(new ByteArrayInputStream(data)));
-        int magic = serde.readInt();
-        if (magic != MAGIC_NUMBER) {
-            throw new IllegalArgumentException("Invalid magic number: 0x" + Integer.toHexString(magic));
-        }
-        int typeId = serde.readInt();
-        if (typeId != dormant.typeId()) {
-            throw new IllegalArgumentException("Type ID mismatch: expected " + dormant.typeId() + " but got " + typeId);
-        }
-        dormant.read(serde);
+    public static <T extends Dormant> T deserialize(byte[] data) {
+        var decoder = new BinaryDecoder(new DataInputStream(new ByteArrayInputStream(data)));
+        return decoder.readDormant();
     }
 
     // Read methods
@@ -173,27 +232,11 @@ public class BinaryDecoder implements Decoder {
     @Override
     @SuppressWarnings("unchecked")
     public <T extends Dormant> T readDormant() {
-        if (readBoolean()) {
-            int typeId = readInt();
-            if (registry == null) {
-                throw new UnsupportedOperationException("No DormantRegistry available. Use readDormant(Supplier<T>) instead.");
-            }
-            Dormant instance = registry.create(typeId);
+        int typeId = readInt();
+        return create(typeId).map(instance -> {
             instance.read(this);
             return (T) instance;
-        }
-        return null;
-    }
-
-    @Override
-    public <T extends Dormant> T readDormant(Supplier<T> factory) {
-        if (readBoolean()) {
-            readInt(); // consume typeId
-            T value = factory.get();
-            value.read(this);
-            return value;
-        }
-        return null;
+        }).orElse(null);
     }
 
     @Override

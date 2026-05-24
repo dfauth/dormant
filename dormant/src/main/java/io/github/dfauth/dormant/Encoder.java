@@ -32,7 +32,6 @@ public interface Encoder {
     Encoder writeBytes(byte[] value);
     Encoder writeEnum(Enum<?> value);
     Encoder writeOrdinal(Enum<?> value);
-    int magicNumber();
     Encoder writeDormant(Dormant value);
 
     <T> Encoder writeList(List<T> list, Writer<T> writer);
