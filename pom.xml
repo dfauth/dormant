@@ -53,6 +53,11 @@
                 <artifactId>classgraph</artifactId>
                 <version>4.8.174</version>
             </dependency>
+            <dependency>
+                <groupId>org.aspectj</groupId>
+                <artifactId>aspectjweaver</artifactId>
+                <version>1.9.25.1</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
