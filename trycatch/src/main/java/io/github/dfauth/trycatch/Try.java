@@ -5,6 +5,24 @@ import java.util.function.Function;
 
 public interface Try<T> {
 
+    static <T> Try<T> success(T t) {
+        return new Success<>(t);
+    }
+
+    static <T> Try<T> failure(Exception e) {
+        return new Failure<>(e);
+    }
+
+    T getValue();
+
+    default boolean isSuccess() {
+        return false;
+    }
+
+    default boolean isFailure() {
+        return !isSuccess();
+    }
+
     default Try<T> onFailure(Consumer<Exception> consumer) {
         return this;
     }

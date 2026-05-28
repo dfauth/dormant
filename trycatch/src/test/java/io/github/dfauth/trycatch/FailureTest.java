@@ -11,6 +11,62 @@ class FailureTest {
     private final Exception cause = new Exception("fail");
     private final Failure<String> failure = new Failure<>(cause);
 
+    // --- Try.failure() factory ---
+
+    @Test
+    void tryFailure_createsFailureInstance() {
+        assertInstanceOf(Failure.class, Try.failure(new Exception("oops")));
+    }
+
+    @Test
+    void tryFailure_getValueThrows() {
+        Try<String> t = Try.failure(new Exception("oops"));
+        assertThrows(RuntimeException.class, t::getValue);
+    }
+
+    // --- getValue() ---
+
+    @Test
+    void getValue_rethrowsRuntimeExceptionDirectly() {
+        var original = new IllegalStateException("runtime");
+        var failure = new Failure<String>(original);
+        var ex = assertThrows(IllegalStateException.class, failure::getValue);
+        assertSame(original, ex);
+    }
+
+    @Test
+    void getValue_wrapsCheckedExceptionInRuntimeException() {
+        var ex = assertThrows(RuntimeException.class, failure::getValue);
+        assertSame(cause, ex.getCause());
+    }
+
+    // --- isSuccess / isFailure ---
+
+    @Test
+    void isSuccess_returnsFalse() {
+        assertFalse(failure.isSuccess());
+    }
+
+    @Test
+    void isFailure_returnsTrue() {
+        assertTrue(failure.isFailure());
+    }
+
+    // --- map(Consumer) default (no-op on Failure) ---
+
+    @Test
+    void map_consumer_isNeverCalled() {
+        var holder = new Object() { boolean called = false; };
+        failure.map((Consumer<String>) v -> holder.called = true);
+        assertFalse(holder.called);
+    }
+
+    @Test
+    void map_consumer_returnsSameInstance() {
+        Try<String> result = failure.map((Consumer<String>) v -> {});
+        assertSame(failure, result);
+    }
+
     // --- map(Function) ---
 
     @Test

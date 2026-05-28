@@ -10,6 +10,16 @@ public class Success<T> implements Try<T> {
     private final T t;
 
     @Override
+    public T getValue() {
+        return t;
+    }
+
+    @Override
+    public boolean isSuccess() {
+        return true;
+    }
+
+    @Override
     public Try<T> map(Consumer<T> consumer) {
         consumer.accept(t);
         return this;

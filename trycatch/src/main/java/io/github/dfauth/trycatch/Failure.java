@@ -10,6 +10,15 @@ public class Failure<T> implements Try<T> {
     private final Exception exception;
 
     @Override
+    public T getValue() {
+        if(exception instanceof RuntimeException r) {
+            throw r;
+        } else {
+            throw new RuntimeException(exception);
+        }
+    }
+
+    @Override
     public Try<T> onFailure(Consumer<Exception> consumer) {
         consumer.accept(exception);
         return this;
