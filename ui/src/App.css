@@ -165,12 +165,34 @@ body {
   text-transform: uppercase;
   text-align: left;
   padding: 0.65rem 1rem;
+  vertical-align: bottom;
+}
+
+/* ---------- Scrollable table wrapper ---------- */
+
+.table-scroll-wrapper {
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: calc(100vh - 9rem);
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.table-scroll-wrapper .trades-table {
+  overflow: visible;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.table-scroll-wrapper .trades-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .th-sortable {
   cursor: pointer;
   user-select: none;
-  white-space: nowrap;
 }
 
 .th-sortable:hover {

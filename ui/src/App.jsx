@@ -57,12 +57,33 @@ function useSort(initialCol, initialDir = 'asc') {
   return { sortCol, onSort, icon, sort }
 }
 
+function positionDuration(p) {
+  if (!p.openDate) return null
+  const end = p.closeDate ? new Date(p.closeDate) : new Date()
+  return Math.round((end - new Date(p.openDate)) / 86400000)
+}
+
+function positionCagr(p) {
+  const days = positionDuration(p)
+  if (!days || days <= 0) return null
+  const openingSide = p.trades?.[0]?.side
+  const purchaseValue = (p.trades ?? [])
+    .filter(t => t.side === openingSide)
+    .reduce((s, t) => s + parseFloat(t.cost ?? 0), 0)
+  if (purchaseValue <= 0) return null
+  const endValue = purchaseValue + parseFloat(p.realisedPnl ?? 0)
+  if (endValue <= 0) return null
+  return (Math.pow(endValue / purchaseValue, 365 / days) - 1) * 100
+}
+
 function positionVal(p, col) {
   if (col === 'trades')       return p.trades?.length ?? 0
   if (col === 'size')         return parseFloat(p.size ?? 0)
   if (col === 'averagePrice') return parseFloat(p.averagePrice ?? 0)
   if (col === 'realisedPnl')  return parseFloat(p.realisedPnl ?? 0)
   if (col === 'dividends')    return parseFloat(p.dividends ?? 0)
+  if (col === 'duration')     return positionDuration(p) ?? 0
+  if (col === 'cagr')         return positionCagr(p) ?? -Infinity
   return p[col] ?? ''
 }
 
@@ -145,6 +166,11 @@ export default function App() {
 
   useEffect(() => {
     if (!selectedPosition) return
+
+    if (selectedPosition.trades) {
+      setPositionTrades({ data: selectedPosition.trades, loading: false, error: null })
+      return
+    }
 
     setPositionTrades({ data: [], loading: true, error: null })
     fetch(`/api/positions/market/${selectedPosition.market}/code/${selectedPosition.code}`, { credentials: 'include' })
@@ -322,7 +348,7 @@ export default function App() {
         <a href="/logout" className="nav-item logout">Logout</a>
       </nav>
 
-      <div className={page === 'prices' && subPage === 'default' ? 'page-prices' : page === 'prices' && subPage === 'grid' ? 'page-grid' : page === 'positions' && subPage === '1Y performance' ? 'page page-wide' : 'page'}>
+      <div className={page === 'prices' && subPage === 'default' ? 'page-prices' : page === 'prices' && subPage === 'grid' ? 'page-grid' : page === 'positions' && (subPage === '1Y performance' || subPage === 'closed positions' || subPage === 'open positions') ? 'page page-wide' : 'page'}>
         {page === 'trades' && (
           <>
             <h1>Trades — ASX</h1>
@@ -374,40 +400,43 @@ export default function App() {
             ) : positions.data.length === 0 ? (
               <p className="empty">No open positions.</p>
             ) : (
+              <div className="table-scroll-wrapper">
               <table className="trades-table">
                 <thead>
                   <tr>
-                    <SortTh label="Market"       col="market"       sort={openSort} />
-                    <SortTh label="Code"         col="code"         sort={openSort} />
-                    <SortTh label="Side"         col="side"         sort={openSort} />
-                    <SortTh label="Size"         col="size"         sort={openSort} />
-                    <SortTh label="Avg Price"    col="averagePrice" sort={openSort} />
-                    <SortTh label="Realised P&L" col="realisedPnl"  sort={openSort} />
-                    <SortTh label="Dividends"    col="dividends"    sort={openSort} />
-                    <SortTh label="Opened"       col="openDate"     sort={openSort} />
-                    <SortTh label="Trades"       col="trades"       sort={openSort} />
+                    <SortTh label="Market"             col="market"       sort={openSort} />
+                    <SortTh label="Code"               col="code"         sort={openSort} />
+                    <SortTh label="Avg Purchase Price" col="averagePrice" sort={openSort} />
+                    <SortTh label="Realised P&L"       col="realisedPnl"  sort={openSort} />
+                    <SortTh label="Dividends"          col="dividends"    sort={openSort} />
+                    <SortTh label="Opened"             col="openDate"     sort={openSort} />
+                    <SortTh label="Duration"           col="duration"     sort={openSort} />
+                    <SortTh label="Trades"             col="trades"       sort={openSort} />
                   </tr>
                 </thead>
                 <tbody>
-                  {openSort.sort(positions.data, positionVal).map((p, i) => (
+                  {openSort.sort(positions.data, positionVal).map((p, i) => {
+                    const days = positionDuration(p)
+                    return (
                     <tr key={`${p.market}-${p.code}-${i}`}>
                       <td>{p.market}</td>
                       <td className="code-link" onClick={() => setSelectedCode({ market: p.market, code: p.code })}>
                         {p.code}
                       </td>
-                      <td>{p.side}</td>
-                      <td>{p.size}</td>
-                      <td>{p.averagePrice}</td>
+                      <td>{p.averagePrice != null ? parseFloat(p.averagePrice).toFixed(2) : '—'}</td>
                       <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
                       <td>{Number(p.dividends ?? 0) !== 0 ? parseFloat(p.dividends).toFixed(2) : '—'}</td>
                       <td>{p.openDate ?? '—'}</td>
+                      <td>{days != null ? `${days}d` : '—'}</td>
                       <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code })}>
                         {p.trades?.length ?? 0}
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}
@@ -422,42 +451,50 @@ export default function App() {
             ) : closedPositions.data.length === 0 ? (
               <p className="empty">No closed positions.</p>
             ) : (
+              <div className="table-scroll-wrapper">
               <table className="trades-table">
                 <thead>
                   <tr>
-                    <SortTh label="Market"       col="market"       sort={closedSort} />
-                    <SortTh label="Code"         col="code"         sort={closedSort} />
-                    <SortTh label="Side"         col="side"         sort={closedSort} />
-                    <SortTh label="Size"         col="size"         sort={closedSort} />
-                    <SortTh label="Avg Price"    col="averagePrice" sort={closedSort} />
-                    <SortTh label="Realised P&L" col="realisedPnl"  sort={closedSort} />
+                    <SortTh label="Market"             col="market"           sort={closedSort} />
+                    <SortTh label="Code"               col="code"             sort={closedSort} />
+                    <SortTh label="Avg Buy Price" col="averagePrice"     sort={closedSort} />
+                    <SortTh label="Avg Sell Price"     col="averageSalePrice" sort={closedSort} />
+                    <SortTh label="Realised P&L"       col="realisedPnl"      sort={closedSort} />
                     <SortTh label="Dividends"    col="dividends"    sort={closedSort} />
                     <SortTh label="Opened"       col="openDate"     sort={closedSort} />
                     <SortTh label="Closed"       col="closeDate"    sort={closedSort} />
+                    <SortTh label="Duration"     col="duration"     sort={closedSort} />
+                    <SortTh label="CAGR"         col="cagr"         sort={closedSort} />
                     <SortTh label="Trades"       col="trades"       sort={closedSort} />
                   </tr>
                 </thead>
                 <tbody>
-                  {closedSort.sort(closedPositions.data, positionVal).map((p, i) => (
+                  {closedSort.sort(closedPositions.data, positionVal).map((p, i) => {
+                    const days = positionDuration(p)
+                    const cagr = positionCagr(p)
+                    return (
                     <tr key={`${p.market}-${p.code}-${i}`}>
                       <td>{p.market}</td>
                       <td className="code-link" onClick={() => setSelectedCode({ market: p.market, code: p.code })}>
                         {p.code}
                       </td>
-                      <td>{p.side}</td>
-                      <td>{p.size}</td>
-                      <td>{p.averagePrice}</td>
+                      <td>{p.averagePrice != null ? parseFloat(p.averagePrice).toFixed(2) : '—'}</td>
+                      <td>{p.averageSalePrice != null ? parseFloat(p.averageSalePrice).toFixed(2) : '—'}</td>
                       <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
                       <td>{Number(p.dividends ?? 0) !== 0 ? parseFloat(p.dividends).toFixed(2) : '—'}</td>
                       <td>{p.openDate ?? '—'}</td>
                       <td>{p.closeDate ?? '—'}</td>
-                      <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code })}>
+                      <td>{days != null ? `${days}d` : '—'}</td>
+                      <td className={cagr != null ? (cagr >= 0 ? 'pnl-positive' : 'pnl-negative') : ''}>{cagr != null ? `${cagr.toFixed(2)}%` : '—'}</td>
+                      <td className="code-link" onClick={() => setSelectedPosition({ market: p.market, code: p.code, trades: p.trades ?? [] })}>
                         {p.trades?.length ?? 0}
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
+              </div>
             )}
           </>
         )}

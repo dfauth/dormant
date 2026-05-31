@@ -88,6 +88,15 @@ public class Position {
                 .map((cost, size) -> cost.divide(bd(size), MathContext.DECIMAL128).setScale(cost.scale(), RoundingMode.HALF_UP));
     }
 
+    public BigDecimal getAverageSalePrice() {
+        Side closingSide = getSide().flip();
+        return trades.stream()
+                .filter(t -> t.getSide() == closingSide)
+                .reduce(tuple2(ZERO, 0), (t2, t) -> tuple2(t2._1().add(t.getCost()), t2._2() + t.getSize()),
+                        (l, r) -> tuple2(l._1().add(r._1()), l._2() + r._2()))
+                .map((cost, size) -> size == 0 ? ZERO : cost.divide(bd(size), MathContext.DECIMAL128).setScale(cost.scale(), RoundingMode.HALF_UP));
+    }
+
     public LocalDate getOpenDate() {
         return trades.getFirst().getDate();
     }
