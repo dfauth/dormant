@@ -79,6 +79,7 @@ function positionCagr(p) {
 function positionVal(p, col) {
   if (col === 'trades')       return p.trades?.length ?? 0
   if (col === 'size')         return parseFloat(p.size ?? 0)
+  if (col === 'marketValue')  return parseFloat(p.size ?? 0) * parseFloat(p.averagePrice ?? 0)
   if (col === 'averagePrice') return parseFloat(p.averagePrice ?? 0)
   if (col === 'realisedPnl')  return parseFloat(p.realisedPnl ?? 0)
   if (col === 'dividends')    return parseFloat(p.dividends ?? 0)
@@ -406,7 +407,9 @@ export default function App() {
                   <tr>
                     <SortTh label="Market"             col="market"       sort={openSort} />
                     <SortTh label="Code"               col="code"         sort={openSort} />
+                    <SortTh label="Size"               col="size"         sort={openSort} />
                     <SortTh label="Avg Purchase Price" col="averagePrice" sort={openSort} />
+                    <SortTh label="Market Value"       col="marketValue"  sort={openSort} />
                     <SortTh label="Realised P&L"       col="realisedPnl"  sort={openSort} />
                     <SortTh label="Dividends"          col="dividends"    sort={openSort} />
                     <SortTh label="Opened"             col="openDate"     sort={openSort} />
@@ -423,7 +426,9 @@ export default function App() {
                       <td className="code-link" onClick={() => setSelectedCode({ market: p.market, code: p.code })}>
                         {p.code}
                       </td>
+                      <td>{p.size != null ? p.size : '—'}</td>
                       <td>{p.averagePrice != null ? parseFloat(p.averagePrice).toFixed(2) : '—'}</td>
+                      <td>{p.size != null && p.averagePrice != null ? (parseFloat(p.size) * parseFloat(p.averagePrice)).toFixed(2) : '—'}</td>
                       <td className={Number(p.realisedPnl) >= 0 ? 'pnl-positive' : 'pnl-negative'}>{p.realisedPnl}</td>
                       <td>{Number(p.dividends ?? 0) !== 0 ? parseFloat(p.dividends).toFixed(2) : '—'}</td>
                       <td>{p.openDate ?? '—'}</td>
