@@ -1,7 +1,10 @@
 package io.github.dfauth.trade.model;
 
 import io.github.dfauth.trycatch.Maps;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -9,6 +12,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 
+import static io.github.dfauth.trycatch.Collectors.Payload.averagingPayload;
+import static io.github.dfauth.trycatch.Collectors.payloadCollector;
 import static io.github.dfauth.trycatch.Tuple2.tuple2;
 import static io.github.dfauth.trycatch.Utils.bd;
 import static java.lang.Math.abs;
@@ -79,13 +84,10 @@ public class Position {
         }
     }
 
-    public BigDecimal getAveragePrice() {
+    public double getAveragePrice() {
         return trades.stream()
                 .filter(t -> t.getSide() == getSide())
-                .reduce(tuple2(ZERO, 0), (t2, t) -> {
-                    return tuple2(t2._1().add(t.getCost()), t2._2() + t.getSize());
-                }, (l, r) -> tuple2(l._1().add(r._1()), l._2() + r._2()))
-                .map((cost, size) -> cost.divide(bd(size), MathContext.DECIMAL128).setScale(cost.scale(), RoundingMode.HALF_UP));
+                .collect(payloadCollector(t -> averagingPayload(t.getCost(), t.getSize()), averagingPayload(ZERO, 0)));
     }
 
     public BigDecimal getAverageSalePrice() {

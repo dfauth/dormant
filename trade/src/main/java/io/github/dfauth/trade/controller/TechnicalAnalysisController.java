@@ -113,6 +113,28 @@ public class TechnicalAnalysisController extends BaseController {
         });
     }
 
+    @Operation(summary = "Get Volume Weighted EMA for a security", description = "Returns the latest VWEMA value")
+    @ApiResponse(responseCode = "200", description = "VWEMA value")
+    @GetMapping("/vwema/{code}/{period}")
+    public Optional<DatedSecurityPayload<Double>> getVWEMA(
+            @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @PathVariable("code") String marketCodeString,
+            @Parameter(description = "Period for calculation") @PathVariable("period") int period,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            Optional<DateRange> dateRange = DateRange.resolve(empty(), empty(), endAt);
+            Function<Price, Optional<VWEMA>> vwema = VWEMA.vwEmaStream(period)::apply;
+            return u.resolveCode(marketCodeString, (mkt, cd) -> {
+                Optional<DatedSecurityPayload<Double>> last = dateRange
+                        .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dr.start(), dr.end()))
+                        .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(mkt, cd))
+                        .stream()
+                        .flatMap(p -> vwema.apply(p).map(d -> new DatedSecurityPayload<>(cd, p.getDate(), d.value())).stream())
+                        .reduce(right());
+                return last;
+            });
+        });
+    }
+
     @Operation(summary = "Get prices for a security", description = "Returns OHLCV prices ordered by date ascending, optionally filtered by date range or tenor.")
     @ApiResponse(responseCode = "200", description = "List of prices")
     @GetMapping("/ema/{code}")

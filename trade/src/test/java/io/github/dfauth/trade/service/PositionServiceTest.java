@@ -49,7 +49,7 @@ class PositionServiceTest {
         assertEquals(150, p.getSize());
         // avg price = (100*10 + 50*12) / 150 = 1600/150 ≈ 10.6667
         double expectedAvg = 1600.0 / 150.0;
-        assertEquals(expectedAvg, p.getAveragePrice().doubleValue(), 1e-2);
+        assertEquals(expectedAvg, p.getAveragePrice(), 1e-2);
         assertEquals(0, p.getRealisedPnl().doubleValue(), 1e-9);
         assertEquals(LocalDate.of(2024, 1, 1), p.getOpenDate());
         assertTrue(p.getCloseDate().isEmpty());
@@ -71,7 +71,7 @@ class PositionServiceTest {
         assertEquals(Side.BUY, p.getSide());
         assertEquals(0, p.getSize());
         // PnL = (15 - 10) * 100 = 500
-        assertEquals(10.00, p.getAveragePrice().doubleValue(), 1e-9);
+        assertEquals(10.00, p.getAveragePrice(), 1e-9);
         assertEquals(500.0, p.getRealisedPnl().doubleValue(), 1e-9);
         assertEquals(LocalDate.of(2024, 1, 1), p.getOpenDate());
         assertEquals(LocalDate.of(2024, 2, 1), p.getCloseDate().get());
@@ -116,7 +116,7 @@ class PositionServiceTest {
         Position second = positions.get(1);
         assertTrue(second.isOpen());
         assertEquals(50, second.getSize());
-        assertEquals(0, new BigDecimal("20.00").compareTo(second.getAveragePrice()));
+        assertEquals(0, 20.00, second.getAveragePrice());
         assertTrue(second.getCloseDate().isEmpty());
     }
 
@@ -135,7 +135,7 @@ class PositionServiceTest {
         assertEquals(40, p.getSize());
         // Realised PnL from partial close: (12 - 10) * 60 = 120
         assertEquals(120, p.getRealisedPnl().doubleValue(), 1e-9);
-        assertEquals(10.00, p.getAveragePrice().doubleValue(), 1e-9);
+        assertEquals(10.00, p.getAveragePrice(), 1e-9);
     }
 
     @Test

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -94,8 +95,9 @@ public class PriceController extends BaseController {
     @ApiResponse(responseCode = "200", description = "List of trend summaries")
     @GetMapping("/trending")
     public List<TrendSummary> getTrending(
-            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") String market,
+            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") Optional<String> mkt,
             @Parameter(description = "Trend state filter (e.g. BULL, BEAR)") @RequestParam("sentiment") Optional<String> sentiment) {
+        String market = mkt.orElse("ASX");
         return priceRepository.findDistinctCodesByMarket(market).stream()
                 .flatMap(code -> {
                     double[] prices = priceRepository.findByMarketAndCodeOrderByDateAsc(market, code)
@@ -125,6 +127,24 @@ public class PriceController extends BaseController {
             return u.resolveCode(code).map((mkt, cd) -> dateRange
                             .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dr.start(), dr.end()))
                             .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(mkt, cd)));
+        });
+    }
+
+    @Operation(summary = "Get all prices", description = "Returns OHLCV prices ordered by date ascending, optionally filtered by date range or tenor.")
+    @ApiResponse(responseCode = "200", description = "List of prices")
+    @GetMapping()
+    public Map<String,List<Price>> getAllPrices(
+            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") Optional<String> market,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
+            @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            String mkt = market.orElse("ASX");
+            Optional<DateRange> dateRange = DateRange.resolve(tenor, startFrom, endAt);
+            return dateRange
+                            .map(dr -> priceRepository.findByMarketAndDateBetweenOrderByDateAsc(mkt, dr.start(), dr.end()))
+                            .orElseGet(() -> priceRepository.findByMarketOrderByDateAsc(mkt))
+                    .stream().collect(Collectors.groupingBy(Price::getCode));
         });
     }
 }

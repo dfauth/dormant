@@ -20,7 +20,7 @@ public class RateOfChange {
             return new double[0];
         }
         Function<Double, Optional<Double>> f = rocStream(period);
-        double[] result = new double[prices.length - period];
+        double[] result = new double[prices.length - period + 1];
         AtomicInteger i = new AtomicInteger(0);
         for (double price : prices) {
             f.apply(price).ifPresent(v -> result[i.getAndIncrement()] = v);
@@ -41,13 +41,18 @@ public class RateOfChange {
         if (period < 1) {
             throw new IllegalArgumentException("Period must be at least 1");
         }
-        RingBuffer<Double> ringBuffer = RingBuffer.create(new Double[period]);
+        RingBuffer<Double> ringBuffer = RingBuffer.create(new double[period]);
         return price -> {
-            Double oldest = ringBuffer.write(price);
-            if (!ringBuffer.isFull() || oldest == null) {
-                return empty();
+            ringBuffer.write(price);
+            if (ringBuffer.isFull()) {
+                return ringBuffer.stream().findFirst().map(f -> (price - f) / f);
             }
-            return Optional.of((price - oldest) / oldest);
+            return empty();
         };
+    }
+
+    public static Function<Double, Optional<Double>> rocStreamPerPeriod(int period) {
+        Function<Double, Optional<Double>> rocStream = rocStream(period);
+        return d -> rocStream.apply(d).map(roc -> roc / (double) period);
     }
 }

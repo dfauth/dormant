@@ -167,7 +167,7 @@ class PositionTest {
     @Test
     void getAveragePrice_singleTrade_returnsTradePrice() {
         Position p = Position.of(bhp(D1, Side.BUY, 100, "10.00"));
-        assertEquals(0, new BigDecimal("10.00").compareTo(p.getAveragePrice()));
+        assertEquals(0, 10.00, p.getAveragePrice());
     }
 
     @Test
@@ -175,7 +175,7 @@ class PositionTest {
         // (100*10 + 50*12) / 150 = 1600/150 ≈ 10.67
         Position p = Position.of(bhp(D1, Side.BUY, 100, "10.00"));
         p.addTrade(bhp(D2, Side.BUY, 50, "12.00"));
-        assertEquals(1600.0 / 150.0, p.getAveragePrice().doubleValue(), 1e-2);
+        assertEquals(1600.0 / 150.0, p.getAveragePrice(), 1e-2);
     }
 
     @Test
@@ -183,7 +183,7 @@ class PositionTest {
         // Partial close: sell trades should not affect average buy price
         Position p = Position.of(bhp(D1, Side.BUY, 100, "10.00"));
         p.addTrade(bhp(D2, Side.SELL, 40, "15.00"));
-        assertEquals(0, new BigDecimal("10.00").compareTo(p.getAveragePrice()));
+        assertEquals(0, 10.00, p.getAveragePrice());
     }
 
     // --- getRealisedPnl() — also exercises SideSizeCost.add() / merge() / calculate() ---

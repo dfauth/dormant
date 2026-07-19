@@ -16,20 +16,32 @@ class RateOfChangeTest {
         // period=3: ROC[i] = (prices[i] - prices[i-3]) / prices[i-3] * 100
         double[] prices = {10, 11, 12, 13, 14};
         double[] result = RateOfChange.roc(prices, 3);
-        assertEquals(2, result.length);
-        // ROC(13 vs 10) = (13-10)/10*100 = 30
-        assertEquals(0.3, result[0], 1e-9);
-        // ROC(14 vs 11) = (14-11)/11*100 = 27.2727...
-        assertEquals((14.0 - 11.0) / 11.0, result[1], 1e-9);
+        assertEquals(3, result.length);
+        // ROC(12 vs 10) = (12-10)/12
+        assertEquals((12.0 - 10.0)/ 10.0, result[0], 1e-9);
+        // ROC(13 vs 11) = (13-11)/13
+        assertEquals((13.0 - 11.0) / 11.0, result[1], 1e-9);
+        // ROC(14 vs 12) = (14-12)/14
+        assertEquals((14.0 - 12.0) / 12.0, result[2], 1e-9);
     }
 
     @Test
     void batchRocPeriodOne() {
         double[] prices = {10, 20, 15};
         double[] result = RateOfChange.roc(prices, 1);
+        assertEquals(3, result.length);
+        assertEquals(0.0, result[0], 1e-9);
+        assertEquals(0.0, result[1], 1e-9);
+        assertEquals(0.0, result[2], 1e-9);
+    }
+
+    @Test
+    void batchRocPeriodTwo() {
+        double[] prices = {10, 20, 15};
+        double[] result = RateOfChange.roc(prices, 2);
         assertEquals(2, result.length);
-        assertEquals(1.0, result[0], 1e-9); // (20-10)/10*100
-        assertEquals(-0.25, result[1], 1e-9); // (15-20)/20*100
+        assertEquals(1.0, result[0], 1e-9); // (20-10)/10
+        assertEquals(-0.25, result[1], 1e-9); // (15-20)/20
     }
 
     @Test
@@ -47,7 +59,7 @@ class RateOfChangeTest {
 
     @Test
     void streamingRocEmitsEmptyDuringWarmUp() {
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(3);
+        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(4);
         assertEquals(Optional.empty(), roc.apply(10.0));
         assertEquals(Optional.empty(), roc.apply(11.0));
         assertEquals(Optional.empty(), roc.apply(12.0));
@@ -59,7 +71,7 @@ class RateOfChangeTest {
 
     @Test
     void streamingRocProducesCorrectSubsequentValues() {
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(3);
+        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(4);
         roc.apply(10.0);
         roc.apply(11.0);
         roc.apply(12.0);
@@ -78,7 +90,7 @@ class RateOfChangeTest {
 
     @Test
     void streamingRocEmitsForEveryPriceAfterWarmUp() {
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(2);
+        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(3);
         double[] prices = {10, 20, 30, 40, 50};
         List<Double> values = new ArrayList<>();
         for (double p : prices) {
@@ -90,7 +102,7 @@ class RateOfChangeTest {
 
     @Test
     void rocIsZeroWhenPriceUnchanged() {
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(1);
+        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(2);
         roc.apply(100.0);
         Optional<Double> result = roc.apply(100.0);
         assertTrue(result.isPresent());
@@ -99,7 +111,7 @@ class RateOfChangeTest {
 
     @Test
     void rocIsNegativeOnDecline() {
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(1);
+        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(2);
         roc.apply(100.0);
         Optional<Double> result = roc.apply(80.0);
         assertTrue(result.isPresent());

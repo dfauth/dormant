@@ -11,6 +11,10 @@ import java.util.Optional;
 
 public interface PriceRepository extends JpaRepository<Price, Long> {
 
+    List<Price> findByMarketOrderByDateAsc(String market);
+
+    List<Price> findByMarketAndDateBetweenOrderByDateAsc(String market, LocalDate start, LocalDate end);
+
     List<Price> findByMarketAndCodeOrderByDateAsc(String market, String code);
 
     List<Price> findByMarketAndCodeAndDateBetweenOrderByDateAsc(String market, String code, LocalDate start, LocalDate end);

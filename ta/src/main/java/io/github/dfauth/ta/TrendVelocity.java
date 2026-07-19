@@ -33,7 +33,7 @@ public interface TrendVelocity {
     /**
      * Batch Trend Velocity. Returns one value per candle after warm-up.
      */
-    public static double[] trendVelocity(Candle[] candles, int period) {
+    static double[] trendVelocity(Candle[] candles, int period) {
         if (period < 1) {
             throw new IllegalArgumentException("Period must be at least 1");
         }
@@ -52,7 +52,7 @@ public interface TrendVelocity {
      * Streaming Trend Velocity. Returns {@code Optional.empty()} during warm-up,
      * then emits {@code RoC(EMA(close)) / ATR} for each subsequent candle.
      */
-    public static Function<Candle, Optional<Double>> trendVelocity(int period) {
+    static Function<Candle, Optional<Double>> trendVelocity(int period) {
         return trendVelocityStream(period).andThen(tvr -> tvr.map(TrendVelocityRecord::tv));
     }
 
@@ -60,12 +60,12 @@ public interface TrendVelocity {
      * Streaming Trend Velocity. Returns {@code Optional.empty()} during warm-up,
      * then emits {@code RoC(EMA(close)) / ATR} for each subsequent candle.
      */
-    public static Function<Candle, Optional<TrendVelocityRecord>> trendVelocityStream(int period) {
+    static Function<Candle, Optional<TrendVelocityRecord>> trendVelocityStream(int period) {
         if (period < 1) {
             throw new IllegalArgumentException("Period must be at least 1");
         }
         Function<Double, Optional<Double>> ema = ExponentialMovingAverage.emaStream(period);
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStream(period);
+        Function<Double, Optional<Double>> roc = RateOfChange.rocStreamPerPeriod(period);
         Function<Candle, Optional<Double>> atr = AverageTrueRange.atrStream(period);
 
         return candle -> {
