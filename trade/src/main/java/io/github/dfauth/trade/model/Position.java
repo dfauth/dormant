@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 import static io.github.dfauth.trycatch.Collectors.Payload.averagingPayload;
-import static io.github.dfauth.trycatch.Collectors.payloadCollector;
+import static io.github.dfauth.trycatch.Collectors.collectableCollector;
 import static io.github.dfauth.trycatch.Tuple2.tuple2;
 import static io.github.dfauth.trycatch.Utils.bd;
 import static java.lang.Math.abs;
@@ -87,7 +87,7 @@ public class Position {
     public double getAveragePrice() {
         return trades.stream()
                 .filter(t -> t.getSide() == getSide())
-                .collect(payloadCollector(t -> averagingPayload(t.getCost(), t.getSize()), averagingPayload(ZERO, 0)));
+                .collect(collectableCollector(t -> averagingPayload(t.getCost(), t.getSize()), averagingPayload(ZERO, 0)));
     }
 
     public BigDecimal getAverageSalePrice() {

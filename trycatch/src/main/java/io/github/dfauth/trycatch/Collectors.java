@@ -9,7 +9,7 @@ import java.util.stream.Collector;
 
 public class Collectors {
 
-    public static <T,R,S,U> Collector<T, AtomicReference<R>, S> immutableCollector(
+    public static <T,R,S> Collector<T, AtomicReference<R>, S> immutableCollector(
             Supplier<R> supplier,
             BiFunction<T,R,R> accumulator,
             BinaryOperator<R> combiner,
@@ -47,16 +47,21 @@ public class Collectors {
         };
     }
 
-    public static <T,R,S,U> Collector<T, AtomicReference<Payload<U,R,S>>, S> payloadCollector(Function<T, Payload<U,R,S>> mapper, Payload<U,R,S> initial) {
+    public static <T,R extends Collectable<R,S>,S> Collector<T, AtomicReference<R>, S> collectableCollector(Function<T, R> mapper, R initial) {
         return immutableCollector(
                 () -> initial,
-                (t, p) -> p.accumulate(mapper.apply(t)),
-                Payload::accumulate,
-                Payload::finish
+                (t, r) -> r.accumulate(mapper.apply(t)),
+                Collectable::accumulate,
+                Collectable::finish
         );
     }
 
-    public record Payload<L,R,S>(L l, R r, BiFunction<L,R,S> fn, BinaryOperator<L> leftAccumulator, BinaryOperator<R> rightAccumulator) {
+    public record Payload<L,R,S>(L l,
+                                 R r,
+                                 BiFunction<L,R,S> fn,
+                                 BinaryOperator<L> leftAccumulator,
+                                 BinaryOperator<R> rightAccumulator
+    ) implements Collectable<Payload<L,R,S>,S> {
 
         public S finish() {
             return fn.apply(l, r);
