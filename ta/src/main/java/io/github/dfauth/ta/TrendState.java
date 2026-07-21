@@ -3,31 +3,31 @@ package io.github.dfauth.ta;
 import io.github.dfauth.trycatch.TriPredicate;
 
 import java.util.List;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.DoubleFunction;
+import java.util.function.DoublePredicate;
 
 import static java.util.Arrays.stream;
 
 public enum TrendState implements TriPredicate<Double, Double, Double> {
 
     BULL(f -> s -> l ->
-            l < s && s < f), // l < s < f
+            orderedAs(l, s, f)), // l < s < f
     LATE_BULL(f -> s -> l ->
-            l < f && f < s), // l < f < s
+            orderedAs(l,f,s)), // l < f < s
     EARLY_BEAR(f -> s -> l ->
-            f < l && l < s), // f < l < s
+            orderedAs(f,l,s)), // f < l < s
     BEAR(f -> s -> l ->
-            f < s && s < l), // f < s < l
+            orderedAs(f,s,l)), // f < s < l
     LATE_BEAR(f -> s -> l ->
-            s < f && f < l), // s < f < l
+            orderedAs(s,f,l)), // s < f < l
     EARLY_BULL(f -> s -> l ->
-            s < l && l < f); //s < l < f
+            orderedAs(s,l,f)); //s < l < f
 
     public static final List<TrendState> RISING_TREND_STATES = List.of(LATE_BEAR, EARLY_BULL, BULL);
 
-    private Function<Double, Function<Double, Predicate<Double>>> p3;
+    private DoubleFunction<DoubleFunction<DoublePredicate>> p3;
 
-    TrendState(Function<Double, Function<Double, Predicate<Double>>> p3) {
+    TrendState(DoubleFunction<DoubleFunction<DoublePredicate>> p3) {
         this.p3 = p3;
     }
 
@@ -54,6 +54,10 @@ public enum TrendState implements TriPredicate<Double, Double, Double> {
 
     public boolean isBear() {
         return this == BEAR;
+    }
+
+    private static boolean orderedAs(double... arr) {
+        return arr[0] <= arr[1] && arr[1] <= arr[2];
     }
 }
 

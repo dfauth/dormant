@@ -87,6 +87,11 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.github.dfauth.dormant</groupId>
+            <artifactId>dormant</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

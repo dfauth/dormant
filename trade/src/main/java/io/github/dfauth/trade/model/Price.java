@@ -1,5 +1,8 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.Decoder;
+import io.github.dfauth.dormant.Dormant;
+import io.github.dfauth.dormant.Encoder;
 import io.github.dfauth.ta.Candle;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,7 +19,7 @@ import java.time.LocalDate;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Price implements Candle {
+public class Price implements Candle, Dormant {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,5 +67,32 @@ public class Price implements Candle {
     @Override
     public double close() {
         return getClose().doubleValue();
+    }
+
+
+    @Override
+    public void write(Encoder encoder) {
+        encoder.writeLong(id)
+                .writeString(this.market)
+                .writeString(this.code)
+                .writeLocalDate(this.date)
+                .writeBigDecimal(this.open)
+                .writeBigDecimal(this.high)
+                .writeBigDecimal(this.low)
+                .writeBigDecimal(this.close)
+                .writeInt(this.volume);
+    }
+
+    @Override
+    public void read(Decoder decoder) {
+        decoder.readLong(this::setId)
+                .readString(this::setMarket)
+                .readString(this::setCode)
+                .readLocalDate(this::setDate)
+                .readBigDecimal(this::setOpen)
+                .readBigDecimal(this::setHigh)
+                .readBigDecimal(this::setLow)
+                .readBigDecimal(this::setClose)
+                .readInt(this::setVolume);
     }
 }
