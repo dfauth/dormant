@@ -76,8 +76,8 @@ public class PositionService {
         return result;
     }
 
-    public PerformanceStats getPerformanceStats(Long userId, String market) {
-        List<Position> positions = getPositionsByMarket(userId, market);
+    public PerformanceStats getPerformanceStats(Long userId, Predicate<Position> p) {
+        List<Position> positions = getPositions(userId, p);
         return computePerformanceStats(positions);
     }
 
@@ -89,13 +89,10 @@ public class PositionService {
         int total = closed.size();
         if (total == 0) {
             return PerformanceStats.builder()
-                    .totalClosedPositions(0)
                     .wins(0)
                     .losses(0)
-                    .winRate(0.0)
                     .averageWin(BigDecimal.ZERO)
                     .averageLoss(BigDecimal.ZERO)
-                    .riskRewardRatio(0.0)
                     .expectancy(BigDecimal.ZERO)
                     .build();
         }
@@ -110,8 +107,6 @@ public class PositionService {
         double wins = winners.size();
         double losses = losers.size();
 
-        double winRate = wins / total;
-
         BigDecimal averageWin = winners.isEmpty() ? BigDecimal.ZERO
                 : winners.stream().map(Position::getRealisedPnl).reduce(BigDecimal.ZERO, BigDecimal::add)
                 .divide(new BigDecimal(wins), 10, RoundingMode.HALF_UP);
@@ -119,9 +114,6 @@ public class PositionService {
         BigDecimal averageLoss = losers.isEmpty() ? BigDecimal.ZERO
                 : losers.stream().map(Position::getRealisedPnl).reduce(BigDecimal.ZERO, BigDecimal::add)
                 .divide(new BigDecimal(losses), 10, RoundingMode.HALF_UP);
-
-        double riskRewardRatio = averageLoss.compareTo(BigDecimal.ZERO) == 0 ? 0.0
-                : averageWin.divide(averageLoss.abs(), 10, RoundingMode.HALF_UP).doubleValue();
 
         BigDecimal lossRate = new BigDecimal(losses)
                 .divide(new BigDecimal(total), 10, RoundingMode.HALF_UP);
@@ -131,13 +123,10 @@ public class PositionService {
                 .add(lossRate.multiply(averageLoss));
 
         return PerformanceStats.builder()
-                .totalClosedPositions(total)
                 .wins((int)wins)
                 .losses((int)losses)
-                .winRate(winRate)
                 .averageWin(averageWin)
                 .averageLoss(averageLoss)
-                .riskRewardRatio(riskRewardRatio)
                 .expectancy(expectancy)
                 .build();
     }

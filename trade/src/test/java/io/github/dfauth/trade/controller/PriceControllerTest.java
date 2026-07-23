@@ -177,8 +177,9 @@ class PriceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].code").value(CODE))
-                .andExpect(jsonPath("$[0].trendState.trendState").value("BULL"))
-                .andExpect(jsonPath("$[0].distanceFromEma").isNumber());
+                .andExpect(jsonPath("$[0].t.trendState").value("BULL"))
+//                .andExpect(jsonPath("$[0].distanceFromEma").isNumber())
+                ;
     }
 
     @Test

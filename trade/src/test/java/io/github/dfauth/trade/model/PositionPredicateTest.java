@@ -48,78 +48,78 @@ class PositionPredicateTest {
 
     @Test
     void open_matchesOpenLongPosition() {
-        assertTrue(OPEN.test(openLong()));
+        assertTrue(OPEN.get().test(openLong()));
     }
 
     @Test
     void open_matchesOpenShortPosition() {
-        assertTrue(OPEN.test(openShort()));
+        assertTrue(OPEN.get().test(openShort()));
     }
 
     @Test
     void open_doesNotMatchClosedLongPosition() {
-        assertFalse(OPEN.test(closedLong()));
+        assertFalse(OPEN.get().test(closedLong()));
     }
 
     @Test
     void open_doesNotMatchClosedShortPosition() {
-        assertFalse(OPEN.test(closedShort()));
+        assertFalse(OPEN.get().test(closedShort()));
     }
 
     // --- CLOSED ---
 
     @Test
     void closed_matchesClosedLongPosition() {
-        assertTrue(CLOSED.test(closedLong()));
+        assertTrue(CLOSED.get().test(closedLong()));
     }
 
     @Test
     void closed_matchesClosedShortPosition() {
-        assertTrue(CLOSED.test(closedShort()));
+        assertTrue(CLOSED.get().test(closedShort()));
     }
 
     @Test
     void closed_doesNotMatchOpenLongPosition() {
-        assertFalse(CLOSED.test(openLong()));
+        assertFalse(CLOSED.get().test(openLong()));
     }
 
     @Test
     void closed_doesNotMatchOpenShortPosition() {
-        assertFalse(CLOSED.test(openShort()));
+        assertFalse(CLOSED.get().test(openShort()));
     }
 
     // --- SHORT ---
 
     @Test
     void short_matchesOpenShortPosition() {
-        assertTrue(SHORT.test(openShort()));
+        assertTrue(SHORT.get().test(openShort()));
     }
 
     @Test
     void short_matchesClosedShortPosition() {
-        assertTrue(SHORT.test(closedShort()));
+        assertTrue(SHORT.get().test(closedShort()));
     }
 
     @Test
     void short_doesNotMatchLongPosition() {
-        assertFalse(SHORT.test(openLong()));
+        assertFalse(SHORT.get().test(openLong()));
     }
 
     // --- LONG ---
 
     @Test
     void long_matchesOpenLongPosition() {
-        assertTrue(LONG.test(openLong()));
+        assertTrue(LONG.get().test(openLong()));
     }
 
     @Test
     void long_matchesClosedLongPosition() {
-        assertTrue(LONG.test(closedLong()));
+        assertTrue(LONG.get().test(closedLong()));
     }
 
     @Test
     void long_doesNotMatchShortPosition() {
-        assertFalse(LONG.test(openShort()));
+        assertFalse(LONG.get().test(openShort()));
     }
 
     // --- OPEN and CLOSED are complements ---
@@ -127,13 +127,13 @@ class PositionPredicateTest {
     @Test
     void open_andClosed_areComplements_forLong() {
         Position p = openLong();
-        assertNotEquals(OPEN.test(p), CLOSED.test(p));
+        assertNotEquals(OPEN.get().test(p), CLOSED.get().test(p));
     }
 
     @Test
     void open_andClosed_areComplements_forShort() {
         Position p = closedShort();
-        assertNotEquals(OPEN.test(p), CLOSED.test(p));
+        assertNotEquals(OPEN.get().test(p), CLOSED.get().test(p));
     }
 
     // --- SHORT and LONG are complements ---
@@ -142,8 +142,8 @@ class PositionPredicateTest {
     void short_andLong_areComplements() {
         Position longPos = openLong();
         Position shortPos = openShort();
-        assertNotEquals(SHORT.test(longPos), LONG.test(longPos));
-        assertNotEquals(SHORT.test(shortPos), LONG.test(shortPos));
+        assertNotEquals(SHORT.get().test(longPos), LONG.get().test(longPos));
+        assertNotEquals(SHORT.get().test(shortPos), LONG.get().test(shortPos));
     }
 
     // --- implements Predicate (can compose) ---

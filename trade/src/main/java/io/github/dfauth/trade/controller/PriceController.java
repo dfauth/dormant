@@ -113,6 +113,16 @@ public class PriceController extends BaseController {
                 .collect(Collectors.toList());
     }
 
+    @Operation(summary = "Get trending stocks", description = "Calculates the current trend state for every stock in the given market and optionally filters by sentiment.")
+    @ApiResponse(responseCode = "200", description = "List of trend summaries")
+    @GetMapping("/trending/all")
+    public Map<String, TrendSummary> getAllTrending(
+            @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") Optional<String> mkt) {
+        return getTrending(mkt, Optional.empty()).stream()
+                .map(ts -> Map.entry(ts.getMarket()+":"+ts.getCode(), ts))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
     @Operation(summary = "Get prices for a security", description = "Returns OHLCV prices ordered by date ascending, optionally filtered by date range or tenor.")
     @ApiResponse(responseCode = "200", description = "List of prices")
     @GetMapping("/{code}")

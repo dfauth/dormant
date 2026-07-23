@@ -178,7 +178,7 @@ class PositionControllerTest {
         mockMvc.perform(get("/api/positions/market/" + MARKET + "/performance")
                         .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "pos@example.com"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalClosedPositions").value(1))
+                .andExpect(jsonPath("$.totalPositions").value(1))
                 .andExpect(jsonPath("$.wins").value(1))
                 .andExpect(jsonPath("$.losses").value(0))
                 .andExpect(jsonPath("$.winRate").value(1.0));
@@ -189,7 +189,7 @@ class PositionControllerTest {
         mockMvc.perform(get("/api/positions/market/NYSE/performance")
                         .with(oidcLogin().idToken(t -> t.subject(GOOGLE_ID).claim("email", "pos@example.com"))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalClosedPositions").value(0))
+                .andExpect(jsonPath("$.totalPositions").value(0))
                 .andExpect(jsonPath("$.wins").value(0))
                 .andExpect(jsonPath("$.winRate").value(0.0));
     }

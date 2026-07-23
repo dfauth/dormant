@@ -160,7 +160,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(2, stats.getTotalClosedPositions());
+        assertEquals(2, stats.getTotalPositions());
         assertEquals(2, stats.getWins());
         assertEquals(0, stats.getLosses());
         assertEquals(1.0, stats.getWinRate(), 1e-9);
@@ -186,7 +186,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(2, stats.getTotalClosedPositions());
+        assertEquals(2, stats.getTotalPositions());
         assertEquals(1, stats.getWins());
         assertEquals(1, stats.getLosses());
         // winRate = 50%
@@ -210,7 +210,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(0, stats.getTotalClosedPositions());
+        assertEquals(0, stats.getTotalPositions());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getLosses());
         assertEquals(0, stats.getWinRate(), 1e-9);
@@ -234,7 +234,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(2, stats.getTotalClosedPositions());
+        assertEquals(2, stats.getTotalPositions());
         assertEquals(0, stats.getWins());
         assertEquals(2, stats.getLosses());
         assertEquals(0, stats.getWinRate(), 1e-9);
@@ -257,7 +257,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(1, stats.getTotalClosedPositions());
+        assertEquals(1, stats.getTotalPositions());
         assertEquals(0, stats.getWins());
         assertEquals(1, stats.getLosses());
         assertEquals(0, stats.getWinRate(), 1e-9);
@@ -278,7 +278,7 @@ class PositionServiceTest {
 
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(1, stats.getTotalClosedPositions());
+        assertEquals(1, stats.getTotalPositions());
         assertEquals(1, stats.getWins());
         assertEquals(0, stats.getLosses());
     }
@@ -297,7 +297,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(2, stats.getTotalClosedPositions());
+        assertEquals(2, stats.getTotalPositions());
         assertEquals(1, stats.getWins());
         assertEquals(1, stats.getLosses());
         assertEquals(0.5, stats.getWinRate(), 1e-9);
@@ -326,7 +326,7 @@ class PositionServiceTest {
         List<Position> positions = service.buildPositions(trades);
         PerformanceStats stats = service.computePerformanceStats(positions);
 
-        assertEquals(3, stats.getTotalClosedPositions());
+        assertEquals(3, stats.getTotalPositions());
         assertEquals(2, stats.getWins());
         assertEquals(1, stats.getLosses());
         // winRate = 2/3 * 100 ≈ 66.6666666667
@@ -344,7 +344,7 @@ class PositionServiceTest {
     void performanceStats_emptyPositionsList() {
         PerformanceStats stats = service.computePerformanceStats(List.of());
 
-        assertEquals(0, stats.getTotalClosedPositions());
+        assertEquals(0, stats.getTotalPositions());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getLosses());
         assertEquals(0, stats.getWinRate(), 1e-9);

@@ -13,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,6 +34,7 @@ class PositionServiceRepositoryTest {
 
     private static final Long USER_ID = 1L;
     private static final String MARKET = "ASX";
+    private static final Predicate<Position> MARKET_PREDICATE = p -> p.getMarket().equals(MARKET);
 
     private static final LocalDate D1 = LocalDate.of(2024, 1, 1);
     private static final LocalDate D2 = LocalDate.of(2024, 2, 1);
@@ -371,12 +373,12 @@ class PositionServiceRepositoryTest {
 
     @Test
     void getPerformanceStats_noTrades_returnsZeroStats() {
-        when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
+        when(tradeRepository.findByUserId(USER_ID))
                 .thenReturn(List.of());
 
-        PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET);
+        PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET_PREDICATE);
 
-        assertEquals(0, stats.getTotalClosedPositions());
+        assertEquals(0, stats.getTotalPositions());
         assertEquals(0, stats.getWins());
         assertEquals(0, stats.getLosses());
         assertEquals(0.0, stats.getWinRate(), 1e-9);
@@ -385,16 +387,16 @@ class PositionServiceRepositoryTest {
     @Test
     void getPerformanceStats_openPositionsExcluded() {
         // BHP: closed win (+500); ANZ: open (excluded)
-        when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
+        when(tradeRepository.findByUserId(USER_ID))
                 .thenReturn(List.of(
                         trade("BHP", D1, Side.BUY,  100, "10.00"),
                         trade("BHP", D2, Side.SELL, 100, "15.00"),
                         trade("ANZ", D3, Side.BUY,   50, "20.00")
                 ));
 
-        PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET);
+        PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET_PREDICATE);
 
-        assertEquals(1, stats.getTotalClosedPositions());
+        assertEquals(1, stats.getTotalPositions());
         assertEquals(1, stats.getWins());
         assertEquals(0, stats.getLosses());
         assertEquals(1.0, stats.getWinRate(), 1e-9);
@@ -402,7 +404,7 @@ class PositionServiceRepositoryTest {
 
     @Test
     void getPerformanceStats_delegatesToGetPositionsByMarket() {
-        when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
+        when(tradeRepository.findByUserId(USER_ID))
                 .thenReturn(List.of(
                         trade("BHP", D1, Side.BUY,  100, "10.00"),
                         trade("BHP", D2, Side.SELL, 100, "15.00"),
@@ -410,11 +412,11 @@ class PositionServiceRepositoryTest {
                         trade("ANZ", D2, Side.SELL, 200, "25.00")
                 ));
 
-        PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET);
+        PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET_PREDICATE);
 
-        assertEquals(2, stats.getTotalClosedPositions());
+        assertEquals(2, stats.getTotalPositions());
         assertEquals(1, stats.getWins());   // BHP: +500
         assertEquals(1, stats.getLosses()); // ANZ: -1000
-        verify(tradeRepository).findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET);
+        verify(tradeRepository).findByUserId(USER_ID);
     }
 }

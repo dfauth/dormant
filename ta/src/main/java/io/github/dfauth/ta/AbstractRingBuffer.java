@@ -17,8 +17,8 @@ public abstract class AbstractRingBuffer<T> implements RingBuffer<T> {
     }
 
     @Override
-    public Stream<T> stream() {
-        return IntStream.range(0, capacity()).mapToObj(this::read).filter(nonNull());
+    public Stream<T> stream(int n) {
+        return IntStream.range(n, capacity()+n).mapToObj(this::read).filter(nonNull());
     }
 
     protected abstract Predicate<T> nonNull();

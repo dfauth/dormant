@@ -1,5 +1,7 @@
 package io.github.dfauth.ta;
 
+import io.github.dfauth.trycatch.Collectable;
+
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -54,5 +56,18 @@ public class RateOfChange {
     public static Function<Double, Optional<Double>> rocStreamPerPeriod(int period) {
         Function<Double, Optional<Double>> rocStream = rocStream(period);
         return d -> rocStream.apply(d).map(roc -> roc / (double) period);
+    }
+
+    static class ROCCollectable implements Collectable<ROCCollectable, Double> {
+
+        @Override
+        public ROCCollectable accumulate(ROCCollectable rocCollectable) {
+            return null;
+        }
+
+        @Override
+        public Double finish() {
+            return 0.0; //(last - first)/count;
+        }
     }
 }

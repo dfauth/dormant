@@ -1,5 +1,6 @@
 package io.github.dfauth.ta;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.github.dfauth.trycatch.TriPredicate;
 
 import java.util.List;
@@ -40,18 +41,22 @@ public enum TrendState implements TriPredicate<Double, Double, Double> {
         return stream(values()).filter(t -> t.test(f, s, l)).findFirst().orElseThrow(() -> new IllegalStateException("Oops. shouldn't happen"));
     }
 
+    @JsonIgnore
     public boolean isRising() {
         return RISING_TREND_STATES.contains(this);
     }
 
+    @JsonIgnore
     public boolean isFalling() {
         return !isRising();
     }
 
+    @JsonIgnore
     public boolean isBull() {
         return this == BULL;
     }
 
+    @JsonIgnore
     public boolean isBear() {
         return this == BEAR;
     }

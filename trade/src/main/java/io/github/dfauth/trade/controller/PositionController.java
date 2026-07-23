@@ -16,8 +16,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
 
-import static io.github.dfauth.trade.model.PositionPredicate.CLOSED;
-import static io.github.dfauth.trade.model.PositionPredicate.OPEN;
+import static io.github.dfauth.trade.model.PositionPredicate.*;
 import static io.github.dfauth.trycatch.Optionals.or;
 import static io.github.dfauth.trycatch.Predicates.always;
 import static java.util.Optional.empty;
@@ -59,7 +58,7 @@ public class PositionController extends BaseController {
                 .map(dr -> p ->
                         (p.getOpenDate().isAfter(dr.start()) && p.getCloseDate().map(cd -> dr.end().isAfter(cd)).orElse(true))
                 );
-        Optional<Predicate<Position>> openClosePredicate = positionPredicate.map(_p -> (Predicate<Position>) _p);
+        Optional<Predicate<Position>> openClosePredicate = positionPredicate.map(PositionPredicate::get);
         return authorize(u -> positionService.getPositions(u.getId(), or(Predicate::and, dateRangePredicate, openClosePredicate).orElse(always())));
     }
 
@@ -84,7 +83,19 @@ public class PositionController extends BaseController {
     @ApiResponse(responseCode = "200", description = "Performance statistics")
     @GetMapping("/market/{market}/performance")
     public PerformanceStats getPerformanceStats(
-            @Parameter(description = "Market code (e.g. ASX)") @PathVariable("market") String market) {
-        return authorize(u -> positionService.getPerformanceStats(u.getId(), market));
+            @Parameter(description = "Market code (e.g. ASX)") @PathVariable("market") String market,
+            @Parameter(description = "Position predicate (ie. OPEN / CLOSED)") @RequestParam("predicate") Optional<PositionPredicate> openClosedPredicate,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
+            @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt
+    ) {
+        Predicate<Position> mktPredicate = _p -> _p.getMarket().equals(market);
+        Optional<Predicate<Position>> dateRangePredicate = DateRange.resolve(tenor, startFrom, endAt)
+                .map(dr -> p ->
+                        (p.getOpenDate().isAfter(dr.start()) && p.getCloseDate().map(cd -> dr.end().isAfter(cd)).orElse(true))
+                );
+        Predicate<Position> z = filter(openClosedPredicate);
+        Predicate<Position> p = dateRangePredicate.map(drp -> drp.and(z)).orElse(z);
+        return authorize(u -> positionService.getPerformanceStats(u.getId(), mktPredicate.and(p)));
     }
 }

@@ -1,8 +1,12 @@
 package io.github.dfauth.trade.model;
 
+import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
-public enum PositionPredicate implements Predicate<Position> {
+import static io.github.dfauth.trycatch.Predicates.orTrue;
+
+public enum PositionPredicate implements Supplier<Predicate<Position>> {
     OPEN(Position::isOpen),
     CLOSED(Position::isClosed),
     SHORT(Position::isShort),
@@ -15,7 +19,19 @@ public enum PositionPredicate implements Predicate<Position> {
     }
 
     @Override
-    public boolean test(Position position) {
-        return p.test(position);
+    public Predicate<Position> get() {
+        return p;
+    }
+
+    public static Predicate<Position> filter(Optional<PositionPredicate> o) {
+        return orTrue(o.map(Supplier::get));
+    }
+
+    public Predicate<Position> and(PositionPredicate positionPredicate) {
+        return get().and(positionPredicate.get());
+    }
+
+    public Predicate<Position> or(PositionPredicate positionPredicate) {
+        return get().or(positionPredicate.get());
     }
 }

@@ -1,7 +1,15 @@
 package io.github.dfauth.ta;
 
-public record Trend(int duration, double price, double fast, double slow, double lng, TrendState trendState) {
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
+public record Trend(int duration,
+                    @JsonIgnore double price,
+                    @JsonIgnore double fast,
+                    @JsonIgnore double slow,
+                    @JsonIgnore double lng,
+                    TrendState trendState) {
+
+    @JsonIgnore
     public boolean isDiverging() {
         return false;
     }

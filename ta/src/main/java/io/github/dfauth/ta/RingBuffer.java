@@ -19,7 +19,11 @@ public interface RingBuffer<T> {
 
     T write(T d);
 
-    Stream<T> stream();
+    default Stream<T> stream() {
+        return stream(0);
+    }
+
+    Stream<T> stream(int n);
 
     boolean isFull();
 }
