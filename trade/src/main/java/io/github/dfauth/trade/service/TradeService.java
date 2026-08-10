@@ -7,9 +7,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static io.github.dfauth.trycatch.Function2.peek;
-import static java.util.function.Predicate.not;
 
 @Service
 @RequiredArgsConstructor
@@ -19,9 +20,18 @@ public class TradeService {
 
     @Transactional
     public List<Trade> createBatch(List<Trade> trades, Long userId) {
-        return tradeRepository.saveAll(trades.stream()
-                .filter(not(t -> tradeRepository.existsByConfirmationId(t.getConfirmationId())))
-                        .map(peek(t -> t.setUserId(userId)))
-                .toList());
+        Map<Boolean, List<Trade>> x = trades.stream().collect(Collectors.partitioningBy(t -> tradeRepository.existsByConfirmationId(t.getConfirmationId())));
+        return tradeRepository.saveAll(
+                trades.stream()
+                        .map(peek(t -> tradeRepository.findByConfirmationId(t.getConfirmationId())
+                                .map(peek(_t -> {
+                                    t.setId(_t.getId());
+                                    t.setUserId(userId);
+                                }))
+                                .orElseGet(() -> {
+                                    t.setUserId(userId);
+                                    return t;
+                                })
+                        )).toList());
     }
 }

@@ -148,7 +148,7 @@ class TradeControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(trades)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$", hasSize(2)));
 
         // 1 trade should have been committed
         assertEquals(2, tradeRepository.count());
