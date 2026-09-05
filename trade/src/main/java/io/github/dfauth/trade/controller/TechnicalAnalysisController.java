@@ -6,6 +6,7 @@ import io.github.dfauth.ta.TrendVelocity;
 import io.github.dfauth.trade.model.*;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.service.UserService;
+import io.github.dfauth.trycatch.Try;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -30,7 +31,7 @@ import static java.util.Optional.empty;
 @RestController
 @RequestMapping("/api/ta")
 @Tag(name = "ATR", description = "Average True Range data")
-public class TechnicalAnalysisController extends BaseController {
+public class TechnicalAnalysisController extends BaseController implements ControllerMixIn {
 
     private final PriceRepository priceRepository;
 
@@ -113,6 +114,18 @@ public class TechnicalAnalysisController extends BaseController {
         });
     }
 
+    @Operation(summary = "Get Trend Velocity for a list of securities", description = "Returns the latest Trend Velocity for the provided securities")
+    @ApiResponse(responseCode = "200", description = "a map of Trend Velocity value")
+    @PostMapping("/tv/{period}")
+    public Map<String, Try<TV>> postTrendVelocity(
+            @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @RequestBody List<List<String>> codes,
+            @Parameter(description = "Period for trend velocity calculation") @PathVariable("period") int period,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        return authorize(u -> {
+            return mapCodes(codes, c -> getTrendVelocity(c, period, endAt));
+        });
+    }
+
     @Operation(summary = "Get Volume Weighted EMA for a security", description = "Returns the latest VWEMA value")
     @ApiResponse(responseCode = "200", description = "VWEMA value")
     @GetMapping("/vwema/{code}/{period}")
@@ -162,7 +175,7 @@ public class TechnicalAnalysisController extends BaseController {
         });
     }
 
-    public record TV(String code, LocalDate date, @JsonIgnore TrendVelocity.TrendVelocityRecord tvr) implements TrendVelocity {
+    public record TV(@JsonIgnore String code, @JsonIgnore LocalDate date, @JsonIgnore TrendVelocity.TrendVelocityRecord tvr) implements TrendVelocity {
         @Override
         public int getPeriod() {
             return tvr.period();

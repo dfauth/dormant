@@ -65,13 +65,15 @@ public interface TrendVelocity {
             throw new IllegalArgumentException("Period must be at least 1");
         }
         Function<Double, Optional<Double>> ema = ExponentialMovingAverage.emaStream(period);
-        Function<Double, Optional<Double>> roc = RateOfChange.rocStreamPerPeriod(period);
+        Function<Double, Optional<Double>> roc = RateOfChange.changeStreamPerPeriod(period);
         Function<Candle, Optional<Double>> atr = AverageTrueRange.atrStream(period);
 
         return candle -> {
             Optional<Double> emaVal = ema.apply(candle.close());
             Optional<Double> atrVal = atr.apply(candle);
-            return emaVal.flatMap(e -> roc.apply(e).flatMap(r -> atrVal.map(a -> new TrendVelocityRecord(period, e, r, a, r / a))));
+            return emaVal.flatMap(e -> roc.apply(e)
+                    .flatMap(r -> atrVal
+                            .map(a -> new TrendVelocityRecord(period, e, r, a, r / a))));
         };
     }
 }

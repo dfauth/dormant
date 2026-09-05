@@ -2,12 +2,23 @@ package io.github.dfauth.trycatch;
 
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 import java.util.stream.Collector;
 
+import static io.github.dfauth.trycatch.Utils.oops;
+
 public class Collectors {
+
+    public static <K,V> Collector<Map.Entry<K,V>,?, Map<K,V>> mapEntryCollector() {
+        return mapEntryCollector(oops("Duplicate entry not supported"));
+    }
+
+    public static <K,V> Collector<Map.Entry<K,V>,?, Map<K,V>> mapEntryCollector(BinaryOperator<V> fn) {
+        return java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, fn);
+    }
 
     public static <T,R,S> Collector<T, AtomicReference<R>, S> immutableCollector(
             Supplier<R> supplier,

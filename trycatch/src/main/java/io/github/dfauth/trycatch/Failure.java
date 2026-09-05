@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 @RequiredArgsConstructor
 public class Failure<T> implements Try<T> {
-    private final Exception exception;
+    protected final Exception exception;
 
     @Override
     public T getValue() {

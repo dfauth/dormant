@@ -176,9 +176,8 @@ class PriceControllerTest {
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].code").value(CODE))
-                .andExpect(jsonPath("$[0].t.trendState").value("BULL"))
-//                .andExpect(jsonPath("$[0].distanceFromEma").isNumber())
+                .andExpect(jsonPath("$[0].t.s").value("BULL"))
+                .andExpect(jsonPath("$[0].d").isNumber())
                 ;
     }
 
@@ -194,7 +193,7 @@ class PriceControllerTest {
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].code").value("CBA"));
+                .andExpect(jsonPath("$[0].t.s").value("BULL"));
     }
 
     @Test

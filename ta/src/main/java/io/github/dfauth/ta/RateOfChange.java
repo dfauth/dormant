@@ -1,7 +1,5 @@
 package io.github.dfauth.ta;
 
-import io.github.dfauth.trycatch.Collectable;
-
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
@@ -58,16 +56,31 @@ public class RateOfChange {
         return d -> rocStream.apply(d).map(roc -> roc / (double) period);
     }
 
-    static class ROCCollectable implements Collectable<ROCCollectable, Double> {
-
-        @Override
-        public ROCCollectable accumulate(ROCCollectable rocCollectable) {
-            return null;
+    /**
+     * Streaming change. Returns {@code Optional.empty()} until {@code period + 1}
+     * prices have been seen, then emits:
+     * <pre>
+     *   ROC = (current - price[period_bars_ago])
+     * </pre>
+     * Uses {@code write()}'s return value, which is the displaced oldest element,
+     * giving the exact look-back price without a separate read call.
+     */
+    public static Function<Double, Optional<Double>> changeStream(int period) {
+        if (period < 1) {
+            throw new IllegalArgumentException("Period must be at least 1");
         }
+        RingBuffer<Double> ringBuffer = RingBuffer.create(new double[period]);
+        return price -> {
+            ringBuffer.write(price);
+            if (ringBuffer.isFull()) {
+                return ringBuffer.stream().findFirst().map(f -> (price - f));
+            }
+            return empty();
+        };
+    }
 
-        @Override
-        public Double finish() {
-            return 0.0; //(last - first)/count;
-        }
+    public static Function<Double, Optional<Double>> changeStreamPerPeriod(int period) {
+        Function<Double, Optional<Double>> changeStream = changeStream(period);
+        return d -> changeStream.apply(d).map(roc -> roc / (double) period);
     }
 }

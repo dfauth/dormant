@@ -7,7 +7,7 @@ import java.util.function.Function;
 
 @RequiredArgsConstructor
 public class Success<T> implements Try<T> {
-    private final T t;
+    protected final T t;
 
     @Override
     public T getValue() {
