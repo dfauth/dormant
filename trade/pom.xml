@@ -92,6 +92,12 @@
             <artifactId>dormant</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.github.dfauth.dormant</groupId>
+            <artifactId>ta</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <classifier>tests</classifier>
+        </dependency>
     </dependencies>
 
     <build>

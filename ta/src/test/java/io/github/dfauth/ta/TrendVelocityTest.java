@@ -15,11 +15,11 @@ class TrendVelocityTest {
     // 10 steadily rising candles: close increases by 1 each bar,
     // range is constant (high = close + 0.5, low = close - 0.5).
     private static Candle rising(double close) {
-        return candle(close - 1, close + 0.5, close - 0.5, close);
+        return candle(close - 1, close + 0.5, close - 0.5, close, 0);
     }
 
     private static Candle falling(double close) {
-        return candle(close + 1, close + 0.5, close - 0.5, close);
+        return candle(close + 1, close + 0.5, close - 0.5, close, 0);
     }
 
     // 12 rising candles: enough for period=5 warm-up (2*5=10) with 2 values emitted

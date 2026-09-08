@@ -5,10 +5,7 @@ import io.github.dfauth.dormant.Dormant;
 import io.github.dfauth.dormant.Encoder;
 import io.github.dfauth.ta.Candle;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -67,6 +64,11 @@ public class Price implements Candle, Dormant {
     @Override
     public double close() {
         return getClose().doubleValue();
+    }
+
+    @Override
+    public int volume() {
+        return volume;
     }
 
 

@@ -3,21 +3,22 @@ package io.github.dfauth.ta;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
 import static io.github.dfauth.ta.Drawdown.drawdownStream;
-import static io.github.dfauth.ta.ZipUnZipUtils.BHP;
+import static io.github.dfauth.ta.TestData.BHP;
+import static io.github.dfauth.ta.TestData.unzipCandles;
 
 @Slf4j
 public class DrawdownTest {
 
     @Test
     public void testIt() {
-        ZipUnZipUtils.Price[] prices = ZipUnZipUtils.prices(BHP);
-        Function<ZipUnZipUtils.Price, Optional<Drawdown<ZipUnZipUtils.Price>>> fn = drawdownStream(ZipUnZipUtils.Price::close);
-        Drawdown<ZipUnZipUtils.Price> drawdown = Arrays.stream(prices)
+        List<Candle> prices = unzipCandles(BHP);
+        Function<Candle, Optional<Drawdown<Candle>>> fn = drawdownStream(Candle::close);
+        Drawdown<Candle> drawdown = prices.stream()
                 .flatMap(d -> fn.apply(d).stream())
                 .toList()
                 .getLast();
@@ -28,11 +29,11 @@ public class DrawdownTest {
         log.info("maxDrawdown: {}", drawdown.getMaxDrawdown());
         drawdown.extremes().stream().forEach(e -> {
             if(e.isLeft()) {
-                ZipUnZipUtils.Price p = e.left().value().payload();
-                log.info("past high: "+p.close()+" on "+p.date());
+                Candle p = e.left().value().payload();
+                log.info("past high: "+p.close());
             } else {
-                ZipUnZipUtils.Price p = e.right().value().payload();
-                log.info("past low: "+p.close()+" on "+p.date());
+                Candle p = e.right().value().payload();
+                log.info("past low: "+p.close());
             }
         });
     }

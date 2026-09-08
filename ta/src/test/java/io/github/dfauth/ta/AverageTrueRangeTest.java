@@ -25,11 +25,11 @@ class AverageTrueRangeTest {
     private static final double[] LOWS   = { 8,  9, 10, 11, 13};
     private static final double[] CLOSES = { 9, 10, 11, 13, 14};
     private static final Candle[] CANDLES = {
-            candle(0, HIGHS[0], LOWS[0], CLOSES[0]),
-            candle(0, HIGHS[1], LOWS[1], CLOSES[1]),
-            candle(0, HIGHS[2], LOWS[2], CLOSES[2]),
-            candle(0, HIGHS[3], LOWS[3], CLOSES[3]),
-            candle(0, HIGHS[4], LOWS[4], CLOSES[4]),
+            candle(0, HIGHS[0], LOWS[0], CLOSES[0], 0),
+            candle(0, HIGHS[1], LOWS[1], CLOSES[1], 0),
+            candle(0, HIGHS[2], LOWS[2], CLOSES[2], 0),
+            candle(0, HIGHS[3], LOWS[3], CLOSES[3], 0),
+            candle(0, HIGHS[4], LOWS[4], CLOSES[4], 0),
     };
 
     @Test
@@ -60,15 +60,15 @@ class AverageTrueRangeTest {
         Function<Candle, Optional<Double>> atr = AverageTrueRange.atrStream(2);
 
         // First candle: no previous close, no output
-        assertEquals(Optional.empty(), atr.apply(candle(0, 10, 8, 9)));
+        assertEquals(Optional.empty(), atr.apply(candle(0, 10, 8, 9, 0)));
         // Second candle: TR1 = 2.0, buffer not yet full
-        assertEquals(Optional.empty(), atr.apply(candle(0, 11, 9, 10)));
+        assertEquals(Optional.empty(), atr.apply(candle(0, 11, 9, 10, 0)));
         // Third candle: TR2 = 2.0, buffer full → SMA seed = 2.0
-        assertEquals(2.0, atr.apply(candle(0, 12, 10, 11)).orElseThrow(), 1e-9);
+        assertEquals(2.0, atr.apply(candle(0, 12, 10, 11, 0)).orElseThrow(), 1e-9);
         // Fourth candle: TR3 = 3.0 → Wilder: (2.0*1 + 3.0)/2 = 2.5
-        assertEquals(2.5, atr.apply(candle(0, 14, 11, 13)).orElseThrow(), 1e-9);
+        assertEquals(2.5, atr.apply(candle(0, 14, 11, 13, 0)).orElseThrow(), 1e-9);
         // Fifth candle: TR4 = 2.0 → Wilder: (2.5*1 + 2.0)/2 = 2.25
-        assertEquals(2.25, atr.apply(candle(0, 15, 13, 14)).orElseThrow(), 1e-9);
+        assertEquals(2.25, atr.apply(candle(0, 15, 13, 14, 0)).orElseThrow(), 1e-9);
     }
 
     @Test

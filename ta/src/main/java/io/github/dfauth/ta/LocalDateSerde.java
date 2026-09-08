@@ -1,4 +1,4 @@
-package io.github.dfauth.trade.model;
+package io.github.dfauth.ta;
 
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;

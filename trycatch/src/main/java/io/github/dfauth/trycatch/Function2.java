@@ -2,6 +2,7 @@ package io.github.dfauth.trycatch;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
@@ -15,6 +16,14 @@ public class Function2 {
             tryCatch(() -> consumer.accept(t));
             return t;
         };
+    }
+
+    public static <T> BinaryOperator<T> first() {
+        return (l, r) -> l;
+    }
+
+    public static <T> BinaryOperator<T> latest() {
+        return (l, r) -> r;
     }
 
 }
