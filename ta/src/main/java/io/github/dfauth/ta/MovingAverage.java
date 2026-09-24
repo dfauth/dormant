@@ -14,10 +14,17 @@ public class MovingAverage {
     }
 
     public static <T, R> Function<T, Optional<R>> smaStream(T[] array, Function<T, Double> f, BiFunction<T, Double, R> f2) {
-        RingBuffer<T> ringBuffer = RingBuffer.create(array);
+        return smaStream(array, array.length, f, f2);
+    }
+
+    public static <T, R> Function<T, Optional<R>> smaStream(T[] array, int n, Function<T, Double> f, BiFunction<T, Double, R> f2) {
+        return smaStream(RingBuffer.create(array), n, f, f2);
+    }
+
+    public static <T, R> Function<T, Optional<R>> smaStream(RingBuffer<T> ringBuffer, int n, Function<T, Double> f, BiFunction<T, Double, R> f2) {
         return t -> {
             ringBuffer.write(t);
-            return ringBuffer.stream().filter(_ -> ringBuffer.isFull()).mapToDouble(f::apply).average().stream().mapToObj(d -> f2.apply(t, d)).findFirst();
+            return ringBuffer.stream(n).filter(_ -> ringBuffer.isFull()).mapToDouble(f::apply).average().stream().mapToObj(d -> f2.apply(t, d)).findFirst();
         };
     }
 
@@ -25,16 +32,28 @@ public class MovingAverage {
         return emaStream(array, identity(), (l, r) -> r);
     }
 
+    public static Function<Double, Optional<Double>> emaStream(RingBuffer<Double> ringBuffer, int n) {
+        return emaStream(2.0, ringBuffer, n, identity(), (l, r) -> r);
+    }
+
     public static <T, R> Function<T, Optional<R>> emaStream(T[] array, Function<T, Double> f, BiFunction<T, Double, R> f2) {
         return emaStream(2.0, array, f, f2);
     }
 
     public static <T, R> Function<T, Optional<R>> emaStream(double weight, T[] array, Function<T, Double> f, BiFunction<T, Double, R> f2) {
-        Function<T, Optional<Double>> s = smaStream(array, f, (t, d) -> d);
+        return emaStream(weight, array, array.length, f, f2);
+    }
+
+    public static <T, R> Function<T, Optional<R>> emaStream(double weight, T[] array, int n, Function<T, Double> f, BiFunction<T, Double, R> f2) {
+        return emaStream(weight, RingBuffer.create(array), n, f, f2);
+    }
+
+    public static <T, R> Function<T, Optional<R>> emaStream(double weight, RingBuffer<T> ringBuffer, int n, Function<T, Double> f, BiFunction<T, Double, R> f2) {
+        Function<T, Optional<Double>> s = smaStream(ringBuffer, n, f, (t, d) -> d);
         AtomicReference<Double> prev = new AtomicReference<>();
         return t -> Optional.ofNullable(prev.get())
                 .map(p -> {
-                    double x = ema(weight, array.length, f.apply(t), p);
+                    double x = ema(weight, n, f.apply(t), p);
                     prev.set(x);
                     return f2.apply(t, x);
                 })

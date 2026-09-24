@@ -23,11 +23,12 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
 
     public static Function<Double, Optional<Trend>> trendStream(int fastPeriod, int slowPeriod, int longPeriod) {
         validatePeriods(fastPeriod, slowPeriod, longPeriod);
-        Function<Double, Optional<Double>> fast = ExponentialMovingAverage.emaStream(fastPeriod);
+        RingBuffer<Double> ringBuffer = RingBuffer.create(new double[longPeriod]);
+        Function<Double, Optional<Double>> fast = MovingAverage.emaStream(ringBuffer, fastPeriod);
         List<Double> fastList = new ArrayList<>();
-        Function<Double, Optional<Double>> slow = ExponentialMovingAverage.emaStream(slowPeriod);
+        Function<Double, Optional<Double>> slow = MovingAverage.emaStream(ringBuffer, slowPeriod);
         List<Double> slowList = new ArrayList<>();
-        Function<Double, Optional<Double>> lng = ExponentialMovingAverage.emaStream(longPeriod);
+        Function<Double, Optional<Double>> lng = MovingAverage.emaStream(ringBuffer, longPeriod);
         List<Double> longList = new ArrayList<>();
         TrendCalculator trendCalculator = new TrendCalculator(
                 d -> {

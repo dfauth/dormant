@@ -176,6 +176,7 @@ public class TechnicalAnalysisController extends BaseController implements Contr
     }
 
     public record TV(@JsonIgnore String code, @JsonIgnore LocalDate date, @JsonIgnore TrendVelocity.TrendVelocityRecord tvr) implements TrendVelocity {
+        @JsonIgnore
         @Override
         public int getPeriod() {
             return tvr.period();
@@ -183,22 +184,31 @@ public class TechnicalAnalysisController extends BaseController implements Contr
 
         @Override
         public double getEma() {
-            return tvr.ema();
+            return round4dp(tvr.ema());
+        }
+
+        private double round4dp(double d) {
+            return roundNdp(4, d);
+        }
+
+        private double roundNdp(int n, double d) {
+            double pow = Math.pow(10.0, n);
+            return Math.round(d * pow) / pow;
         }
 
         @Override
         public double getRoc() {
-            return tvr.roc();
+            return round4dp(tvr.roc());
         }
 
         @Override
         public double getAtr() {
-            return tvr.atr();
+            return round4dp(tvr.atr());
         }
 
         @Override
         public double getTv() {
-            return tvr.tv();
+            return round4dp(tvr.tv());
         }
     }
 }

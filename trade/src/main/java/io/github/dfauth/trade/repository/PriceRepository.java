@@ -25,4 +25,15 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
 
     @Query("SELECT DISTINCT p.code FROM Price p WHERE p.market = :market ORDER BY p.code")
     List<String> findDistinctCodesByMarket(@Param("market") String market);
+
+    @Query("SELECT p FROM Price p WHERE p.market = :market and p.code = :code AND p.date > :date ORDER BY p.date asc")
+    List<Price> findByCodeOrderByDateAsc(@Param("market") String market, @Param("code") String code, @Param("date") LocalDate date);
+
+    default List<Price> findByCodeOrderByDateAsc(String marketCodeString) {
+        String[] arr = marketCodeString.split(":");
+        String mkt = arr[0];
+        String code = arr[1];
+        LocalDate date = LocalDate.now().minusYears(1);
+        return findByCodeOrderByDateAsc(mkt, code, date);
+    }
 }

@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.controller;
 
+import io.github.dfauth.ta.Trend;
 import io.github.dfauth.ta.TrendCalculator;
 import io.github.dfauth.trade.model.*;
 import io.github.dfauth.trade.repository.PriceRepository;
@@ -13,10 +14,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static io.github.dfauth.trycatch.Utils.oops;
@@ -89,6 +92,20 @@ public class PriceController extends BaseController {
                         .stream().reduce(new Watermark<>(direction, p -> p.getClose().doubleValue()), Watermark::update, oops());
             });
         });
+    }
+
+    @Operation(summary = "Get trending stocks", description = "Calculates the current trend state for every stock in the given market and optionally filters by sentiment.")
+    @ApiResponse(responseCode = "200", description = "List of trend summaries")
+    @GetMapping("/trending/{code}")
+    public List<Trend> getTrending(
+            @Parameter(description = "ASX code") @PathVariable("code") String code) {
+        Function<Double, Optional<Trend>> trendStream = TrendCalculator.trendStream();
+        return priceRepository.findByCodeOrderByDateAsc(code).stream()
+                .map(Price::getClose)
+                .map(BigDecimal::doubleValue)
+                .map(trendStream)
+                .flatMap(Optional::stream)
+                .toList();
     }
 
     @Operation(summary = "Get trending stocks", description = "Calculates the current trend state for every stock in the given market and optionally filters by sentiment.")
