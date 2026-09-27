@@ -40,6 +40,11 @@ public abstract class AbstractRingBuffer<T> implements RingBuffer<T> {
         return counter.get() >= capacity();
     }
 
+    @Override
+    public int size() {
+        return isFull() ? capacity() : counter.get() % capacity();
+    }
+
     public int offset() {
         return offset(false);
     }

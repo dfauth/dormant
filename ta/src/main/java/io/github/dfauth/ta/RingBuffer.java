@@ -26,4 +26,6 @@ public interface RingBuffer<T> {
     Stream<T> stream(int n);
 
     boolean isFull();
+
+    int size();
 }

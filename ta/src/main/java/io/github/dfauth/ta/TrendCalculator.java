@@ -23,12 +23,11 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
 
     public static Function<Double, Optional<Trend>> trendStream(int fastPeriod, int slowPeriod, int longPeriod) {
         validatePeriods(fastPeriod, slowPeriod, longPeriod);
-        RingBuffer<Double> ringBuffer = RingBuffer.create(new double[longPeriod]);
-        Function<Double, Optional<Double>> fast = MovingAverage.emaStream(ringBuffer, fastPeriod);
+        Function<Double, Optional<Double>> fast = MovingAverage.emaStream(new double[fastPeriod]);
         List<Double> fastList = new ArrayList<>();
-        Function<Double, Optional<Double>> slow = MovingAverage.emaStream(ringBuffer, slowPeriod);
+        Function<Double, Optional<Double>> slow = MovingAverage.emaStream(new double[slowPeriod]);
         List<Double> slowList = new ArrayList<>();
-        Function<Double, Optional<Double>> lng = MovingAverage.emaStream(ringBuffer, longPeriod);
+        Function<Double, Optional<Double>> lng = MovingAverage.emaStream(new double[longPeriod]);
         List<Double> longList = new ArrayList<>();
         TrendCalculator trendCalculator = new TrendCalculator(
                 d -> {
@@ -59,18 +58,24 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
 
     @Override
     public Optional<Trend> apply(Double price) {
-        return nonEmpty(fastEma.apply(price))
-                .flatMap(f -> nonEmpty(slowEma.apply(price))
-                .flatMap(s -> nonEmpty(longEma.apply(price))
-                .map(l -> {
-                    TrendState state = TrendState.classify(f.getLast(), s.getLast(), l.getLast());
-                    if(previous == null || previous.trendState() != state) {
-                        previous = new Trend(0, price, f.getLast(), s.getLast(), l.getLast(), state);
-                    } else {
-                        previous = new Trend(previous.duration()+1, price, f.getLast(), s.getLast(), l.getLast(), state);
-                    }
-                    return previous;
-                })));
+        List<Double> maybeFast = fastEma.apply(price);
+        List<Double> maybeSlow = slowEma.apply(price);
+        List<Double> maybeLong = longEma.apply(price);
+        return nonEmpty(maybeFast)
+                .flatMap(f -> nonEmpty(maybeSlow)
+                        .flatMap(s -> nonEmpty(maybeLong)
+                                .map(l -> {
+                                    TrendState state = TrendState.classify(f.getLast(), s.getLast(), l.getLast());
+                                    if(previous == null || previous.trendState() != state) {
+                                        previous = new Trend(0, price, f.getLast(), s.getLast(), l.getLast(), state);
+                                    } else {
+                                        previous = new Trend(previous.duration()+1, price, f.getLast(), s.getLast(), l.getLast(), state);
+                                    }
+                                    return previous;
+                                })
+                        )
+                );
+
     }
 
     private static <T> Optional<List<T>> nonEmpty(List<T> l) {

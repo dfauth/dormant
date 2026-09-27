@@ -44,8 +44,9 @@ class TrendCalculatorTest {
         Function<Double, Optional<Trend>> stream = TrendCalculator.trendStream(2, 5, 10);
         // Feed fewer prices than longPeriod — should always return empty
         for (int i = 0; i < 9; i++) {
-            assertEquals(Optional.empty(), stream.apply((double) (i + 1)));
+            assertEquals(Optional.empty(), stream.apply((double) (i)));
         }
+        assertTrue(stream.apply(9.0).isPresent()); // 10th value produces a result
     }
 
     @Test
