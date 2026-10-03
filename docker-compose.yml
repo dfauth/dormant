@@ -29,7 +29,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     volumes:
-      - ./data:/trade/data
+      - ${HOST_DB_PATH}:/data
     networks:
       - dormant_net
 

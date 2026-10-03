@@ -3,7 +3,7 @@ spring:
     mapper:
       accept-case-insensitive-enums: true
   datasource:
-    url: jdbc:h2:file:/trade/data/trades
+    url: jdbc:h2:file:/data/trades
     driver-class-name: org.h2.Driver
     username: sa
     password:
