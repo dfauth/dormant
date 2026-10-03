@@ -1,23 +1,22 @@
-# Use a lightweight official Node.js image
-FROM node:22-alpine
+FROM node:20-slim
 
-# Set the working directory inside the container
-WORKDIR /usr/src/app
+WORKDIR app
 
-# Copy package files first to leverage Docker build cache
-COPY package*.json ./
+# 1. Change ownership of the working directory to the node user
+RUN chown -R node:node /app
 
-# Install only production dependencies for a smaller image
-RUN npm ci --omit=dev
-
-# Copy the rest of the application source code
-COPY . .
-
-# Expose the port your app runs on
-EXPOSE 3000
-
-# Run the app securely as a non-root user
+# 2. Tell Docker to execute subsequent instructions as 'node'
 USER node
 
-# Execute the application directly using node
-CMD ["node", "index.js"]
+# 3. Copy package files and install dependencies as the 'node' user
+COPY --chown=node:node package*.json ./
+RUN npm install
+
+# 4. Copy the remaining application files
+COPY --chown=node:node . .
+
+# 5. Build and expose
+RUN npm run build
+EXPOSE 4173
+
+CMD ["npm", "start"]

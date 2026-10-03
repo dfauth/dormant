@@ -3,6 +3,7 @@ package io.github.dfauth.trade.config;
 import io.github.dfauth.trade.authzn.OAuthUser;
 import io.github.dfauth.trade.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,8 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class SecurityConfig {
 
     private final UserService userService;
+    @Value("${dormant.trade.security.oauth2.redirect:http://localhost:4173}")
+    private String redirect;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -61,7 +64,7 @@ public class SecurityConfig {
                                     (OAuth2User) authentication.getPrincipal(),
                                     token.getAuthorizedClientRegistrationId()
                             ));
-                            response.sendRedirect("http://localhost:3000");
+                            response.sendRedirect(redirect);
                         })
                 )
                 .oauth2ResourceServer(rs -> rs
