@@ -21,14 +21,12 @@ services:
       - 8081:8081
       - 5005:5005
     environment:
-      - FACEBOOK_CLIENT_ID=1620430302605224
-      - FACEBOOK_CLIENT_SECRET=691f07fa6e37afc0eff68f57908c098a
-      - GITHUB_CLIENT_ID=Ov23ctUEXkrwxXa8eO2f
-      - GITHUB_CLIENT_SECRET=977ac3096c99b068ac7daf80c62239d666c6cf57
-      - GOOGLE_CLIENT_ID=321671510578-g4mdj28njvqj3kamjj128gn85vn7g41u.apps.googleusercontent.com
-      - GOOGLE_CLIENT_ID1=321671510578-ndmjd8lhcbifntfobfefj5le7tle8cue.apps.googleusercontent.com
-      - GOOGLE_CLIENT_SECRET=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
-      - GOOGLE_CLIENT_SECRET1=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
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
     volumes:
       - ./data:/trade/data
