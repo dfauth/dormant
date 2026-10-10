@@ -1,17 +1,25 @@
 package io.github.dfauth.ta;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
+import static io.github.dfauth.ta.TestData.*;
+import static io.github.dfauth.ta.TrendState.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+@Slf4j
 class TrendCalculatorTest {
 
     @Test
     void testClassifyBullish() {
-        assertEquals(TrendState.BULL, TrendState.classify(3.0, 2.0, 1.0));
+        assertEquals(BULL, TrendState.classify(3.0, 2.0, 1.0));
     }
 
     @Test
@@ -68,7 +76,7 @@ class TrendCalculatorTest {
         }
         Optional<Trend> result = TrendCalculator.trend(prices, 2, 5, 10);
         assertTrue(result.isPresent());
-        assertEquals(TrendState.BULL, result.map(Trend::trendState).get());
+        assertEquals(BULL, result.map(Trend::trendState).get());
     }
 
     @Test
@@ -76,5 +84,36 @@ class TrendCalculatorTest {
         assertThrows(IllegalArgumentException.class, () -> TrendCalculator.trendStream(5, 3, 10));
         assertThrows(IllegalArgumentException.class, () -> TrendCalculator.trendStream(3, 3, 10));
         assertThrows(IllegalArgumentException.class, () -> TrendCalculator.trendStream(2, 5, 5));
+    }
+
+    @Test
+    void testValue() {
+        assertEquals(-2, BEAR.value());
+        assertEquals(-1, EARLY_BEAR.value());
+        assertEquals(0, LATE_BULL.value());
+        assertEquals(0, LATE_BEAR.value());
+        assertEquals(1, EARLY_BULL.value());
+        assertEquals(2, BULL.value());
+    }
+
+    @ParameterizedTest()
+    @MethodSource("testCandles")
+    void testDivergence(List<Candle> candles) {
+        Function<Double, Optional<Trend>> f = TrendCalculator.trendStream();
+        List<Trend> trends = candles.stream().map(Candle::close).map(f).flatMap(Optional::stream).toList();
+        Trend last = trends.getLast();
+        log.info("trend: {}", last);
+        log.info("divergence: {}", last.isDiverging());
+        log.info("acceleration: {}", last.acceleration());
+    }
+
+    public static Stream<List<Candle>> testCandles() {
+        return Stream.of(
+                unzipCandles(XRO),
+                unzipCandles(CAT),
+                unzipCandles(EBO),
+                unzipCandles(CSL),
+                unzipCandles(UNI)
+        );
     }
 }

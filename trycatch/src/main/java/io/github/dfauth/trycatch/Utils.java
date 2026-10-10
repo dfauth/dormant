@@ -2,6 +2,7 @@ package io.github.dfauth.trycatch;
 
 import java.math.BigDecimal;
 import java.util.function.BinaryOperator;
+import java.util.function.UnaryOperator;
 
 public class Utils {
 
@@ -33,5 +34,10 @@ public class Utils {
 
     public static BigDecimal bd(double d) {
         return BigDecimal.valueOf(d);
+    }
+
+    public static UnaryOperator<Double> roundTo(int dp) {
+        double scale = Math.pow(10.0, dp);
+        return d -> Math.round(d * scale) / scale;
     }
 }

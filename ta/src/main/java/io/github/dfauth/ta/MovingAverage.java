@@ -1,5 +1,7 @@
 package io.github.dfauth.ta;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
@@ -77,4 +79,11 @@ public class MovingAverage {
         return (current * multiplier) + (prev * (1 - multiplier));
     }
 
+    record EMA<T>(@JsonIgnore double multiplier,
+                  double ema, T t,
+                  @JsonIgnore Function<T, Double> extractor) {
+        public EMA<T> ema(T t) {
+            return new EMA<>(multiplier, MovingAverage.ema(multiplier, extractor.apply(t), ema), t, extractor);
+        }
+    }
 }

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
 
+import static io.github.dfauth.ta.RateOfChange.roc;
 import static java.util.function.Predicate.not;
 
 @RequiredArgsConstructor
@@ -66,10 +67,12 @@ public class TrendCalculator implements Function<Double, Optional<Trend>> {
                         .flatMap(s -> nonEmpty(maybeLong)
                                 .map(l -> {
                                     TrendState state = TrendState.classify(f.getLast(), s.getLast(), l.getLast());
-                                    if(previous == null || previous.trendState() != state) {
-                                        previous = new Trend(0, price, f.getLast(), s.getLast(), l.getLast(), state);
+                                    if(previous == null) {
+                                        previous = new Trend(0, price, f.getLast(), s.getLast(), l.getLast(), state, 0d, 0d, 0d);
+                                    } else if(previous.trendState() != state) {
+                                        previous = new Trend(0, price, f.getLast(), s.getLast(), l.getLast(), state, roc(f.getLast(), previous.fast()), roc(s.getLast(), previous.slow()), roc(l.getLast(), previous.lng()));
                                     } else {
-                                        previous = new Trend(previous.duration()+1, price, f.getLast(), s.getLast(), l.getLast(), state);
+                                        previous = new Trend(previous, price, f.getLast(), s.getLast(), l.getLast(), state);
                                     }
                                     return previous;
                                 })

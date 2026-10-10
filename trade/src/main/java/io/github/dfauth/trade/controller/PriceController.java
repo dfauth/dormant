@@ -136,7 +136,7 @@ public class PriceController extends BaseController {
     public Map<String, TrendSummary> getAllTrending(
             @Parameter(description = "Market code (e.g. ASX)") @RequestParam("market") Optional<String> mkt) {
         return getTrending(mkt, Optional.empty()).stream()
-                .map(ts -> Map.entry(ts.getMarket()+":"+ts.getCode(), ts))
+                .map(ts -> Map.entry(ts.getMarket() + ":" + ts.getCode(), ts))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 

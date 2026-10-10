@@ -3,6 +3,7 @@ package io.github.dfauth.ta;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.github.dfauth.trycatch.TriPredicate;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.DoubleFunction;
 import java.util.function.DoublePredicate;
@@ -62,7 +63,25 @@ public enum TrendState implements TriPredicate<Double, Double, Double> {
     }
 
     private static boolean orderedAs(double... arr) {
-        return arr[0] <= arr[1] && arr[1] <= arr[2];
+        switch (arr.length) {
+            case 0:
+            case 1:
+                throw new IllegalArgumentException("need at least two values");
+            case 2:
+                return arr[0] <= arr[1];
+            default:
+                return arr[0] <= arr[1] && orderedAs(Arrays.copyOfRange(arr, 1, arr.length));
+        }
+    }
+
+    public boolean isDiverging(double rocFast, double rocSlow, double rocLng) {
+        return isRising() ? orderedAs(rocSlow, rocFast) :  orderedAs(rocFast, rocSlow);
+    }
+
+    public int value() {
+        int n = values().length / 2;
+        int o = (ordinal() + n - 1) % n;
+        return isRising() ? o : -1 * o;
     }
 }
 

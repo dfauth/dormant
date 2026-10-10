@@ -1,12 +1,29 @@
 package io.github.dfauth.ta;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static java.util.Optional.empty;
 
-public class RateOfChange {
+@RequiredArgsConstructor
+public class RateOfChange<T> {
+
+    @Getter
+    private final double roC;
+    @Getter
+    private final T t;
+
+    public static double roc(double current, double previous) {
+        return roc(current, previous, 1);
+    }
+
+    public static double roc(double current, double previous, int periods) {
+        return (current - previous) / (previous * periods);
+    }
 
     /**
      * Batch ROC. Returns one value per price after the warm-up period.
