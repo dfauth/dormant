@@ -1,9 +1,11 @@
 package io.github.dfauth.trade.controller;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.github.dfauth.trade.model.MarketDepth;
 import io.github.dfauth.trade.model.MarketDepthSummary;
-import io.github.dfauth.trade.model.TenorRange;
+import io.github.dfauth.trade.model.Tenor;
 import io.github.dfauth.trade.repository.MarketDepthRepository;
+import io.github.dfauth.trade.utils.TenorDeserializer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -34,9 +36,9 @@ public class MarketDepthController {
     @ApiResponse(responseCode = "200", description = "Daily averages per security")
     @GetMapping("/recent")
     public List<MarketDepthSummary> getRecentDepth(
-            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<Tenor> tenor
     ) {
-        LocalDateTime cutoff = TenorRange.parse(tenor.orElse("3D")).start().atTime(23,59,59);
+        LocalDateTime cutoff = tenor.orElse(Tenor.parse("3D")).endNow().start().atTime(23,59,59);
         return aggregateByDay(marketDepthRepository.findByRecordedAtGreaterThanEqual(cutoff));
     }
 

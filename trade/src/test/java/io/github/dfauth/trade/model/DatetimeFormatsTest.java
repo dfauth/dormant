@@ -55,7 +55,7 @@ class DatetimeFormatsTest {
     @Test
     void usedAsTenorRangeAnchorWithStartFrom() {
         LocalDate anchor = DatetimeFormats.YYYYMMDD.toLocalDate("20250615");
-        TenorRange range = TenorRange.parse("2Y").startFrom(anchor);
+        DateRange range = Tenor.parse("2Y").startFrom(anchor);
         assertEquals(anchor, range.start());
         assertEquals(LocalDate.of(2027, 6, 15), range.end());
     }
@@ -63,7 +63,7 @@ class DatetimeFormatsTest {
     @Test
     void usedAsTenorRangeAnchorWithEndAt() {
         LocalDate anchor = DatetimeFormats.YYYYMMDD.toLocalDate("20250615");
-        TenorRange range = TenorRange.parse("6M").endAt(anchor);
+        DateRange range = Tenor.parse("6M").endAt(anchor);
         assertEquals(LocalDate.of(2024, 12, 15), range.start());
         assertEquals(anchor, range.end());
     }

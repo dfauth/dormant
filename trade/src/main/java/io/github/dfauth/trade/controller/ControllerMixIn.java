@@ -1,10 +1,7 @@
 package io.github.dfauth.trade.controller;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import io.github.dfauth.trycatch.Collectors;
-import io.github.dfauth.trycatch.Failure;
-import io.github.dfauth.trycatch.Success;
-import io.github.dfauth.trycatch.Try;
+import io.github.dfauth.trycatch.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.List;
@@ -18,11 +15,15 @@ import static java.util.function.Predicate.not;
 
 public interface ControllerMixIn {
 
-    default  <T> Stream<Map.Entry<String, Try<T>>> streamCodes(List<List<String>> codes, Function<String, Optional<T>> f) {
+    default  <T> Stream<T> streamCodes(List<List<String>> codes, Function<String, T> f) {
         return codes.stream()
                 .flatMap(List::stream)
                 .filter(not(StringUtils::isBlank))
-                .map(c -> Map.entry(c, tryWrap(c, f)));
+                .map(f);
+    }
+
+    default  <T> Stream<Map.Entry<String, Try<T>>> streamCodestoMapEntries(List<List<String>> codes, Function<String, Optional<T>> f) {
+        return streamCodes(codes, c -> Map.entry(c, tryWrap(c, f)));
     }
 
     default <T> Try<T> tryWrap(String code, Function<String, Optional<T>> f) {
@@ -34,7 +35,7 @@ public interface ControllerMixIn {
     }
 
     default  <T> Map<String, Try<T>> mapCodes(List<List<String>> codes, Function<String, Optional<T>> f) {
-        return streamCodes(codes, f).collect(Collectors.mapEntryCollector());
+        return streamCodestoMapEntries(codes, f).collect(Collectors.mapEntryCollector());
     }
 
     class SuccessWrapper<T> extends Success<T> {

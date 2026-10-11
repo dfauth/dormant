@@ -21,9 +21,8 @@ public interface DateRange {
         return startFrom.map(YYYYMMDD::toLocalDate)
                 .flatMap(s -> endAt.map(YYYYMMDD::toLocalDate)
                         .map(e -> DateRange.of(s, e)))
-                .or(() -> tenor.map(TenorRange::parse)
-                        .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElse(t))
-                        .<DateRange>map(t -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t))
-                );
+                .or(() -> tenor.map(Tenor::parse)
+                        .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElseGet(() -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t.endNow()))
+                ));
     }
 }
