@@ -33,4 +33,9 @@ public class TrendSummary {
     public BigDecimal getDistageFromEma() {
         return Double.isNaN(distanceFromEma) || Double.isInfinite(distanceFromEma) ? null : BigDecimal.valueOf(distanceFromEma).setScale(2, RoundingMode.HALF_UP);
     }
+
+    @JsonProperty("a")
+    public double acceleration() {
+        return trendState.acceleration();
+    }
 }

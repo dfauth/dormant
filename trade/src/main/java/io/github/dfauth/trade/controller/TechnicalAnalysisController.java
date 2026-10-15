@@ -1,6 +1,7 @@
 package io.github.dfauth.trade.controller;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import io.github.dfauth.ta.Dated;
 import io.github.dfauth.ta.RelativeStrengthIndex;
 import io.github.dfauth.ta.TrendVelocity;
 import io.github.dfauth.trade.model.*;
@@ -126,10 +127,23 @@ public class TechnicalAnalysisController extends BaseController implements Contr
         });
     }
 
+    @Operation(summary = "Get Volume Weighted EMA for a list of securities", description = "Returns the latest VWEMA value")
+    @ApiResponse(responseCode = "200", description = "VWEMA value")
+    @PostMapping("/vwema/{period}")
+    public Map<String, Try<Dated<Double>>> postVWEMA(
+            @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @RequestBody List<List<String>> codes,
+            @Parameter(description = "Period for calculation") @PathVariable("period") int period,
+            @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt
+    ) {
+        return authorize(u -> {
+            return mapCodes(codes, c -> getVWEMA(c, period, endAt));
+        });
+    }
+
     @Operation(summary = "Get Volume Weighted EMA for a security", description = "Returns the latest VWEMA value")
     @ApiResponse(responseCode = "200", description = "VWEMA value")
     @GetMapping("/vwema/{code}/{period}")
-    public Optional<DatedSecurityPayload<Double>> getVWEMA(
+    public Optional<Dated<Double>> getVWEMA(
             @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @PathVariable("code") String marketCodeString,
             @Parameter(description = "Period for calculation") @PathVariable("period") int period,
             @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
@@ -137,11 +151,11 @@ public class TechnicalAnalysisController extends BaseController implements Contr
             Optional<DateRange> dateRange = DateRange.resolve(empty(), empty(), endAt);
             Function<Price, Optional<VWEMA>> vwema = VWEMA.vwEmaStream(period)::apply;
             return u.resolveCode(marketCodeString, (mkt, cd) -> {
-                Optional<DatedSecurityPayload<Double>> last = dateRange
+                Optional<Dated<Double>> last = dateRange
                         .map(dr -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dr.start(), dr.end()))
                         .orElseGet(() -> priceRepository.findByMarketAndCodeOrderByDateAsc(mkt, cd))
                         .stream()
-                        .flatMap(p -> vwema.apply(p).map(d -> new DatedSecurityPayload<>(cd, p.getDate(), d.value())).stream())
+                        .flatMap(p -> vwema.apply(p).map(d -> Dated.withPayload(p.getDate(), d.value())).stream())
                         .reduce(right());
                 return last;
             });

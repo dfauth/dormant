@@ -3,28 +3,23 @@ package io.github.dfauth.trade.config;
 import io.github.dfauth.dormant.Dormant;
 import io.github.dfauth.trade.kafka.DormantSerde;
 import io.github.dfauth.trade.kafka.KafkaPublisher;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.common.serialization.StringSerializer;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.kafka.autoconfigure.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 
-import java.util.Map;
 
 @Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class KafkaConfig {
 
-    @Bean
-    public Map<String, Object> kafkaProperties() {
-        return Map.of(
-                CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, "kafka:9092"
-        );
-    }
+    private final KafkaProperties kafkaProperties;
 
     @Bean
     public <T extends Dormant> DormantSerde<T> dormantSerde() {
@@ -32,8 +27,8 @@ public class KafkaConfig {
     }
 
     @Bean
-    public <V extends Dormant> ProducerFactory<String, V> kafkaProducerFactory(@Qualifier("kafkaProperties") Map<String, Object> props, DormantSerde<V> dormantSerde) {
-        return () -> new KafkaProducer<>(props, new StringSerializer(), dormantSerde.serializer());
+    public <V extends Dormant> ProducerFactory<String, V> kafkaProducerFactory(KafkaProperties props, DormantSerde<V> dormantSerde) {
+        return () -> new KafkaProducer<>(props.buildProducerProperties(), new StringSerializer(), dormantSerde.serializer());
     }
 
     @Bean

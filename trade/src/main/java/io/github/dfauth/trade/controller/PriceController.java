@@ -242,13 +242,13 @@ public class PriceController extends BaseController implements ControllerMixIn {
         }
 
         @JsonProperty("s")
-        public Map.Entry<LocalDate, Double> getSummary() {
+        public MapEntry<LocalDate, Double> getSummary() {
             Map.Entry<LocalDate, Double> latest = trends.entrySet().stream()
                     .flatMap(e -> e.getValue().values().stream()
                             .map(Trend::trendState)
                             .mapToDouble(TrendState::value).average().stream().mapToObj(d -> Map.entry(e.getKey(), d)))
                     .toList().getLast();
-            return new MapEntryRecord<>(latest);
+            return new MapEntry<>(latest);
         }
     }
 
