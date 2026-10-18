@@ -26,7 +26,7 @@ import org.springframework.security.web.util.matcher.RequestMatcher;
 public class SecurityConfig {
 
     private final UserService userService;
-    @Value("${dormant.trade.security.oauth2.redirect:http://localhost:4173}")
+    @Value("${dormant.trade.security.oauth2.redirect:http://localhost:8000}")
     private String redirect;
 
     @Bean

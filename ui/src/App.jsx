@@ -14,6 +14,8 @@ import {
   Cell, LabelList, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
 const NAV_ITEMS = [
   { key: 'positions',  label: 'Positions',    subItems: ['1Y performance', 'open positions', 'closed positions'] },
   { key: 'trades',     label: 'Trades',       subItems: ['default'] },
@@ -137,7 +139,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/trades', { credentials: 'include' })
+    fetch(`${BASE_URL}/api/trades`, { credentials: 'include' })
       .then(res => {
         if (res.status === 401 || res.redirected) {
           setState({ status: 'unauthenticated', trades: [], error: null })
@@ -156,7 +158,7 @@ export default function App() {
     if (page !== 'positions' || state.status !== 'authenticated') return
 
     setPositions(p => ({ ...p, loading: true, error: null }))
-    fetch('/api/positions/open', { credentials: 'include' })
+    fetch(`${BASE_URL}/api/positions/open`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -174,7 +176,7 @@ export default function App() {
     }
 
     setPositionTrades({ data: [], loading: true, error: null })
-    fetch(`/api/positions/market/${selectedPosition.market}/code/${selectedPosition.code}`, { credentials: 'include' })
+    fetch(`${BASE_URL}/api/positions/market/${selectedPosition.market}/code/${selectedPosition.code}`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -190,7 +192,7 @@ export default function App() {
     if (!selectedCode) return
 
     setCodePositions({ data: [], loading: true, error: null })
-    fetch(`/api/positions/market/${selectedCode.market}/code/${selectedCode.code}`, { credentials: 'include' })
+    fetch(`${BASE_URL}/api/positions/market/${selectedCode.market}/code/${selectedCode.code}`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -203,7 +205,7 @@ export default function App() {
     if (page !== 'positions' || subPage !== 'closed positions' || state.status !== 'authenticated') return
 
     setClosedPositions(p => ({ ...p, loading: true, error: null }))
-    fetch('/api/positions/closed', { credentials: 'include' })
+    fetch(`${BASE_URL}/api/positions/closed`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -216,7 +218,7 @@ export default function App() {
     if (page !== 'positions' || subPage !== '1Y performance' || state.status !== 'authenticated') return
 
     setPerfPositions(p => ({ ...p, loading: true, error: null }))
-    fetch(`/api/positions?predicate=CLOSED&tenor=${perfTenor}`, { credentials: 'include' })
+    fetch(`${BASE_URL}/api/positions?predicate=CLOSED&tenor=${perfTenor}`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -228,7 +230,7 @@ export default function App() {
   useEffect(() => {
     if (page !== 'payments' || subPage !== 'reconciliation' || state.status !== 'authenticated') return
     setPayments(p => ({ ...p, loading: true, error: null }))
-    fetch('/api/payments/reconcile', { credentials: 'include' })
+    fetch(`${BASE_URL}/api/payments/reconcile`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -240,7 +242,7 @@ export default function App() {
   useEffect(() => {
     if (page !== 'payments' || subPage !== 'dividend summary' || state.status !== 'authenticated') return
     setDividends(d => ({ ...d, loading: true, error: null }))
-    fetch('/api/payments?type=DIV', { credentials: 'include' })
+    fetch(`${BASE_URL}/api/payments?type=DIV`, { credentials: 'include' })
       .then(res => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         return res.json()
@@ -253,8 +255,8 @@ export default function App() {
     if (page !== 'payments' || subPage !== 'dividend reconciliation' || state.status !== 'authenticated') return
     setDivRecon(d => ({ ...d, loading: true, error: null }))
     Promise.all([
-      fetch('/api/payments?type=DIV', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
-      fetch('/api/positions', { credentials: 'include' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
+      fetch(`${BASE_URL}/api/payments?type=DIV`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
+      fetch(`${BASE_URL}/api/positions`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() }),
     ])
       .then(([payments, positions]) => setDivRecon({ payments, positions, loading: false, error: null }))
       .catch(err => setDivRecon({ payments: [], positions: [], loading: false, error: err.message }))

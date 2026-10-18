@@ -1,5 +1,6 @@
 package io.github.dfauth.trycatch;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.RequiredArgsConstructor;
 
 import java.util.function.Consumer;
@@ -9,6 +10,7 @@ import java.util.function.Function;
 public class Failure<T> implements Try<T> {
     protected final Exception exception;
 
+    @JsonIgnore
     @Override
     public T getValue() {
         if(exception instanceof RuntimeException r) {
@@ -39,5 +41,9 @@ public class Failure<T> implements Try<T> {
     @Override
     public <R> Try<R> onFailure(Function<Exception, R> function) {
         return new Success<>(function.apply(exception));
+    }
+
+    public String getError() {
+        return exception.getMessage();
     }
 }

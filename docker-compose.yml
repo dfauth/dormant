@@ -1,20 +1,69 @@
+networks:
+  dormant_net:
+    driver: bridge
+
 services:
+
+  h2:
+    image: eclipse-temurin:17-jre-jammy
+    container_name: h2-database
+    restart: always
+    ports:
+      - "1092:1092"   # TCP Server port
+      - "8082:8082"   # Web Console port
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        if [ ! -f /h2.jar ]; then
+          wget https://repo1.maven.org/maven2/com/h2database/h2/2.2.224/h2-2.2.224.jar -O /h2.jar
+        fi
+        java -cp /h2.jar org.h2.tools.Server \
+          -web -webAllowOthers -webPort 8082 \
+          -tcp -tcpAllowOthers -tcpPort 1092 \
+          -baseDir /h2-data
+    volumes:
+      - ${HOST_DB_PATH}:/h2-data
+    networks:
+      - dormant_net
 
   kafka:
     image: apache/kafka:latest
     container_name: kafka
     ports:
       - 9092:9092
+      - 29092:29092
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
       KAFKA_NUM_PARTITIONS: 6
+    networks:
+      - dormant_net
+
+  kong:
+    image: docker.io/kong:latest
+    container_name: kong
+    volumes:
+      - ./kong.yml:/usr/local/kong/declarative/kong.yml:ro
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+    ports:
+      - 8000:8000     # HTTP Proxy
+      - 8443:8443     # HTTPS Proxy
+      - 8001:8001     # Admin API (HTTP)
+      - 8444:8444     # Admin API (HTTPS)
+    restart: unless-stopped
     networks:
       - dormant_net
 
@@ -49,17 +98,13 @@ services:
     container_name: node_app
     restart: always
     ports:
-      - "4173:4173"
+      - 4173:4173
     volumes:
       - .:/usr/src/app
       - /usr/src/app/node_modules
     environment:
-      - VITE_API_BASE_URL=http://dormant-container:8081/api
+      - VITE_API_BASE_URL=http://localhost:8000
       - NODE_ENV=development
     networks:
       - dormant_net
-
-networks:
-  dormant_net:
-    driver: bridge
 

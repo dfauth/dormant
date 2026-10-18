@@ -1,12 +1,12 @@
 spring:
   datasource:
-    url: jdbc:h2:file:/data/trades
+    url: jdbc:h2:tcp://h2-database:1092//h2-data/trades
     driver-class-name: org.h2.Driver
     username: sa
     password:
   h2:
     console:
-      enabled: true
+      enabled: false
       path: /h2-console
       settings:
         web-allow-others: true
