@@ -84,6 +84,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
       - spring.kafka.bootstrap-servers=kafka:9092
+      - dormant.trade.security.oauth2.redirect=http://localhost:4173
     volumes:
       - ${HOST_DB_PATH}:/data
     networks:

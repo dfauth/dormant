@@ -274,13 +274,13 @@ export default function App() {
     return (
       <div className="login">
         <h1>Trade UI</h1>
-        <a href="/oauth2/authorization/google">
+        <a href={`${BASE_URL}/oauth2/authorization/google`}>
           <button className="login-btn">Login with Google</button>
         </a>
-        <a href="/oauth2/authorization/github">
+        <a href={`${BASE_URL}/oauth2/authorization/github`}>
           <button className="login-btn login-btn--github">Login with GitHub</button>
         </a>
-        <a href="/oauth2/authorization/facebook">
+        <a href={`${BASE_URL}/oauth2/authorization/facebook`}>
           <button className="login-btn login-btn--facebook">Login with Facebook</button>
         </a>
       </div>
@@ -348,7 +348,7 @@ export default function App() {
             )}
           </div>
         ))}
-        <a href="/logout" className="nav-item logout">Logout</a>
+        <a href={`${BASE_URL}/logout`} className="nav-item logout">Logout</a>
       </nav>
 
       <div className={page === 'prices' && subPage === 'default' ? 'page-prices' : page === 'prices' && subPage === 'grid' ? 'page-grid' : page === 'positions' && (subPage === '1Y performance' || subPage === 'closed positions' || subPage === 'open positions') ? 'page page-wide' : 'page'}>

@@ -1,14 +1,35 @@
 _format_version: "3.0"
 services:
+  - name: oauth2-service
+    url: http://dormant-container:8081/oauth2
+    routes:
+      - name: oauth2-route
+        paths:
+          - /oauth2
+        preserve_host: true
+  - name: login-service
+    url: http://dormant-container:8081/login
+    routes:
+      - name: login-route
+        paths:
+          - /login
+        preserve_host: true
+  - name: logout-service
+    url: http://dormant-container:8081/logout
+    routes:
+      - name: logout-route
+        paths:
+          - /logout
+        preserve_host: true
   - name: rest-api-service
     url: http://dormant-container:8081/api
     routes:
       - name: rest-api-route
         paths:
           - /api
-          - /oauth2
           - /login
           - /logout
+        preserve_host: true
 plugins:
   - name: cors
     config:

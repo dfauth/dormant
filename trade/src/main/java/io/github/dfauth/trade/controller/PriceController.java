@@ -32,6 +32,7 @@ import static io.github.dfauth.trade.model.Tenor._1Y;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
 import static io.github.dfauth.trycatch.Utils.oops;
 import static java.lang.Math.abs;
+import static java.util.Collections.emptyMap;
 import static java.util.Optional.empty;
 
 @Slf4j
@@ -238,17 +239,17 @@ public class PriceController extends BaseController implements ControllerMixIn {
         }
         @JsonProperty("t")
         public Map<String, Trend> getTrends() {
-            return trends.lastEntry().getValue();
+            return trends.isEmpty() ? emptyMap() : trends.lastEntry().getValue();
         }
 
         @JsonProperty("s")
-        public MapEntry<LocalDate, Double> getSummary() {
-            Map.Entry<LocalDate, Double> latest = trends.entrySet().stream()
+        public Optional<MapEntry<LocalDate, Double>> getSummary() {
+            List<Map.Entry<LocalDate, Double>> latest = trends.entrySet().stream()
                     .flatMap(e -> e.getValue().values().stream()
                             .map(Trend::trendState)
                             .mapToDouble(TrendState::value).average().stream().mapToObj(d -> Map.entry(e.getKey(), d)))
-                    .toList().getLast();
-            return new MapEntry<>(latest);
+                    .toList();
+            return latest.isEmpty() ? empty() : Optional.of(new MapEntry<>(latest.getLast()));
         }
     }
 
