@@ -348,7 +348,7 @@ export default function App() {
             )}
           </div>
         ))}
-        <a href={`${BASE_URL}/logout`} className="nav-item logout">Logout</a>
+        <a href={`${BASE_URL}/login?logout`} className="nav-item logout">Logout</a>
       </nav>
 
       <div className={page === 'prices' && subPage === 'default' ? 'page-prices' : page === 'prices' && subPage === 'grid' ? 'page-grid' : page === 'positions' && (subPage === '1Y performance' || subPage === 'closed positions' || subPage === 'open positions') ? 'page page-wide' : 'page'}>

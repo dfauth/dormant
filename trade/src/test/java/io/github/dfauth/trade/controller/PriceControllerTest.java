@@ -1,10 +1,13 @@
 package io.github.dfauth.trade.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import io.github.dfauth.ta.TestData;
 import io.github.dfauth.trade.model.Price;
 import io.github.dfauth.trade.model.User;
 import io.github.dfauth.trade.repository.PriceRepository;
 import io.github.dfauth.trade.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static io.github.dfauth.ta.TestData.unzipCandles;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -339,6 +343,19 @@ class PriceControllerTest {
         mockMvc.perform(get("/api/prices/" + CODE)
                         .param("market", MARKET)
                         .param("tenor", "6M")
+                        .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)
+                ));
+    }
+
+    @Disabled
+    @Test
+    void getTrend() throws Exception {
+        priceRepository.saveAll(unzipCandles(new TypeReference<List<Price>>() {
+        }, TestData._4DX).stream().peek(p -> p.setId(0L)).toList());
+
+        mockMvc.perform(get("/api/prices/trend/ASX:4DX")
                         .with(oidcLogin().idToken(token -> token.subject(GOOGLE_ID).claim("email", "test@example.com"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)));
