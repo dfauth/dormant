@@ -74,7 +74,7 @@ public enum TrendState implements TriPredicate<Double, Double, Double> {
         }
     }
 
-    public boolean isDiverging(double rocFast, double rocSlow, double rocLng) {
+    public boolean isDiverging(double rocFast, double rocSlow) {
         return isRising() ? orderedAs(rocSlow, rocFast) :  orderedAs(rocFast, rocSlow);
     }
 

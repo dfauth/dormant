@@ -22,9 +22,10 @@ public record Trend(@JsonProperty("n") int duration,
     }
 
     public boolean isDiverging() {
-        return trendState.isDiverging(rocFast, rocSlow, rocLng);
+        return trendState.isDiverging(rocFast, rocSlow);
     }
 
+    @JsonProperty("a")
     public double acceleration() {
         return (rocFast - rocSlow) / abs(rocSlow);
     }
