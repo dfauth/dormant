@@ -14,5 +14,5 @@ public record ValuationChange(
         BigDecimal targetChangePct,
         BigDecimal price,
         BigDecimal potential,
-        Consensus consensus
+        io.github.dfauth.dormant.model.Consensus consensus
 ) {}

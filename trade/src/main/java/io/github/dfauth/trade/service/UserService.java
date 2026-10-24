@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.service;
 
 import io.github.dfauth.trade.authzn.OAuthUser;
-import io.github.dfauth.trade.model.User;
-import io.github.dfauth.trade.repository.UserRepository;
+import io.github.dfauth.dormant.model.User;
+import io.github.dfauth.dormant.model.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.oauth2.core.user.OAuth2User;

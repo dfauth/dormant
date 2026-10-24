@@ -1,7 +1,7 @@
 package io.github.dfauth.trade.utils;
 
 import io.github.dfauth.trade.model.Position;
-import io.github.dfauth.trade.model.Trade;
+import io.github.dfauth.dormant.model.Trade;
 import io.github.dfauth.trycatch.Maps;
 import lombok.extern.slf4j.Slf4j;
 

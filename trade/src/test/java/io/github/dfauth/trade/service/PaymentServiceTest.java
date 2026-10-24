@@ -1,9 +1,9 @@
 package io.github.dfauth.trade.service;
 
 import io.github.dfauth.trade.model.DateRange;
-import io.github.dfauth.trade.model.Payment;
-import io.github.dfauth.trade.model.TransactionType;
-import io.github.dfauth.trade.repository.PaymentRepository;
+import io.github.dfauth.dormant.model.Payment;
+import io.github.dfauth.dormant.model.TransactionType;
+import io.github.dfauth.dormant.model.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;

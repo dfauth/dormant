@@ -2,11 +2,11 @@ package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.DateRange;
 import io.github.dfauth.trade.model.Direction;
-import io.github.dfauth.trade.model.Valuation;
+import io.github.dfauth.dormant.model.Valuation;
 import io.github.dfauth.trade.model.ValuationChange;
 import io.github.dfauth.trade.model.ValuationSummary;
-import io.github.dfauth.trade.repository.PriceRepository;
-import io.github.dfauth.trade.repository.ValuationRepository;
+import io.github.dfauth.dormant.model.repository.PriceRepository;
+import io.github.dfauth.dormant.model.repository.ValuationRepository;
 import io.github.dfauth.trade.service.ValuationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.model.DateRange;
-import io.github.dfauth.trade.model.Trade;
-import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.dormant.model.Trade;
+import io.github.dfauth.dormant.model.repository.TradeRepository;
 import io.github.dfauth.trade.service.DuplicateTradeException;
 import io.github.dfauth.trade.service.TradeService;
 import io.github.dfauth.trade.service.UserService;

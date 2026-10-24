@@ -1,7 +1,7 @@
 package io.github.dfauth.trade.service;
 
-import io.github.dfauth.trade.model.Trade;
-import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.dormant.model.Trade;
+import io.github.dfauth.dormant.model.repository.TradeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

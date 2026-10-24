@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.service;
 
-import io.github.dfauth.trade.model.Watchlist;
-import io.github.dfauth.trade.model.WatchlistItem;
-import io.github.dfauth.trade.repository.WatchlistRepository;
+import io.github.dfauth.dormant.model.Watchlist;
+import io.github.dfauth.dormant.model.WatchlistItem;
+import io.github.dfauth.dormant.model.repository.WatchlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,9 @@ public class WatchlistService {
                 .orElseGet(() -> watchlistRepository.save(
                         Watchlist.builder().userId(userId).name(name).build()));
         // remove those missing from the submitted list
-        new ArrayList(wl.getItems()).stream().filter(i -> !items.contains(i)).forEach(i -> wl.getItems().remove(i));
+        new ArrayList<>(wl.getItems()).stream().filter(i -> !items.contains(i)).forEach(i -> {
+            wl.getItems().remove(i);
+        });
 
         // add those from the submitted list that are missing from the db list
         items.stream().filter(i -> !wl.getItems().contains(i)).forEach(i -> {

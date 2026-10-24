@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Trade;
 import io.github.dfauth.trycatch.Maps;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,7 +54,7 @@ public class Position {
         return abs(trades.stream().mapToInt(t -> t.getSide().signed(t.getSize())).sum());
     }
 
-    public Side getSide() {
+    public io.github.dfauth.dormant.model.Side getSide() {
         return trades.getFirst().getSide();
     }
 
@@ -67,7 +68,7 @@ public class Position {
                     .flatMap(t -> t.stream().map(_t -> _t.getSide().signed(_t.getCost())).reduce(BigDecimal::add))
                     .orElse(ZERO);
         } else {
-            Map<Side, SideSizeCost> tmp = trades.stream()
+            Map<io.github.dfauth.dormant.model.Side, SideSizeCost> tmp = trades.stream()
                     .map(SideSizeCost::new)
                     .reduce(new HashMap<>(), (acc, ssc) -> {
                         acc.computeIfPresent(ssc.side, (k, v) -> v.add(ssc));
@@ -91,7 +92,7 @@ public class Position {
     }
 
     public BigDecimal getAverageSalePrice() {
-        Side closingSide = getSide().flip();
+        io.github.dfauth.dormant.model.Side closingSide = getSide().flip();
         return trades.stream()
                 .filter(t -> t.getSide() == closingSide)
                 .reduce(tuple2(ZERO, 0), (t2, t) -> tuple2(t2._1().add(t.getCost()), t2._2() + t.getSize()),
@@ -107,7 +108,7 @@ public class Position {
         return Optional.of(trades.getLast()).filter(t -> isClosed()).map(Trade::getDate);
     }
 
-    private record SideSizeCost(Side side, int size, BigDecimal cost) {
+    private record SideSizeCost(io.github.dfauth.dormant.model.Side side, int size, BigDecimal cost) {
         public SideSizeCost(Trade trade) {
             this(trade.getSide(), trade.getSize(), trade.getCost());
         }

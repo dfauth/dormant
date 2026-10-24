@@ -1,9 +1,9 @@
 package io.github.dfauth.trade.service;
 
 import io.github.dfauth.trade.model.DateRange;
-import io.github.dfauth.trade.model.Payment;
-import io.github.dfauth.trade.model.TransactionType;
-import io.github.dfauth.trade.repository.PaymentRepository;
+import io.github.dfauth.dormant.model.Payment;
+import io.github.dfauth.dormant.model.TransactionType;
+import io.github.dfauth.dormant.model.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

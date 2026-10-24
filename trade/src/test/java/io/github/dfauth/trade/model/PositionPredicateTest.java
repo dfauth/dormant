@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Trade;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -15,7 +16,7 @@ class PositionPredicateTest {
     private Trade buyTrade(int size) {
         return Trade.builder()
                 .date(DATE).market("ASX").code("BHP")
-                .side(Side.BUY).size(size)
+                .side(io.github.dfauth.dormant.model.Side.BUY).size(size)
                 .price(BigDecimal.TEN).cost(BigDecimal.TEN.multiply(BigDecimal.valueOf(size)))
                 .build();
     }
@@ -23,7 +24,7 @@ class PositionPredicateTest {
     private Trade sellTrade(int size) {
         return Trade.builder()
                 .date(DATE.plusDays(1)).market("ASX").code("BHP")
-                .side(Side.SELL).size(size)
+                .side(io.github.dfauth.dormant.model.Side.SELL).size(size)
                 .price(BigDecimal.TEN).cost(BigDecimal.TEN.multiply(BigDecimal.valueOf(size)))
                 .build();
     }

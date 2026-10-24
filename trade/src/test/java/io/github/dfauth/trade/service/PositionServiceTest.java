@@ -2,8 +2,8 @@ package io.github.dfauth.trade.service;
 
 import io.github.dfauth.trade.model.PerformanceStats;
 import io.github.dfauth.trade.model.Position;
-import io.github.dfauth.trade.model.Side;
-import io.github.dfauth.trade.model.Trade;
+import io.github.dfauth.dormant.model.Side;
+import io.github.dfauth.dormant.model.Trade;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;

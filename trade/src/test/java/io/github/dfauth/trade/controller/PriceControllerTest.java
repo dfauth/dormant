@@ -2,10 +2,10 @@ package io.github.dfauth.trade.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.dfauth.ta.TestData;
-import io.github.dfauth.trade.model.Price;
-import io.github.dfauth.trade.model.User;
-import io.github.dfauth.trade.repository.PriceRepository;
-import io.github.dfauth.trade.repository.UserRepository;
+import io.github.dfauth.dormant.model.Price;
+import io.github.dfauth.dormant.model.User;
+import io.github.dfauth.dormant.model.repository.PriceRepository;
+import io.github.dfauth.dormant.model.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

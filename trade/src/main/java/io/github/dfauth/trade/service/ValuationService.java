@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.service;
 
 import io.github.dfauth.trade.model.Direction;
-import io.github.dfauth.trade.model.Valuation;
-import io.github.dfauth.trade.repository.ValuationRepository;
+import io.github.dfauth.dormant.model.Valuation;
+import io.github.dfauth.dormant.model.repository.ValuationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -3,13 +3,13 @@ package io.github.dfauth.trade.model;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-public enum PaymentPredicate implements Supplier<Predicate<Balanced>> {
+public enum PaymentPredicate implements Supplier<Predicate<io.github.dfauth.dormant.model.Balanced>> {
     RECONCILE(() -> new Predicate<>() {
 
-        private Balanced previous = null;
+        private io.github.dfauth.dormant.model.Balanced previous = null;
 
         @Override
-        public boolean test(Balanced payment) {
+        public boolean test(io.github.dfauth.dormant.model.Balanced payment) {
             if (previous == null) {
                 previous = payment;
                 return false;
@@ -21,14 +21,14 @@ public enum PaymentPredicate implements Supplier<Predicate<Balanced>> {
         }
     });
 
-    private Supplier<Predicate<Balanced>> p;
+    private Supplier<Predicate<io.github.dfauth.dormant.model.Balanced>> p;
 
-    PaymentPredicate(Supplier<Predicate<Balanced>> p) {
+    PaymentPredicate(Supplier<Predicate<io.github.dfauth.dormant.model.Balanced>> p) {
         this.p = p;
     }
 
     @Override
-    public Predicate<Balanced> get() {
+    public Predicate<io.github.dfauth.dormant.model.Balanced> get() {
         return p.get();
     }
 }

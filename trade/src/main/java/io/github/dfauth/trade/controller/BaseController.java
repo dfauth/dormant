@@ -1,7 +1,7 @@
 package io.github.dfauth.trade.controller;
 
 import io.github.dfauth.trade.authzn.Authorization;
-import io.github.dfauth.trade.model.User;
+import io.github.dfauth.dormant.model.User;
 import io.github.dfauth.trade.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

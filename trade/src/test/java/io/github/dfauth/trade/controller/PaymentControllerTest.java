@@ -1,10 +1,10 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.Payment;
-import io.github.dfauth.trade.model.TransactionType;
-import io.github.dfauth.trade.model.User;
-import io.github.dfauth.trade.repository.PaymentRepository;
-import io.github.dfauth.trade.repository.UserRepository;
+import io.github.dfauth.dormant.model.Payment;
+import io.github.dfauth.dormant.model.TransactionType;
+import io.github.dfauth.dormant.model.User;
+import io.github.dfauth.dormant.model.repository.PaymentRepository;
+import io.github.dfauth.dormant.model.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

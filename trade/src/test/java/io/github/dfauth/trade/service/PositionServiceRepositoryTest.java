@@ -1,8 +1,10 @@
 package io.github.dfauth.trade.service;
 
+import io.github.dfauth.dormant.model.Payment;
+import io.github.dfauth.dormant.model.Trade;
 import io.github.dfauth.trade.model.*;
-import io.github.dfauth.trade.repository.PaymentRepository;
-import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.dormant.model.repository.PaymentRepository;
+import io.github.dfauth.dormant.model.repository.TradeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,14 +47,14 @@ class PositionServiceRepositoryTest {
         // Default: no dividends — keeps existing tests passing without modification.
         // Individual tests override these stubs as needed.
         lenient().when(paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(
-                any(), any(), eq(TransactionType.DIV))).thenReturn(List.of());
+                any(), any(), eq(io.github.dfauth.dormant.model.TransactionType.DIV))).thenReturn(List.of());
         lenient().when(paymentRepository.findByUserIdAndMarketAndTransactionTypeOrderByDateAsc(
-                any(), any(), eq(TransactionType.DIV))).thenReturn(List.of());
+                any(), any(), eq(io.github.dfauth.dormant.model.TransactionType.DIV))).thenReturn(List.of());
         lenient().when(paymentRepository.findByUserIdAndTransactionTypeOrderByDateAsc(
-                any(), eq(TransactionType.DIV))).thenReturn(List.of());
+                any(), eq(io.github.dfauth.dormant.model.TransactionType.DIV))).thenReturn(List.of());
     }
 
-    private Trade trade(String code, LocalDate date, Side side, int size, String price) {
+    private Trade trade(String code, LocalDate date, io.github.dfauth.dormant.model.Side side, int size, String price) {
         BigDecimal p = new BigDecimal(price);
         return Trade.builder()
                 .market(MARKET)
@@ -84,8 +86,8 @@ class PositionServiceRepositoryTest {
     void getPositions_closedPosition_returnsClosed() {
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00")
                 ));
 
         List<Position> result = service.getPositions(USER_ID, MARKET, "BHP");
@@ -98,9 +100,9 @@ class PositionServiceRepositoryTest {
     void getPositions_sequentialPositions_returnsAll() {
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00"),
-                        trade("BHP", D3, Side.BUY,   50, "20.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.BUY,   50, "20.00")
                 ));
 
         List<Position> result = service.getPositions(USER_ID, MARKET, "BHP");
@@ -122,8 +124,8 @@ class PositionServiceRepositoryTest {
     @Test
     void getOpenPositions_allOpen_returnsAll() {
         when(tradeRepository.findByUserId(USER_ID)).thenReturn(List.of(
-                trade("BHP", D1, Side.BUY, 100, "10.00"),
-                trade("ANZ", D1, Side.BUY, 200, "25.00")
+                trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY, 100, "10.00"),
+                trade("ANZ", D1, io.github.dfauth.dormant.model.Side.BUY, 200, "25.00")
         ));
 
         List<Position> result = service.getOpenPositions(USER_ID);
@@ -136,9 +138,9 @@ class PositionServiceRepositoryTest {
     void getOpenPositions_closedPositionsExcluded() {
         // BHP fully closed, ANZ open
         when(tradeRepository.findByUserId(USER_ID)).thenReturn(List.of(
-                trade("BHP", D1, Side.BUY,  100, "10.00"),
-                trade("BHP", D2, Side.SELL, 100, "15.00"),
-                trade("ANZ", D1, Side.BUY,  200, "25.00")
+                trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00"),
+                trade("ANZ", D1, io.github.dfauth.dormant.model.Side.BUY,  200, "25.00")
         ));
 
         List<Position> result = service.getOpenPositions(USER_ID);
@@ -151,8 +153,8 @@ class PositionServiceRepositoryTest {
     void getPositions_customPredicate_filtersCorrectly() {
         // BHP is long (BUY-first), ANZ is short (SELL-first)
         when(tradeRepository.findByUserId(USER_ID)).thenReturn(List.of(
-                trade("BHP", D1, Side.BUY,  100, "10.00"),
-                trade("ANZ", D1, Side.SELL, 200, "50.00")
+                trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                trade("ANZ", D1, io.github.dfauth.dormant.model.Side.SELL, 200, "50.00")
         ));
 
         List<Position> result = service.getPositions(USER_ID.longValue(), Position::isShort);
@@ -176,8 +178,8 @@ class PositionServiceRepositoryTest {
     void getPositionsByMarket_singleCode_buildsPositions() {
         when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00")
                 ));
 
         List<Position> result = service.getPositionsByMarket(USER_ID, MARKET);
@@ -191,8 +193,8 @@ class PositionServiceRepositoryTest {
     void getPositionsByMarket_multipleCodes_eachCodeBuiltSeparately() {
         when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY, 100, "10.00"),
-                        trade("ANZ", D1, Side.BUY, 200, "25.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY, 100, "10.00"),
+                        trade("ANZ", D1, io.github.dfauth.dormant.model.Side.BUY, 200, "25.00")
                 ));
 
         List<Position> result = service.getPositionsByMarket(USER_ID, MARKET);
@@ -208,9 +210,9 @@ class PositionServiceRepositoryTest {
         // distinct() preserves encounter order: BHP, CBA, ANZ
         when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("CBA", D1, Side.BUY,   50, "100.00"),
-                        trade("ANZ", D2, Side.BUY,  200, "25.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("CBA", D1, io.github.dfauth.dormant.model.Side.BUY,   50, "100.00"),
+                        trade("ANZ", D2, io.github.dfauth.dormant.model.Side.BUY,  200, "25.00")
                 ));
 
         List<Position> result = service.getPositionsByMarket(USER_ID, MARKET);
@@ -225,9 +227,9 @@ class PositionServiceRepositoryTest {
     void getPositionsByMarket_sequentialPositionsSameCode() {
         when(tradeRepository.findByUserIdAndMarketOrderByDateAsc(USER_ID, MARKET))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00"),
-                        trade("BHP", D3, Side.BUY,   50, "20.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.BUY,   50, "20.00")
                 ));
 
         List<Position> result = service.getPositionsByMarket(USER_ID, MARKET);
@@ -241,7 +243,7 @@ class PositionServiceRepositoryTest {
 
     private Payment div(String code, LocalDate paymentDate, LocalDate exDivDate, String value) {
         return Payment.builder()
-                .transactionType(TransactionType.DIV)
+                .transactionType(io.github.dfauth.dormant.model.TransactionType.DIV)
                 .market(MARKET)
                 .code(code)
                 .date(paymentDate)
@@ -258,11 +260,11 @@ class PositionServiceRepositoryTest {
         // Position: BUY Jan 1, SELL Mar 1. Dividend payment date Feb 1 (within range).
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D3, Side.SELL, 100, "15.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00")
                 ));
         when(paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(
-                USER_ID,"ASX:BHP", TransactionType.DIV))
+                USER_ID,"ASX:BHP", io.github.dfauth.dormant.model.TransactionType.DIV))
                 .thenReturn(List.of(div("BHP", D2, null, "120.00")));
 
         List<Position> result = service.getPositions(USER_ID, MARKET, "BHP");
@@ -278,11 +280,11 @@ class PositionServiceRepositoryTest {
         LocalDate D4 = LocalDate.of(2024, 4, 1);
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D3, Side.SELL, 100, "15.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00")
                 ));
         when(paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(
-                USER_ID,"ASX:BHP", TransactionType.DIV))
+                USER_ID,"ASX:BHP", io.github.dfauth.dormant.model.TransactionType.DIV))
                 .thenReturn(List.of(div("BHP", D4, D2, "75.00")));
 
         List<Position> result = service.getPositions(USER_ID, MARKET, "BHP");
@@ -298,11 +300,11 @@ class PositionServiceRepositoryTest {
         LocalDate D4 = LocalDate.of(2024, 4, 1);
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D3, Side.SELL, 100, "15.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00")
                 ));
         when(paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(
-                USER_ID, "ASX:BHP", TransactionType.DIV))
+                USER_ID, "ASX:BHP", io.github.dfauth.dormant.model.TransactionType.DIV))
                 .thenReturn(List.of(div("BHP", D4, null, "75.00")));
 
         List<Position> result = service.getPositions(USER_ID, MARKET, "BHP");
@@ -315,9 +317,9 @@ class PositionServiceRepositoryTest {
     void dividends_openPosition_accumulatesMultipleDividends() {
         LocalDate D4 = LocalDate.of(2024, 4, 1);
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
-                .thenReturn(List.of(trade("BHP", D1, Side.BUY, 100, "10.00")));
+                .thenReturn(List.of(trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY, 100, "10.00")));
         when(paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(
-                USER_ID, "ASX:BHP", TransactionType.DIV))
+                USER_ID, "ASX:BHP", io.github.dfauth.dormant.model.TransactionType.DIV))
                 .thenReturn(List.of(
                         div("BHP", D2, null, "50.00"),
                         div("BHP", D4, null, "60.00")
@@ -336,12 +338,12 @@ class PositionServiceRepositoryTest {
         LocalDate D4 = LocalDate.of(2024, 4, 1);
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D3, Side.SELL, 100, "15.00"),
-                        trade("BHP", D3, Side.BUY,   50, "20.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00"),
+                        trade("BHP", D3, io.github.dfauth.dormant.model.Side.BUY,   50, "20.00")
                 ));
         when(paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(
-                USER_ID, "ASX:BHP", TransactionType.DIV))
+                USER_ID, "ASX:BHP", io.github.dfauth.dormant.model.TransactionType.DIV))
                 .thenReturn(List.of(
                         div("BHP", D2, null, "40.00"),   // Feb 1 → first position (Jan–Mar)
                         div("BHP", D4, null, "30.00")    // Apr 1 → second position (Mar–open)
@@ -358,8 +360,8 @@ class PositionServiceRepositoryTest {
     void dividends_noDividends_remainZero() {
         when(tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(USER_ID, MARKET, "BHP"))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00")
                 ));
         // paymentRepository stub already returns List.of() from @BeforeEach
 
@@ -389,9 +391,9 @@ class PositionServiceRepositoryTest {
         // BHP: closed win (+500); ANZ: open (excluded)
         when(tradeRepository.findByUserId(USER_ID))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00"),
-                        trade("ANZ", D3, Side.BUY,   50, "20.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00"),
+                        trade("ANZ", D3, io.github.dfauth.dormant.model.Side.BUY,   50, "20.00")
                 ));
 
         PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET_PREDICATE);
@@ -406,10 +408,10 @@ class PositionServiceRepositoryTest {
     void getPerformanceStats_delegatesToGetPositionsByMarket() {
         when(tradeRepository.findByUserId(USER_ID))
                 .thenReturn(List.of(
-                        trade("BHP", D1, Side.BUY,  100, "10.00"),
-                        trade("BHP", D2, Side.SELL, 100, "15.00"),
-                        trade("ANZ", D1, Side.BUY,  200, "30.00"),
-                        trade("ANZ", D2, Side.SELL, 200, "25.00")
+                        trade("BHP", D1, io.github.dfauth.dormant.model.Side.BUY,  100, "10.00"),
+                        trade("BHP", D2, io.github.dfauth.dormant.model.Side.SELL, 100, "15.00"),
+                        trade("ANZ", D1, io.github.dfauth.dormant.model.Side.BUY,  200, "30.00"),
+                        trade("ANZ", D2, io.github.dfauth.dormant.model.Side.SELL, 200, "25.00")
                 ));
 
         PerformanceStats stats = service.getPerformanceStats(USER_ID, MARKET_PREDICATE);

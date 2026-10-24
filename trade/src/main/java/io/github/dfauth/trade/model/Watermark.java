@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Price;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

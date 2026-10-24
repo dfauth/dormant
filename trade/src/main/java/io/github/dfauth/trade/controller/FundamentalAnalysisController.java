@@ -1,6 +1,6 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.Revenue;
+import io.github.dfauth.dormant.model.Revenue;
 import io.github.dfauth.trade.service.RevenueService;
 import io.github.dfauth.trade.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;

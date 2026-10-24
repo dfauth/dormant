@@ -1,6 +1,7 @@
 package io.github.dfauth.trade.model;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.github.dfauth.dormant.model.Price;
 import io.github.dfauth.ta.Dated;
 import io.github.dfauth.ta.MovingAverage;
 import io.github.dfauth.ta.TestData;

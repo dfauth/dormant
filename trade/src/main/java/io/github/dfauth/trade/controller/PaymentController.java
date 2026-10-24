@@ -1,9 +1,9 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.Balanced;
+import io.github.dfauth.dormant.model.Balanced;
 import io.github.dfauth.trade.model.DateRange;
-import io.github.dfauth.trade.model.Payment;
-import io.github.dfauth.trade.model.TransactionType;
+import io.github.dfauth.dormant.model.Payment;
+import io.github.dfauth.dormant.model.TransactionType;
 import io.github.dfauth.trade.service.PaymentService;
 import io.github.dfauth.trade.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;

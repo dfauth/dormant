@@ -1,11 +1,11 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.User;
-import io.github.dfauth.trade.model.Watchlist;
-import io.github.dfauth.trade.model.WatchlistItem;
-import io.github.dfauth.trade.repository.UserRepository;
-import io.github.dfauth.trade.repository.WatchlistItemRepository;
-import io.github.dfauth.trade.repository.WatchlistRepository;
+import io.github.dfauth.dormant.model.User;
+import io.github.dfauth.dormant.model.Watchlist;
+import io.github.dfauth.dormant.model.WatchlistItem;
+import io.github.dfauth.dormant.model.repository.UserRepository;
+import io.github.dfauth.dormant.model.repository.WatchlistItemRepository;
+import io.github.dfauth.dormant.model.repository.WatchlistRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

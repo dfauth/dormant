@@ -3,13 +3,14 @@ package io.github.dfauth.trade.controller;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.github.dfauth.dormant.model.Price;
 import io.github.dfauth.ta.Dated;
 import io.github.dfauth.ta.Trend;
 import io.github.dfauth.ta.TrendCalculator;
 import io.github.dfauth.ta.TrendState;
-import io.github.dfauth.trade.kafka.KafkaPublisher;
+import io.github.dfauth.dormant.kafka.KafkaPublisher;
 import io.github.dfauth.trade.model.*;
-import io.github.dfauth.trade.repository.PriceRepository;
+import io.github.dfauth.dormant.model.repository.PriceRepository;
 import io.github.dfauth.trade.service.UserService;
 import io.github.dfauth.trade.utils.LocalDateDeserializer;
 import io.github.dfauth.trade.utils.TenorDeserializer;
@@ -62,7 +63,7 @@ public class PriceController extends BaseController implements ControllerMixIn {
         priceRepository.saveAll(newPrices);
         log.info("Persisted {} of {} prices ({} duplicates skipped)", newPrices.size(), prices.size(), prices.size() - newPrices.size());
         // publish new prices
-        newPrices.forEach(p -> tryCatch(() -> kafkaPublisher.publish(p.getCode(), p)));
+        newPrices.forEach(p -> tryCatch(() -> kafkaPublisher.publish(p.getMarketCode(), p)));
         return ResponseEntity.status(HttpStatus.CREATED).body(newPrices.size());
     }
 

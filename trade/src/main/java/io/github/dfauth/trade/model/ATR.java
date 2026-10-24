@@ -1,5 +1,6 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Price;
 import io.github.dfauth.ta.AverageTrueRange;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

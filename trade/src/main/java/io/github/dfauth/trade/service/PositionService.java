@@ -1,8 +1,10 @@
 package io.github.dfauth.trade.service;
 
+import io.github.dfauth.dormant.model.Payment;
+import io.github.dfauth.dormant.model.Trade;
 import io.github.dfauth.trade.model.*;
-import io.github.dfauth.trade.repository.PaymentRepository;
-import io.github.dfauth.trade.repository.TradeRepository;
+import io.github.dfauth.dormant.model.repository.PaymentRepository;
+import io.github.dfauth.dormant.model.repository.TradeRepository;
 import io.github.dfauth.trade.utils.PositionCollector;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +31,7 @@ public class PositionService {
     public List<Position> getPositions(Long userId, String market, String code) {
         List<Trade> trades = tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(userId, market, code);
         List<Position> positions = buildPositions(trades);
-        List<Payment> divs = paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(userId, market+":"+code, TransactionType.DIV);
+        List<Payment> divs = paymentRepository.findByUserIdAndCodeAndTransactionTypeOrderByDateAsc(userId, market+":"+code, io.github.dfauth.dormant.model.TransactionType.DIV);
         assignDividends(positions, divs);
         return positions;
     }
@@ -43,7 +45,7 @@ public class PositionService {
                 .collect(new PositionCollector()).stream()
                 .filter(_p -> p.test(_p))
                 .toList();
-        List<Payment> allDivs = paymentRepository.findByUserIdAndTransactionTypeOrderByDateAsc(userId, TransactionType.DIV);
+        List<Payment> allDivs = paymentRepository.findByUserIdAndTransactionTypeOrderByDateAsc(userId, io.github.dfauth.dormant.model.TransactionType.DIV);
         Map<String, List<Payment>> divsByKey = allDivs.stream()
                 .filter(d -> d.getCode() != null)
                 .collect(Collectors.groupingBy(Payment::getCode));
@@ -56,7 +58,7 @@ public class PositionService {
 
     public List<Position> getPositionsByMarket(Long userId, String market) {
         List<Trade> allTrades = tradeRepository.findByUserIdAndMarketOrderByDateAsc(userId, market);
-        List<Payment> allDivs = paymentRepository.findByUserIdAndMarketAndTransactionTypeOrderByDateAsc(userId, market, TransactionType.DIV);
+        List<Payment> allDivs = paymentRepository.findByUserIdAndMarketAndTransactionTypeOrderByDateAsc(userId, market, io.github.dfauth.dormant.model.TransactionType.DIV);
         Map<String, List<Payment>> divsByCode = allDivs.stream()
                 .filter(d -> d.getCode() != null)
                 .collect(Collectors.groupingBy(Payment::getCode));
@@ -185,7 +187,7 @@ public class PositionService {
                 // Reducing position
                 BigDecimal avgPrice = totalCost.divide(bd(runningSize), MathContext.DECIMAL128);
                 BigDecimal pnl;
-                if (current.getSide() == Side.BUY) {
+                if (current.getSide() == io.github.dfauth.dormant.model.Side.BUY) {
                     pnl = trade.getPrice().subtract(avgPrice).multiply(bd(trade.getSize()));
                 } else {
                     pnl = avgPrice.subtract(trade.getPrice()).multiply(bd(trade.getSize()));

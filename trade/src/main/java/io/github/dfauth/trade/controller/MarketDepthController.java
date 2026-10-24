@@ -1,10 +1,10 @@
 package io.github.dfauth.trade.controller;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import io.github.dfauth.trade.model.MarketDepth;
+import io.github.dfauth.dormant.model.MarketDepth;
 import io.github.dfauth.trade.model.MarketDepthSummary;
 import io.github.dfauth.trade.model.Tenor;
-import io.github.dfauth.trade.repository.MarketDepthRepository;
+import io.github.dfauth.dormant.model.repository.MarketDepthRepository;
 import io.github.dfauth.trade.utils.TenorDeserializer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

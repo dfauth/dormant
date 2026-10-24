@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.UserSetting;
-import io.github.dfauth.trade.model.UserSettingId;
-import io.github.dfauth.trade.repository.UserSettingRepository;
+import io.github.dfauth.dormant.model.UserSetting;
+import io.github.dfauth.dormant.model.UserSettingId;
+import io.github.dfauth.dormant.model.repository.UserSettingRepository;
 import io.github.dfauth.trade.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.config;
 
 import io.github.dfauth.dormant.Dormant;
-import io.github.dfauth.trade.kafka.DormantSerde;
-import io.github.dfauth.trade.kafka.KafkaPublisher;
+import io.github.dfauth.dormant.kafka.DormantSerde;
+import io.github.dfauth.dormant.kafka.KafkaPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.producer.KafkaProducer;

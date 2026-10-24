@@ -1,5 +1,7 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Valuation;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -9,7 +11,7 @@ public record ValuationSummary(
         String market,
         String code,
         LocalDate date,
-        Consensus consensus,
+        io.github.dfauth.dormant.model.Consensus consensus,
         Integer buy,
         Integer hold,
         Integer sell,

@@ -1,8 +1,8 @@
 package io.github.dfauth.trade.controller;
 
-import io.github.dfauth.trade.model.User;
-import io.github.dfauth.trade.repository.UserRepository;
-import io.github.dfauth.trade.repository.UserSettingRepository;
+import io.github.dfauth.dormant.model.User;
+import io.github.dfauth.dormant.model.repository.UserRepository;
+import io.github.dfauth.dormant.model.repository.UserSettingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
