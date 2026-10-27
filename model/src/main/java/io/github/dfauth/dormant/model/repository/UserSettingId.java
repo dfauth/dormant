@@ -1,4 +1,4 @@
-package io.github.dfauth.dormant.model;
+package io.github.dfauth.dormant.model.repository;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;

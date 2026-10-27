@@ -74,7 +74,7 @@ services:
     container_name: dormant-container
     ports:
       - 8081:8081
-      - 5005:5005
+      - 5081:5081
     environment:
       - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
       - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
@@ -82,7 +82,32 @@ services:
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5081
+      - spring.kafka.bootstrap-servers=kafka:9092
+      - dormant.trade.security.oauth2.redirect=http://localhost:4173
+    volumes:
+      - ${HOST_DB_PATH}:/data
+    networks:
+      - dormant_net
+    depends_on:
+      - kafka
+
+  actor:
+    build:
+      context: .
+      dockerfile: actor/Dockerfile
+    container_name: actor-container
+    ports:
+      - 8083:8083
+      - 5083:5083
+    environment:
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5083
       - spring.kafka.bootstrap-servers=kafka:9092
       - dormant.trade.security.oauth2.redirect=http://localhost:4173
     volumes:

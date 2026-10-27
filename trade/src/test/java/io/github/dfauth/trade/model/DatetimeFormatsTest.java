@@ -1,12 +1,15 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Tenor;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.time.temporal.TemporalAccessor;
 
+import static io.github.dfauth.trade.model.DateRange.of;
 import static java.time.temporal.ChronoField.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DatetimeFormatsTest {
 
@@ -55,7 +58,7 @@ class DatetimeFormatsTest {
     @Test
     void usedAsTenorRangeAnchorWithStartFrom() {
         LocalDate anchor = DatetimeFormats.YYYYMMDD.toLocalDate("20250615");
-        DateRange range = Tenor.parse("2Y").startFrom(anchor);
+        DateRange range = of(anchor, Tenor.parse("2Y").startFrom(anchor));
         assertEquals(anchor, range.start());
         assertEquals(LocalDate.of(2027, 6, 15), range.end());
     }
@@ -63,7 +66,7 @@ class DatetimeFormatsTest {
     @Test
     void usedAsTenorRangeAnchorWithEndAt() {
         LocalDate anchor = DatetimeFormats.YYYYMMDD.toLocalDate("20250615");
-        DateRange range = Tenor.parse("6M").endAt(anchor);
+        DateRange range = of(Tenor.parse("6M").endAt(anchor), anchor);
         assertEquals(LocalDate.of(2024, 12, 15), range.start());
         assertEquals(anchor, range.end());
     }

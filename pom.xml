@@ -17,6 +17,7 @@
         <module>st8</module>
         <module>model</module>
         <module>kafka</module>
+        <module>actor</module>
     </modules>
 
     <properties>

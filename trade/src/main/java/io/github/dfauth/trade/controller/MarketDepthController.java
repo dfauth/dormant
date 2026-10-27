@@ -3,7 +3,7 @@ package io.github.dfauth.trade.controller;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.github.dfauth.dormant.model.MarketDepth;
 import io.github.dfauth.trade.model.MarketDepthSummary;
-import io.github.dfauth.trade.model.Tenor;
+import io.github.dfauth.dormant.model.Tenor;
 import io.github.dfauth.dormant.model.repository.MarketDepthRepository;
 import io.github.dfauth.trade.utils.TenorDeserializer;
 import io.swagger.v3.oas.annotations.Operation;
@@ -38,7 +38,7 @@ public class MarketDepthController {
     public List<MarketDepthSummary> getRecentDepth(
             @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<Tenor> tenor
     ) {
-        LocalDateTime cutoff = tenor.orElse(Tenor.parse("3D")).endNow().start().atTime(23,59,59);
+        LocalDateTime cutoff = tenor.orElse(Tenor.parse("3D")).endNow().atTime(23,59,59);
         return aggregateByDay(marketDepthRepository.findByRecordedAtGreaterThanEqual(cutoff));
     }
 

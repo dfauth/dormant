@@ -1,6 +1,7 @@
 package io.github.dfauth.dormant.model.repository;
 
 import io.github.dfauth.dormant.model.Price;
+import io.github.dfauth.dormant.model.Tenor;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,5 +36,12 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
         String code = arr[1];
         LocalDate date = LocalDate.now().minusYears(1);
         return findByCodeOrderByDateAsc(mkt, code, date);
+    }
+
+    default List<Price> findByCodeAndTenor(String marketCodeString, Tenor tenor) {
+        String[] arr = marketCodeString.split(":");
+        String mkt = arr[0];
+        String code = arr[1];
+        return findByCodeOrderByDateAsc(mkt, code, tenor.endNow());
     }
 }

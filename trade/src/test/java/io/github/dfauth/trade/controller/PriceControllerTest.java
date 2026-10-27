@@ -1,11 +1,11 @@
 package io.github.dfauth.trade.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.github.dfauth.ta.TestData;
 import io.github.dfauth.dormant.model.Price;
 import io.github.dfauth.dormant.model.User;
 import io.github.dfauth.dormant.model.repository.PriceRepository;
 import io.github.dfauth.dormant.model.repository.UserRepository;
+import io.github.dfauth.ta.TestData;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
@@ -349,7 +349,7 @@ class PriceControllerTest {
                 ));
     }
 
-    @Disabled
+    @Disabled // TODO
     @Test
     void getTrend() throws Exception {
         priceRepository.saveAll(unzipCandles(new TypeReference<List<Price>>() {

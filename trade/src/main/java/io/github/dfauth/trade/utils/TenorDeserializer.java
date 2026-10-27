@@ -3,7 +3,7 @@ package io.github.dfauth.trade.utils;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import io.github.dfauth.trade.model.Tenor;
+import io.github.dfauth.dormant.model.Tenor;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 

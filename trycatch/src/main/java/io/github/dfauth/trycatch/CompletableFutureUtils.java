@@ -3,6 +3,7 @@ package io.github.dfauth.trycatch;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -30,6 +31,13 @@ public class CompletableFutureUtils {
 
     public static <T, R> BiFunction<T, Throwable, R> handler(Function<T, R> mapper) {
         return handler(mapper, logIt.andThen(propagate()));
+    }
+
+    public static <T> BiFunction<T, Throwable, T> handler(Consumer<T> mapper, Consumer<Throwable> handler) {
+        return handler(peek(mapper), ex -> {
+            handler.accept(ex);
+            return null;
+        });
     }
 
     public static <T, R> BiFunction<T, Throwable, R> handler(Function<T, R> mapper, Function<Throwable, R> handler) {

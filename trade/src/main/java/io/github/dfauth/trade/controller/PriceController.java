@@ -29,10 +29,12 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static io.github.dfauth.trade.model.Tenor._1Y;
+import static io.github.dfauth.dormant.model.Tenor._1Y;
+import static io.github.dfauth.trade.model.DateRange.*;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
 import static io.github.dfauth.trycatch.Utils.oops;
 import static java.lang.Math.abs;
+import static java.time.LocalDate.now;
 import static java.util.Collections.emptyMap;
 import static java.util.Optional.empty;
 
@@ -72,7 +74,7 @@ public class PriceController extends BaseController implements ControllerMixIn {
     @GetMapping("/watermark")
     public List<Watermark<Price>> getWatermark(
             @Parameter(description = "Market code (e.g. ASX) defaults to users default market") @RequestParam("market") Optional<String> market,
-            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<Tenor> tenor,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<io.github.dfauth.dormant.model.Tenor> tenor,
             @Parameter(description = "threshold as a % of the high / low (e.g. 0.15, defaults to 0.1)") @RequestParam("threshold") Optional<Double> optThreshold,
             @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Direction> optDirection
     ) {
@@ -96,13 +98,13 @@ public class PriceController extends BaseController implements ControllerMixIn {
     @GetMapping("/watermark/{code}")
     public Watermark<Price> getWatermarkByCode(
             @Parameter(description = "code") @PathVariable("code") String code,
-            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<Tenor> tenor,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y); defaults to 1Y") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<io.github.dfauth.dormant.model.Tenor> tenor,
             @Parameter(description = "direction (e.g. HIGH or LOW, defaults to High)") @RequestParam("direction") Optional<Direction> optDirection
     ) {
         return authorize(u -> {
             return u.resolveCode(code, (m, c) -> {
                 Direction direction = optDirection.orElse(Direction.RISING);
-                DateRange dateRange = tenor.orElse(_1Y).endNow();
+                DateRange dateRange = of(tenor.orElse(_1Y).endNow(), now());
                 return priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(m, c, dateRange.start(), dateRange.end())
                         .stream().reduce(new Watermark<>(direction, p -> p.getClose().doubleValue()), Watermark::update, oops());
             });
@@ -195,13 +197,12 @@ public class PriceController extends BaseController implements ControllerMixIn {
     @GetMapping("/trend/{code}")
     public List<Dated<Trend>> getTrend(
             @Parameter(description = "Security code (e.g. BHP)") @PathVariable("code") String code,
-            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<Tenor> tenor,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<io.github.dfauth.dormant.model.Tenor> tenor,
             @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") @JsonDeserialize(using = LocalDateDeserializer.class) Optional<LocalDate> startFrom,
             @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") @JsonDeserialize(using = LocalDateDeserializer.class) Optional<LocalDate> endAt) {
         return authorize(u -> {
             Function<Double, Optional<Trend>> trendStream = TrendCalculator.trendStream();
-            DateRange dateRange = tenor.map(t -> startFrom.map(t::startFrom).orElseGet(() -> endAt.map(t::endAt).orElse(t.endNow())))
-                    .or(() -> startFrom.flatMap(s -> endAt.map(e -> DateRange.of(s, e)))).orElse(_1Y.endNow());
+            DateRange dateRange = resolveDates(tenor, startFrom, endAt).orElse(defaultDateRange());
             return u.resolveCode(code).map((mkt, cd) -> priceRepository.findByMarketAndCodeAndDateBetweenOrderByDateAsc(mkt, cd, dateRange.start(), dateRange.end()).stream())
                     .map(p -> trendStream.apply(p.close()).map(t -> Dated.withPayload(p.getDate(), t)))
                     .flatMap(Optional::stream)
@@ -214,7 +215,7 @@ public class PriceController extends BaseController implements ControllerMixIn {
     @PostMapping("/trend")
     public TrendAggregation postTrend(
             @Parameter(description = "Security code (e.g. BHP or ASX:BHP)") @RequestBody List<List<String>> codes,
-            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<Tenor> tenor,
+            @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") @JsonDeserialize(using = TenorDeserializer.class) Optional<io.github.dfauth.dormant.model.Tenor> tenor,
             @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") @JsonDeserialize(using = LocalDateDeserializer.class) Optional<LocalDate> startFrom,
             @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") @JsonDeserialize(using = LocalDateDeserializer.class) Optional<LocalDate> endAt) {
         return authorize(u -> streamCodes(codes, c -> u.resolveCode(c).map((mkt, code) -> new CodeAware<>(mkt, code, getTrend(c, tenor, startFrom, endAt))))

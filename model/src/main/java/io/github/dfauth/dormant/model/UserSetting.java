@@ -1,5 +1,6 @@
 package io.github.dfauth.dormant.model;
 
+import io.github.dfauth.dormant.model.repository.UserSettingId;
 import io.github.dfauth.dormant.model.utils.JsonNodeConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

@@ -71,6 +71,18 @@ public class Price implements Candle, Dormant {
         return volume;
     }
 
+    public Price(String marketCode, LocalDate date, BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close, int volume) {
+        this(0L,
+             marketCode.split(":")[0],
+             marketCode.split(":")[1],
+                date,
+                open,
+                high,
+                low,
+                close,
+                volume
+        );
+    }
 
     @Override
     public void write(Encoder encoder) {

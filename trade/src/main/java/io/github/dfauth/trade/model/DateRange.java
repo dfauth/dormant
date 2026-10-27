@@ -1,9 +1,13 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Tenor;
+
 import java.time.LocalDate;
 import java.util.Optional;
 
+import static io.github.dfauth.dormant.model.Tenor._1Y;
 import static io.github.dfauth.trade.model.DatetimeFormats.YYYYMMDD;
+import static java.time.LocalDate.now;
 
 public interface DateRange {
 
@@ -16,13 +20,18 @@ public interface DateRange {
         return new SimpleDateRange(start, end);
     }
 
+    static Optional<DateRange> resolveDates(Optional<Tenor> tenor, Optional<LocalDate> startFrom, Optional<LocalDate> endAt) {
+        return tenor.map(t -> startFrom.map(d -> of(d, t.startFrom(d)))
+                        .orElseGet(() -> endAt.map(d -> of(t.endAt(d), d))
+                                .orElse(of(t.endNow(), now()))))
+                .or(() -> startFrom.flatMap(s -> endAt.map(e -> of(s, e))));
+    }
+
+    static DateRange defaultDateRange() {
+        return of(_1Y.endNow(), now());
+    }
+
     static Optional<DateRange> resolve(Optional<String> tenor, Optional<String> startFrom, Optional<String> endAt) {
-        // if start and end dates are explicitly provided, ignore the tenor
-        return startFrom.map(YYYYMMDD::toLocalDate)
-                .flatMap(s -> endAt.map(YYYYMMDD::toLocalDate)
-                        .map(e -> DateRange.of(s, e)))
-                .or(() -> tenor.map(Tenor::parse)
-                        .map(t -> startFrom.map(YYYYMMDD::toLocalDate).map(t::startFrom).orElseGet(() -> endAt.map(YYYYMMDD::toLocalDate).map(t::endAt).orElse(t.endNow()))
-                ));
+        return resolveDates(tenor.map(Tenor::parse), startFrom.map(YYYYMMDD::toLocalDate), endAt.map(YYYYMMDD::toLocalDate));
     }
 }

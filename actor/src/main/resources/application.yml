@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    url: jdbc:h2:tcp://h2-database:1092//h2-data/trades
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: false
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: true
+  kafka:
+    bootstrap-servers: kafka:9092
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            # Explicitly force localhost instead of the container name
+            redirect-uri: "http://localhost:8081/login/oauth2/code/google"
+            scope: openid, email, profile
+            authorization-grant-type: authorization_code
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            scope: read:user, user:email
+          facebook:
+            client-id: ${FACEBOOK_CLIENT_ID}
+            client-secret: ${FACEBOOK_CLIENT_SECRET}
+            scope: email, public_profile
+      resourceserver:
+        jwt:
+          issuer-uri: https://accounts.google.com
+          jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
+
+server:
+  port: 8083
+

@@ -1,11 +1,13 @@
 package io.github.dfauth.trade.model;
 
+import io.github.dfauth.dormant.model.Tenor;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 
-import static io.github.dfauth.trade.model.Tenor.TenorUnit.*;
-import static io.github.dfauth.trade.model.Tenor._1Y;
+import static io.github.dfauth.dormant.model.Tenor.TenorUnit.*;
+import static io.github.dfauth.dormant.model.Tenor._1Y;
+import static io.github.dfauth.trade.model.DateRange.of;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TenorTest {
@@ -43,49 +45,49 @@ class TenorTest {
 
     @Test
     void backwardYears() {
-        DateRange dateRange = new Tenor(2, Y).endAt(ANCHOR);
+        DateRange dateRange = of(new Tenor(2, Y).endAt(ANCHOR), ANCHOR);
         assertEquals(LocalDate.of(2023, 6, 15), dateRange.start());
         assertEquals(ANCHOR, dateRange.end());
     }
 
     @Test
     void backwardMonths() {
-        DateRange dateRange = new Tenor(3, M).endAt(ANCHOR);
+        DateRange dateRange = of(new Tenor(3, M).endAt(ANCHOR), ANCHOR);
         assertEquals(LocalDate.of(2025, 3, 15), dateRange.start());
         assertEquals(ANCHOR, dateRange.end());
     }
 
     @Test
     void backwardDays() {
-        DateRange dateRange = new Tenor(10, D).endAt(ANCHOR);
+        DateRange dateRange = of(new Tenor(10, D).endAt(ANCHOR), ANCHOR);
         assertEquals(LocalDate.of(2025, 6, 5), dateRange.start());
         assertEquals(ANCHOR, dateRange.end());
     }
 
     @Test
     void forwardYears() {
-        DateRange dateRange = new Tenor(2, Y).startFrom(ANCHOR);
+        DateRange dateRange = of(ANCHOR, new Tenor(2, Y).startFrom(ANCHOR));
         assertEquals(ANCHOR, dateRange.start());
         assertEquals(LocalDate.of(2027, 6, 15), dateRange.end());
     }
 
     @Test
     void forwardMonths() {
-        DateRange dateRange = new Tenor(6, M).startFrom(ANCHOR);
+        DateRange dateRange = of(ANCHOR, new Tenor(6, M).startFrom(ANCHOR));
         assertEquals(ANCHOR, dateRange.start());
         assertEquals(LocalDate.of(2025, 12, 15), dateRange.end());
     }
 
     @Test
     void toLocalDates() {
-        DateRange dateRange = _1Y.endAt(ANCHOR);
+        DateRange dateRange = of(_1Y.endAt(ANCHOR), ANCHOR);
         assertEquals(LocalDate.of(2024, 6, 15), dateRange.start());
         assertEquals(ANCHOR, dateRange.end());
     }
 
     @Test
     void defaultDirectionIsBackward() {
-        DateRange dateRange = _1Y.endAt(ANCHOR);
+        DateRange dateRange = of(_1Y.endAt(ANCHOR), ANCHOR);
         assertEquals(LocalDate.of(2024, 6, 15), dateRange.start());
         assertEquals(ANCHOR, dateRange.end());
     }
