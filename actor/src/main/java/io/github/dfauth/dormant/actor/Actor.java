@@ -6,19 +6,24 @@ import io.github.dfauth.dormant.actor.repository.TAContainerRepository;
 import io.github.dfauth.dormant.model.Price;
 import io.github.dfauth.dormant.model.Tenor;
 import io.github.dfauth.dormant.model.repository.PriceRepository;
-import io.github.dfauth.trycatch.Tuple2;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.common.TopicPartition;
+import org.jspecify.annotations.Nullable;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.listener.ConsumerSeekAware;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
+import java.util.Map;
+
 import static io.github.dfauth.ta.MovingAverage.ema;
-import static io.github.dfauth.trycatch.Tuple2.tuple2;
+import static io.github.dfauth.trycatch.TryCatch.*;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class Actor {
+public class Actor implements ConsumerSeekAware {
 
     private final PriceRepository priceRepository;
     private final TAContainerRepository taContainerRepository;
@@ -36,9 +41,35 @@ public class Actor {
                             )))
                 .findFirst()
                 .ifPresent(pv -> {
+                    tryCatchRunnable(
+                            () -> taContainerRepository.save(new TAContainer(price.getMarket(), price.getCode(), price.getDate(), pv)),
+                            ex -> log.error(ex.getMessage(), ex)
+                            );
                     log.info("event: {}", pv);
-                    taContainerRepository.save(new TAContainer(0L, price.getMarket(), price.getCode(), price.getDate(), pv));
                 });
     }
 
+    @Override
+    public void onPartitionsAssigned(Map<TopicPartition, Long> assignments, ConsumerSeekCallback callback) {
+        log.info("assignments {}", assignments);
+        callback.seekToBeginning(assignments.keySet());
+    }
+
+    @Override
+    public void onFirstPoll() {
+        ConsumerSeekAware.super.onFirstPoll();
+        log.info("firstPoll");
+    }
+
+    @Override
+    public void onPartitionsRevoked(@Nullable Collection<TopicPartition> partitions) {
+        ConsumerSeekAware.super.onPartitionsRevoked(partitions);
+        log.info("partitions revoked {}", partitions);
+    }
+
+    @Override
+    public void onIdleContainer(Map<TopicPartition, Long> assignments, ConsumerSeekCallback callback) {
+        ConsumerSeekAware.super.onIdleContainer(assignments, callback);
+        log.info("on idle container {}", assignments);
+    }
 }

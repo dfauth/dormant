@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -14,6 +16,17 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 @Slf4j
 public class BackwardCompatibleTest {
+
+    @BeforeAll
+    static void beforeAll() {
+        System.setProperty("io.github.dfauth.dormant.BinaryDecoder.basePackages", TestObjectV1.class.getName());
+        BinaryDecoder.reinitialise();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        System.clearProperty("io.github.dfauth.dormant.BinaryDecoder.basePackages");
+    }
 
     int n = 1;
     String s = "test";
@@ -60,23 +73,10 @@ public class BackwardCompatibleTest {
         assertEquals(to2.s, out.s);
     }
 
-    @Test
-    public void testForwardCompatibleViaRegistry() {
-
-        TestObjectV2 to2 = new TestObjectV2(n, s, now);
-
-        byte[] bytes = to2.write();
-        BinaryDecoder decoder = (BinaryDecoder) DecoderFactory.create(new ByteArrayInputStream(bytes));
-        decoder.register(TestObjectV1.class);
-        TestObjectV1 out = decoder.readDormant();
-        assertEquals(to2.n, out.n);
-        assertEquals(to2.s, out.s);
-    }
-
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode
-    static class TestObjectV1 implements Dormant {
+    private static class TestObjectV1 implements Dormant {
 
         private int n;
         private String s;
@@ -101,7 +101,7 @@ public class BackwardCompatibleTest {
     @NoArgsConstructor
     @AllArgsConstructor
     @EqualsAndHashCode
-    static class TestObjectV2 implements Dormant {
+    private static class TestObjectV2 implements Dormant {
 
         private int n;
         private String s;

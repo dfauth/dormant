@@ -1,5 +1,6 @@
 package io.github.dfauth.dormant;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -7,6 +8,11 @@ import java.io.ByteArrayInputStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DormantRegistryTest {
+
+    @BeforeAll
+    static void beforeAll() {
+        BinaryDecoder.reinitialise();
+    }
 
     @Test
     void registryDiscoversImplementations() {

@@ -37,9 +37,19 @@ public class TryCatch {
         }
     }
 
-    public static void tryCatch(ExceptionalRunnable runnable) {
+    public static void tryCatchRunnable(ExceptionalRunnable runnable) {
         tryCatch(() -> {
             runnable.run();
+            return null;
+        });
+    }
+
+    public static void tryCatchRunnable(ExceptionalRunnable runnable, Consumer<Exception> exceptionHandler) {
+        tryCatch(() -> {
+            runnable.run();
+            return null;
+        }, ex -> {
+            exceptionHandler.accept(ex);
             return null;
         });
     }

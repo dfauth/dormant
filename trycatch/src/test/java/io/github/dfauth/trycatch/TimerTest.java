@@ -56,6 +56,6 @@ public class TimerTest {
         sleepRandom(100l);
     }
     private void sleepRandom(long multiplier) {
-        tryCatch(() -> Thread.sleep((long) (Math.random()*multiplier)));
+        TryCatch.tryCatchRunnable(() -> Thread.sleep((long) (Math.random()*multiplier)));
     }
 }

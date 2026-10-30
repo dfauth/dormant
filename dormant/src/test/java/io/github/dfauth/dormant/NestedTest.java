@@ -5,6 +5,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -14,6 +15,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @Slf4j
 public class NestedTest {
+
+    @BeforeAll
+    public static void beforeAll() {
+        BinaryDecoder.reinitialise();
+    }
 
     @Test
     public void testIt() {

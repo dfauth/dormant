@@ -3,6 +3,7 @@ package io.github.dfauth.dormant;
 import io.github.classgraph.ClassGraph;
 import io.github.classgraph.ClassInfo;
 import io.github.classgraph.ScanResult;
+import io.github.dfauth.trycatch.TryCatch;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
@@ -23,16 +24,22 @@ import java.util.function.Supplier;
 
 import static io.github.dfauth.dormant.BinaryEncoder.MAGIC_NUMBER;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
+import static java.util.Arrays.stream;
 import static java.util.Optional.empty;
+import static java.util.function.Predicate.not;
 
 @Slf4j
 public class BinaryDecoder implements Decoder {
 
     private DataInputStream in;
 
-    private final Map<Integer, Supplier<Dormant>> factories = new ConcurrentHashMap<>();
+    private static final Map<Integer, Supplier<Dormant>> factories = new ConcurrentHashMap<>();
 
-    public BinaryDecoder(String... basePackages) {
+    static {
+        reinitialise();
+    }
+
+    public static void initialise(String... basePackages) {
         var classGraph = new ClassGraph()
                 .enableClassInfo();
         if (basePackages.length > 0) {
@@ -55,8 +62,18 @@ public class BinaryDecoder implements Decoder {
         }
     }
 
+    public static void reinitialise() {
+        factories.clear();
+        initialise(
+                stream(System.getProperty(BinaryDecoder.class.getName()+".basePackages", "")
+                        .split(","))
+                        .filter(not(String::isBlank))
+                        .map(String::trim)
+                        .toArray(String[]::new)
+        );
+    }
+
     BinaryDecoder(DataInputStream in) {
-        this();
         this.in = in;
         int magic;
         if ((magic = tryCatch(in::readInt)) != MAGIC_NUMBER) {
@@ -64,7 +81,7 @@ public class BinaryDecoder implements Decoder {
         }
     }
 
-    public void register(Class<? extends Dormant> clazz) {
+    public static void register(Class<? extends Dormant> clazz) {
         if (Modifier.isAbstract(clazz.getModifiers()) || clazz.isInterface()) {
             throw new IllegalArgumentException("Cannot register abstract class or interface: " + clazz.getName());
         }
@@ -80,6 +97,7 @@ public class BinaryDecoder implements Decoder {
         Dormant sample = tryCatch((Callable<Dormant>) finalCtor::newInstance);
         int typeId = sample.typeId();
         Supplier<Dormant> factory = () -> tryCatch((Callable<Dormant>) finalCtor::newInstance);
+        log.info("registering class {} with typeId: {}", clazz.getName(), typeId);
         Supplier<Dormant> existing = factories.putIfAbsent(typeId, factory);
         if (existing != null) {
             String existingClass = existing.get().getClass().getName();
@@ -172,7 +190,7 @@ public class BinaryDecoder implements Decoder {
             int scale = readInt();
             int len = readInt();
             byte[] unscaled = new byte[len];
-            tryCatch(() -> in.readFully(unscaled));
+            TryCatch.tryCatchRunnable(() -> in.readFully(unscaled));
             return new BigDecimal(new BigInteger(unscaled), scale);
         }
         return null;
@@ -211,7 +229,7 @@ public class BinaryDecoder implements Decoder {
         int len = readInt();
         if (len == -1) return null;
         byte[] bytes = new byte[len];
-        tryCatch(() -> in.readFully(bytes));
+        TryCatch.tryCatchRunnable(() -> in.readFully(bytes));
         return bytes;
     }
 

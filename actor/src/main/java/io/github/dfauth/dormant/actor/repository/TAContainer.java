@@ -35,4 +35,7 @@ public class TAContainer {
     @Column(nullable = true)
     private PriceVolume ema200;
 
+    public TAContainer(String market, String code, LocalDate date, PriceVolume ema200) {
+        this(null, market, code, date, ema200);
+    }
 }

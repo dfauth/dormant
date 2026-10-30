@@ -35,7 +35,7 @@ class TryCatchTest {
     @Test
     void testRunnableThrowsWrapsInRuntimeException() {
         var ex = assertThrows(RuntimeException.class, () ->
-                TryCatch.tryCatch((ExceptionalRunnable) () -> {
+                TryCatch.tryCatchRunnable((ExceptionalRunnable) () -> {
                     throw new Exception("fail");
                 })
         );
@@ -75,7 +75,7 @@ class TryCatchTest {
     }
 
     @Test
-    void testTryCatchWithCustomExceptionHandler() {
+    void testTryCatchRunnableWithCustomExceptionHandler() {
         String result = TryCatch.tryCatch(() -> {
             throw new Exception("handled");
         }, ex -> "fallback: " + ex.getMessage());
@@ -83,7 +83,7 @@ class TryCatchTest {
     }
 
     @Test
-    void testTryCatchWithCustomHandlerOnSuccess() {
+    void testTryCatchRunnableWithCustomHandlerOnSuccess() {
         String result = TryCatch.tryCatch(() -> "ok", ex -> "fallback");
         assertEquals("ok", result);
     }

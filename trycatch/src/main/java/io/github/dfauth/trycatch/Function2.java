@@ -13,7 +13,7 @@ public class Function2 {
 
     public static <T> Function<T, T> peek(Consumer<T> consumer) {
         return t -> {
-            tryCatch(() -> consumer.accept(t));
+            TryCatch.tryCatchRunnable(() -> consumer.accept(t));
             return t;
         };
     }

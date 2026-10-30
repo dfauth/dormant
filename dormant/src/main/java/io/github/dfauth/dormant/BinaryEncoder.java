@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static io.github.dfauth.trycatch.TryCatch.tryCatch;
+import static io.github.dfauth.trycatch.TryCatch.tryCatchRunnable;
 
 public class BinaryEncoder implements Encoder {
 
@@ -34,55 +34,55 @@ public class BinaryEncoder implements Encoder {
     // Write methods
     @Override
     public Encoder writeInt(int value) {
-        tryCatch(() -> out.writeInt(value));
+        tryCatchRunnable(() -> out.writeInt(value));
         return this;
     }
 
     @Override
     public Encoder writeLong(long value) {
-        tryCatch(() -> out.writeLong(value));
+        tryCatchRunnable(() -> out.writeLong(value));
         return this;
     }
 
     @Override
     public Encoder writeFloat(float value) {
-        tryCatch(() -> out.writeFloat(value));
+        tryCatchRunnable(() -> out.writeFloat(value));
         return this;
     }
 
     @Override
     public Encoder writeDouble(double value) {
-        tryCatch(() -> out.writeDouble(value));
+        tryCatchRunnable(() -> out.writeDouble(value));
         return this;
     }
 
     @Override
     public Encoder writeBoolean(boolean value) {
-        tryCatch(() -> out.writeBoolean(value));
+        tryCatchRunnable(() -> out.writeBoolean(value));
         return this;
     }
 
     @Override
     public Encoder writeByte(byte value) {
-        tryCatch(() -> out.writeByte(value));
+        tryCatchRunnable(() -> out.writeByte(value));
         return this;
     }
 
     @Override
     public Encoder writeShort(short value) {
-        tryCatch(() -> out.writeShort(value));
+        tryCatchRunnable(() -> out.writeShort(value));
         return this;
     }
 
     @Override
     public Encoder writeChar(char value) {
-        tryCatch(() -> out.writeChar(value));
+        tryCatchRunnable(() -> out.writeChar(value));
         return this;
     }
 
     @Override
     public Encoder writeString(String value) {
-        tryCatch(() -> {
+        tryCatchRunnable(() -> {
             if (value == null) {
                 out.writeInt(-1);
             } else {
@@ -101,7 +101,7 @@ public class BinaryEncoder implements Encoder {
             writeInt(value.scale());
             byte[] unscaled = value.unscaledValue().toByteArray();
             writeInt(unscaled.length);
-            tryCatch(() -> out.write(unscaled));
+            tryCatchRunnable(() -> out.write(unscaled));
         }
         return this;
     }
@@ -141,7 +141,7 @@ public class BinaryEncoder implements Encoder {
             writeInt(-1);
         } else {
             writeInt(value.length);
-            tryCatch(() -> out.write(value));
+            tryCatchRunnable(() -> out.write(value));
         }
         return this;
     }
