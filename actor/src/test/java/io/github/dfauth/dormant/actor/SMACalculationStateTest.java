@@ -38,8 +38,8 @@ public class SMACalculationStateTest {
         List<Price> prices = TestData.unzipCandles(new TypeReference<List<Price>>() {
         }, CSL);
 
-        double close = prices.stream().map(Price::getClose).map(BigDecimal::doubleValue).gather(windowingGatherer(200)).map(p -> p.stream().collect(Collectors.averagingDouble(Double::doubleValue))).toList().getLast();
-        double vol = prices.stream().map(Price::getVolume).map(Double::valueOf).gather(windowingGatherer(200)).map(p -> p.stream().collect(Collectors.averagingDouble(Double::doubleValue))).toList().getLast();
+        double close = prices.stream().map(Price::getClose).map(BigDecimal::doubleValue).gather(windowingGatherer(RingBuffer.create(new double[200]))).map(p -> p.stream().collect(Collectors.averagingDouble(Double::doubleValue))).toList().getLast();
+        double vol = prices.stream().map(Price::getVolume).map(Double::valueOf).gather(windowingGatherer(RingBuffer.create(new double[200]))).map(p -> p.stream().collect(Collectors.averagingDouble(Double::doubleValue))).toList().getLast();
 
         List<PriceVolume> result = prices.stream().gather(smaStatefulCalculation.gatherer()).toList();
 

@@ -15,9 +15,9 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Gatherer;
 
-import static io.github.dfauth.ta.MovingAverage.ema;
 import static io.github.dfauth.trycatch.Function2.peek;
 import static io.github.dfauth.trycatch.Function2.right;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
@@ -43,10 +43,11 @@ public class Actor implements ConsumerSeekAware {
     public void onMessage(Price price) {
         log.info("Received price {}", price);
         RingBuffer<Price> ringBuffer = RingBuffer.create(new Price[period]);
-        Gatherer<Price, EMACalculationState<Price, PriceVolume>, PriceVolume> emaCalculator = new EMACalculationState<>(
-                ringBuffer,
-                new PriceVolumeAggregator(),
-                (l, r) -> new PriceVolume(ema(2.0, period, r.close(), l.getPrice()), ema(2.0, period, r.volume(), l.getVolume()))
+        Function<Price, PriceVolume> extractor = p -> new PriceVolume(p.close(), p.volume());
+        Gatherer<Price, ExponentialMovingAverage<Price, PriceVolume>, PriceVolume> emaCalculator = new ExponentialMovingAverage<>(
+                period,
+                extractor,
+                ringBuffer
         ).gatherer();
         priceRepository.findByCodeAndLimit(price.getMarketCode(), 2 * period)
                 .stream()

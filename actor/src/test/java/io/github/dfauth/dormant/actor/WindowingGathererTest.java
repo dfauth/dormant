@@ -1,5 +1,6 @@
 package io.github.dfauth.dormant.actor;
 
+import io.github.dfauth.ta.RingBuffer;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +15,6 @@ public class WindowingGathererTest {
 
     @Test
     public void testIt() {
-        assertEquals(List.of(List.of(1,2,3), List.of(2,3,4)), Stream.of(1,2,3,4).gather(windowingGatherer(3)).toList());
+        assertEquals(List.of(List.of(1.0,2.0,3.0), List.of(2.0,3.0,4.0)), Stream.of(1.0,2.0,3.0,4.0).gather(windowingGatherer(RingBuffer.create(new double[3]))).toList());
     }
 }

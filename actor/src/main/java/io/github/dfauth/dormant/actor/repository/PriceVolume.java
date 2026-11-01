@@ -3,18 +3,15 @@ package io.github.dfauth.dormant.actor.repository;
 import io.github.dfauth.dormant.Decoder;
 import io.github.dfauth.dormant.Dormant;
 import io.github.dfauth.dormant.Encoder;
-import io.github.dfauth.dormant.actor.CalculationState;
-import io.github.dfauth.dormant.model.Price;
+import io.github.dfauth.dormant.actor.Scalable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Optional;
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Data
-public class PriceVolume implements Dormant {
+public class PriceVolume implements Dormant, Scalable<PriceVolume> {
 
     private double price;
     private double volume;
@@ -30,22 +27,20 @@ public class PriceVolume implements Dormant {
                 .readDouble(d -> this.volume = d);
     }
 
-    public static class PriceVolumeCalculationState implements CalculationState<Price, PriceVolume, PriceVolumeCalculationState> {
+    @Override
+    public PriceVolume aggregate(PriceVolume other) {
+//        this.price += other.price;
+//        this.volume += other.volume;
+//        return this;
+        return new PriceVolume(this.price + other.price, this.volume + other.volume);
+    }
 
-        private final PriceVolume priceVolume = new PriceVolume();
-        private int count = 0;
-
-        @Override
-        public Optional<PriceVolume> current() {
-            return Optional.of(new PriceVolume(priceVolume.getPrice() / count, priceVolume.getVolume() / count));
-        }
-
-        @Override
-        public void accept(Price price) {
-            priceVolume.price += price.getClose().doubleValue();
-            priceVolume.volume += price.getVolume();
-            this.count++;
-        }
+    @Override
+    public PriceVolume scale(double multiplier) {
+//        this.price *= multiplier;
+//        this.volume *= multiplier;
+//        return this;
+        return new PriceVolume(this.price * multiplier, this.volume * multiplier);
     }
 
 }
