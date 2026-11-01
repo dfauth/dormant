@@ -17,17 +17,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class AggregatorTest {
 
     @Test
-    public void testSmaDoubleStream() {
-        Aggregator.AggregatorGatherer<Double, DoubleAggregator, Double> f = new Aggregator.AggregatorGatherer<>(new DoubleAggregator());
-        assertEquals(List.of(1.0, 1.5, 2.0), Stream.of(1.0, 2.0, 3.0).gather(f).toList());
+    public void testDoubleAggregator() {
+        Aggregator<Double, Double> aggregator = Aggregator.aggregator();
+        assertEquals(2.5, aggregator.apply(Stream.of(1.0, 2.0, 3.0, 4.0)));
     }
 
     @Test
-    public void testSmaPriceStream() {
-        Aggregator.AggregatorGatherer<Price, PriceVolumeAggregator, PriceVolume> f = new Aggregator.AggregatorGatherer<>(new PriceVolumeAggregator());
+    public void testPriceAggregator() {
+        PriceVolumeAggregator f = new PriceVolumeAggregator();
         List<Price> prices = TestData.unzipCandles(new TypeReference<List<Price>>() {
         }, CSL);
-        PriceVolume result = prices.stream().gather(f).toList().getLast();
+        PriceVolume result = f.apply(prices.stream());
         assertEquals(245.3827, result.getPrice(), 0.000001);
         assertEquals(935613.92, result.getVolume(), 0.01);
     }

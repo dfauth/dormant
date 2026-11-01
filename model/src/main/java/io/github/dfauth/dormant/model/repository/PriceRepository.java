@@ -27,6 +27,16 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     @Query("SELECT DISTINCT p.code FROM Price p WHERE p.market = :market ORDER BY p.code")
     List<String> findDistinctCodesByMarket(@Param("market") String market);
 
+    @Query("SELECT p FROM Price p WHERE p.market = :market and p.code = :code ORDER BY p.date desc LIMIT :limit")
+    List<Price> findByMarketAndCodeAndLimit(@Param("market") String market, @Param("code") String code, @Param("limit") int limit);
+
+    default List<Price> findByCodeAndLimit(String marketCode, int limit) {
+        String[] arr = marketCode.split(":");
+        String mkt = arr[0];
+        String code = arr[1];
+        return findByMarketAndCodeAndLimit(mkt, code, limit).reversed();
+    }
+
     @Query("SELECT p FROM Price p WHERE p.market = :market and p.code = :code AND p.date > :date ORDER BY p.date asc")
     List<Price> findByCodeOrderByDateAsc(@Param("market") String market, @Param("code") String code, @Param("date") LocalDate date);
 

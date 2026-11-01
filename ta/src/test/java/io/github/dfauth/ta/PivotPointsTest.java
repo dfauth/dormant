@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Gatherers;
 
 import static io.github.dfauth.ta.TestData.BHP;
-import static io.github.dfauth.trycatch.Function2.latest;
+import static io.github.dfauth.trycatch.Function2.right;
 import static io.github.dfauth.trycatch.Utils.oops;
 
 @Slf4j
@@ -20,7 +20,7 @@ public class PivotPointsTest {
     public void testIt() {
         List<Candle> candles = TestData.unzipCandles(BHP).stream()
                 .gather(Gatherers.windowSliding(21))
-                .reduce(latest()).orElse(Collections.emptyList());
+                .reduce(right()).orElse(Collections.emptyList());
         log.info("candles: " + candles.stream().map(Objects::toString).collect(Collectors.joining("\n")));
         PivotPoints pivotPoints = candles.stream()
                 .reduce(new PivotPoints(), (p, c) -> p.apply(c), oops());

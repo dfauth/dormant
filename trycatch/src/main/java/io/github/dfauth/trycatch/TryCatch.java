@@ -55,8 +55,18 @@ public class TryCatch {
     }
 
     public static <T> Consumer<T> tryCatch(ExceptionalConsumer<T> consumer) {
+        return tryCatch(consumer, e -> {
+            log.error(e.getMessage(), e);
+            propagate().apply(e);
+        });
+    }
+
+    public static <T> Consumer<T> tryCatch(ExceptionalConsumer<T> consumer, Consumer<Exception> exceptionHandler) {
         return t -> tryCatch(() -> {
             consumer.accept(t);
+            return null;
+        }, e -> {
+            exceptionHandler.accept(e);
             return null;
         });
     }

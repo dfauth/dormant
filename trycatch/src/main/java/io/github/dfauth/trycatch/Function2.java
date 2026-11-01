@@ -6,8 +6,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static io.github.dfauth.trycatch.TryCatch.tryCatch;
-
 @Slf4j
 public class Function2 {
 
@@ -18,11 +16,11 @@ public class Function2 {
         };
     }
 
-    public static <T> BinaryOperator<T> first() {
+    public static <T> BinaryOperator<T> left() {
         return (l, r) -> l;
     }
 
-    public static <T> BinaryOperator<T> latest() {
+    public static <T> BinaryOperator<T> right() {
         return (l, r) -> r;
     }
 
