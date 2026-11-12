@@ -12,7 +12,7 @@ import io.github.dfauth.dormant.kafka.KafkaPublisher;
 import io.github.dfauth.trade.model.*;
 import io.github.dfauth.dormant.model.repository.PriceRepository;
 import io.github.dfauth.trade.service.UserService;
-import io.github.dfauth.trade.utils.LocalDateDeserializer;
+import io.github.dfauth.dormant.model.utils.LocalDateDeserializer;
 import io.github.dfauth.trade.utils.TenorDeserializer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

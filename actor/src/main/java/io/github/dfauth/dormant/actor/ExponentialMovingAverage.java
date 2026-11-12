@@ -30,7 +30,7 @@ public class ExponentialMovingAverage<T, R extends Scalable<R>> implements Calcu
     }
 
     public ExponentialMovingAverage(double multiplier, int period, Function<T, R> extractor, Function<T, Optional<R>> initialValueSupplier) {
-        this(2.0 / (1 + period), extractor, initialValueSupplier);
+        this(multiplier / (1 + period), extractor, initialValueSupplier);
     }
 
     public ExponentialMovingAverage(double multiplier, Function<T, R> extractor, Function<T, Optional<R>> initialValueSupplier) {
@@ -58,9 +58,10 @@ public class ExponentialMovingAverage<T, R extends Scalable<R>> implements Calcu
 
     @Override
     public void accept(T t) {
+        Optional<R> t1 = initialValueSupplier.apply(t);
         R r;
         if((r = previous.get()) == null) {
-            initialValueSupplier.apply(t).ifPresent(previous::set);
+            t1.ifPresent(previous::set);
         } else {
             previous.set(ema(t, r));
         }

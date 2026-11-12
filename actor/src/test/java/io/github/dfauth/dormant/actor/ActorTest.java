@@ -5,7 +5,10 @@ import io.github.dfauth.dormant.actor.config.KafkaConfig;
 import io.github.dfauth.dormant.actor.repository.TAContainer;
 import io.github.dfauth.dormant.actor.repository.TAContainerRepository;
 import io.github.dfauth.dormant.kafka.KafkaPublisher;
+import io.github.dfauth.dormant.model.BusinessDayCalendar;
+import io.github.dfauth.dormant.model.MarketEnum;
 import io.github.dfauth.dormant.model.Price;
+import io.github.dfauth.dormant.model.repository.MarketHolidayRepository;
 import io.github.dfauth.dormant.model.repository.PriceRepository;
 import io.github.dfauth.ta.TestData;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +22,9 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +54,9 @@ public class ActorTest {
     private EmbeddedKafkaBroker embeddedKafkaBroker;
 
     @MockitoBean
+    private MarketHolidayRepository marketHolidayRepository;
+
+    @MockitoBean
     private PriceRepository priceRepository;
 
     @MockitoBean
@@ -59,7 +67,8 @@ public class ActorTest {
     public void testIt() throws InterruptedException, ExecutionException, TimeoutException {
         List<Price> prices = TestData.unzipCandles(new TypeReference<>() {
         }, TestData.CSL2);
-        when(priceRepository.findByCodeAndLimit(anyString(), anyInt())).thenReturn(prices.subList(prices.size() - 400, prices.size()));
+        when(priceRepository.findByCodeOrderByDateAsc(anyString(), any(LocalDate.class))).thenReturn(prices.subList(prices.size() - 400, prices.size()));
+        when(marketHolidayRepository.findBusinessCalendarByMarket(any(MarketEnum.class))).thenReturn(new BusinessDayCalendar(MarketEnum.ASX, new TreeMap<>()));
         CompletableFuture<SendResult<String, Price>> fut = kafkaPublisher.publish(CODE, prices.getLast());
         fut.handle(handler(sr -> {
             log.info("sendResult: {}", sr);
@@ -72,5 +81,8 @@ public class ActorTest {
         ArgumentCaptor<TAContainer> captor = ArgumentCaptor.forClass(TAContainer.class);
         verify(taContainerRepository, times(1)).save(captor.capture());
         assertEquals(161.71, captor.getValue().getEma200().getPrice(), 0.01);
+        assertEquals(173.14, captor.getValue().getEma63().getPrice(), 0.01);
+        assertEquals(191.18, captor.getValue().getEma21().getPrice(), 0.01);
+        assertEquals(196.71, captor.getValue().getEma8().getPrice(), 0.01);
     }
 }

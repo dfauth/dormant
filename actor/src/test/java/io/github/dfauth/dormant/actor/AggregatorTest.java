@@ -18,16 +18,16 @@ public class AggregatorTest {
 
     @Test
     public void testDoubleAggregator() {
-        Aggregator<Double, Double> aggregator = Aggregator.aggregator();
-        assertEquals(2.5, aggregator.apply(Stream.of(1.0, 2.0, 3.0, 4.0)));
+        Aggregator.DoubleAggregator aggregator = Aggregator.aggregator();
+        assertEquals(2.5, Stream.of(1.0, 2.0, 3.0, 4.0).gather(aggregator.gatherer()).toList().getLast());
     }
 
     @Test
     public void testPriceAggregator() {
-        PriceVolumeAggregator f = new PriceVolumeAggregator();
+        PriceVolumeAggregator f = new PriceVolumeAggregator(200);
         List<Price> prices = TestData.unzipCandles(new TypeReference<List<Price>>() {
         }, CSL);
-        PriceVolume result = f.apply(prices.stream());
+        PriceVolume result = prices.stream().gather(f.gatherer()).toList().getLast();
         assertEquals(245.3827, result.getPrice(), 0.000001);
         assertEquals(935613.92, result.getVolume(), 0.01);
     }

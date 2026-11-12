@@ -70,7 +70,7 @@ services:
     networks:
       - dormant_net
 
-  dormant:
+  trade:
     build:
       context: .
       dockerfile: trade/Dockerfile
@@ -114,7 +114,7 @@ services:
       - JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5083
       - spring.kafka.bootstrap-servers=kafka:9092
       - dormant.trade.security.oauth2.redirect=http://localhost:4173
-      - io.github.dfauth.dormant.actor.Actor.rewrite=true
+      - io.github.dfauth.dormant.actor.Actor.rewrite=false
     volumes:
       - ${HOST_DB_PATH}:/data
     networks:

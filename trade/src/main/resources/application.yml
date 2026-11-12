@@ -46,6 +46,10 @@ spring:
           issuer-uri: https://accounts.google.com
           jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
 
+  liquibase:
+    enabled: true
+    change-log: "classpath:db/changelog/db-changelog-master.xml"
+
 server:
   port: 8081
 

@@ -24,18 +24,18 @@ public class SMACalculationStateTest {
     @Test
     public void testSmaDoubleStream() {
         RingBuffer<Double> ringBuffer = RingBuffer.create(new double[3]);
-        SMACalculationState<Double, Double> smaStatefulCalculation = smaCalculationState(ringBuffer);
+        SMACalculationState<Double, Double, Aggregator.DoubleAggregator> smaStatefulCalculation = smaCalculationState(ringBuffer);
         assertEquals(List.of(2.0, 3.0), Stream.of(1.0, 2.0, 3.0, 4.0).gather(smaStatefulCalculation.gatherer()).toList());
         assertEquals(List.of(2.0,3.0,4.0), ringBuffer.stream().toList());
     }
 
     @Test
     public void testSmaPriceStream() {
-        SMACalculationState<Price, PriceVolume> smaStatefulCalculation = new SMACalculationState<Price, PriceVolume>(
+        SMACalculationState<Price, PriceVolume, PriceVolumeAggregator> smaStatefulCalculation = new SMACalculationState<>(
                 RingBuffer.create(new Price[200]),
-               new PriceVolumeAggregator()
+               new PriceVolumeAggregator(200)
         );
-        List<Price> prices = TestData.unzipCandles(new TypeReference<List<Price>>() {
+        List<Price> prices = TestData.unzipCandles(new TypeReference<>() {
         }, CSL);
 
         double close = prices.stream().map(Price::getClose).map(BigDecimal::doubleValue).gather(windowingGatherer(RingBuffer.create(new double[200]))).map(p -> p.stream().collect(Collectors.averagingDouble(Double::doubleValue))).toList().getLast();

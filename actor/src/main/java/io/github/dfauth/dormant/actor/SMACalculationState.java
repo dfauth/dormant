@@ -4,28 +4,27 @@ import io.github.dfauth.ta.RingBuffer;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-public class SMACalculationState<T,R> implements CalculationState<T,R,SMACalculationState<T,R>> {
+public class SMACalculationState<T,R, S extends Aggregator<T,R,S>> implements CalculationState<T,R,SMACalculationState<T,R,S>> {
 
     private final RingBuffer<T> ringBuffer;
     private final int period;
-    private final Aggregator<T, R> aggregator;
+    private final S aggregator;
 
-    public SMACalculationState(RingBuffer<T> ringBuffer, Aggregator<T, R> f) {
+    public SMACalculationState(RingBuffer<T> ringBuffer, S f) {
         this(ringBuffer, ringBuffer.capacity(), f);
     }
 
-    public static <S extends SMACalculationState<Double, Double>> SMACalculationState<Double, Double> smaCalculationState(RingBuffer<Double> ringBuffer) {
-        return new SMACalculationState<>(ringBuffer, s -> s.collect(Collectors.averagingDouble(Double::doubleValue)));
+    public static SMACalculationState<Double, Double, Aggregator.DoubleAggregator> smaCalculationState(RingBuffer<Double> ringBuffer) {
+        return new SMACalculationState<>(ringBuffer, new Aggregator.DoubleAggregator(ringBuffer.capacity()));
     }
 
     @Override
     public Optional<R> current() {
         return Optional.of(ringBuffer)
                 .filter(rb -> rb.size() >= period)
-                .map(rb -> aggregator.apply(rb.stream()));
+                .flatMap(rb -> aggregator.stream(rb.stream()));
     }
 
     @Override

@@ -29,15 +29,15 @@ public class EMACalculationStateTest {
 
     @Test
     public void testEmaDoubleStream() {
-        EMACalculationState<Double, Double> emaStatefulCalculation = EMACalculationState.emaCalculationState(3);
+        EMACalculationState<Double, Double, Aggregator.DoubleAggregator> emaStatefulCalculation = EMACalculationState.emaCalculationState(3);
         assertEquals(List.of(2.0, 3.0), Stream.of(1.0, 2.0, 3.0, 4.0).map(emaStatefulCalculation).flatMap(Optional::stream).toList());
     }
 
     @Test
     public void testEmaPriceStream() {
-        EMACalculationState<Price, PriceVolume> emaStatefulCalculation = new EMACalculationState<Price, PriceVolume>(
+        EMACalculationState<Price, PriceVolume, PriceVolumeAggregator> emaStatefulCalculation = new EMACalculationState<>(
                 RingBuffer.create(new Price[period]),
-                new PriceVolumeAggregator(),
+                new PriceVolumeAggregator(period),
                 (l, r) -> new PriceVolume(ema(2.0, period, r.close(), l.getPrice()), ema(2.0, period, r.volume(), l.getVolume()))
         );
         List<Price> prices = TestData.unzipCandles(new TypeReference<List<Price>>() {

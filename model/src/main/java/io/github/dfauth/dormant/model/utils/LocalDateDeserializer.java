@@ -1,4 +1,4 @@
-package io.github.dfauth.trade.utils;
+package io.github.dfauth.dormant.model.utils;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;

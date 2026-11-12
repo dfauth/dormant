@@ -6,25 +6,24 @@ import lombok.RequiredArgsConstructor;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 import java.util.stream.Gatherer;
 
 import static io.github.dfauth.ta.ExponentialMovingAverage.ema;
 
 @RequiredArgsConstructor
-public class EMACalculationState<T, R> implements CalculationState<T, R, EMACalculationState<T, R>> {
+public class EMACalculationState<T, R, S extends Aggregator<T, R, S>> implements CalculationState<T, R, EMACalculationState<T, R, S>> {
 
     private final RingBuffer<T> ringBuffer;
-    private final Aggregator<T, R> aggregator;
+    private final S aggregator;
     private final BiFunction<R, T, R> emaFunction;
     private AtomicReference<R> previous = new AtomicReference<>(null);
 
-    public static EMACalculationState<Double, Double> emaCalculationState(int period) {
+    public static <T, R, DoubleAggregator> EMACalculationState<Double, Double, Aggregator.DoubleAggregator> emaCalculationState(int period) {
         Gatherer<Double, ?, Double> f;
         BiFunction<Double, Double, Double> g;
         return new EMACalculationState<>(
                 RingBuffer.create(new double[period]),
-                s -> s.collect(Collectors.averagingDouble(Double::doubleValue)),
+                new Aggregator.DoubleAggregator(),
                 (l, r) -> ema(2.0, period, l, r)
         );
     }
@@ -36,7 +35,7 @@ public class EMACalculationState<T, R> implements CalculationState<T, R, EMACalc
         if ((r = previous.get()) == null) {
             if (ringBuffer.isFull()) {
                 // calculate SMA and this becomes the first ema value
-                previous.set(aggregator.apply(ringBuffer.stream()));
+                aggregator.stream(ringBuffer.stream()).ifPresent(previous::set);
             }
         } else {
             previous.set(emaFunction.apply(r, t));
