@@ -1,7 +1,6 @@
 package io.github.dfauth.dormant.actor;
 
 import io.github.dfauth.dormant.actor.repository.PriceVolume;
-import io.github.dfauth.dormant.actor.repository.TAContainer;
 import io.github.dfauth.dormant.actor.repository.TAContainerRepository;
 import io.github.dfauth.dormant.model.BusinessDayCalendar;
 import io.github.dfauth.dormant.model.MarketEnum;
@@ -15,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.listener.ConsumerSeekAware;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -24,7 +24,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Gatherer;
 
-import static io.github.dfauth.trycatch.Function2.peek;
 import static io.github.dfauth.trycatch.Function2.right;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
 import static java.util.function.Predicate.not;
@@ -51,6 +50,7 @@ public class Actor implements ConsumerSeekAware {
     }
 
     @KafkaListener(topics = {"prices"}, groupId = "prices")
+    @Transactional
     public void onMessage(Price price) {
         log.info("Received price {}", price);
         RingBuffer<Price> ringBuffer = RingBuffer.create(new Price[period]);
@@ -66,16 +66,19 @@ public class Actor implements ConsumerSeekAware {
                 .gather(emaCalculator)
                 .reduce(right())
                 .ifPresent(tryCatch(ema200 -> {
-                    calculateEma(ringBuffer, 65).ifPresent(ema63 -> {
+                    calculateEma(ringBuffer, 65).ifPresent(ema65 -> {
                         calculateEma(ringBuffer, 21).ifPresent(ema21 -> {
                             calculateEma(ringBuffer, 8).ifPresent(ema8 -> {
-                                taContainerRepository.findByMarketAndCodeAndDate(price.getMarket(), price.getCode(), price.getDate())
-                                        .filter(tac -> !tac.getEma200().equals(ema200))
-                                        .map(peek(tac -> tac.setEma200(ema200)))
-                                        .ifPresentOrElse(taContainerRepository::save,
-                                                () -> taContainerRepository.save(new TAContainer(price.getMarket(), price.getCode(), price.getDate(), ema200, ema63, ema21, ema8))
-                                        );
-                                log.info("event: {} {} {} {}", ema200, ema63, ema21, ema8);
+                                taContainerRepository.upsert(
+                                        price.getMarket(),
+                                        price.getCode(),
+                                        price.getDate(),
+                                        ema200,
+                                        ema65,
+                                        ema21,
+                                        ema8
+                                );
+                                log.info("event: {} {} {} {}", ema200, ema65, ema21, ema8);
                             });
                         });
                     });

@@ -37,7 +37,7 @@ public class TAContainer {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = true)
-    private PriceVolume ema63;
+    private PriceVolume ema65;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = true)

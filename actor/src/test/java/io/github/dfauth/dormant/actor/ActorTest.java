@@ -2,7 +2,7 @@ package io.github.dfauth.dormant.actor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.dfauth.dormant.actor.config.KafkaConfig;
-import io.github.dfauth.dormant.actor.repository.TAContainer;
+import io.github.dfauth.dormant.actor.repository.PriceVolume;
 import io.github.dfauth.dormant.actor.repository.TAContainerRepository;
 import io.github.dfauth.dormant.kafka.KafkaPublisher;
 import io.github.dfauth.dormant.model.BusinessDayCalendar;
@@ -78,11 +78,14 @@ public class ActorTest {
 
         SendResult<String, Price> sr = fut.get(1000, TimeUnit.MILLISECONDS);
         sleep(10000);
-        ArgumentCaptor<TAContainer> captor = ArgumentCaptor.forClass(TAContainer.class);
-        verify(taContainerRepository, times(1)).save(captor.capture());
-        assertEquals(161.71, captor.getValue().getEma200().getPrice(), 0.01);
-        assertEquals(173.14, captor.getValue().getEma63().getPrice(), 0.01);
-        assertEquals(191.18, captor.getValue().getEma21().getPrice(), 0.01);
-        assertEquals(196.71, captor.getValue().getEma8().getPrice(), 0.01);
+        ArgumentCaptor<PriceVolume> captor200 = ArgumentCaptor.forClass(PriceVolume.class);
+        ArgumentCaptor<PriceVolume> captor65 = ArgumentCaptor.forClass(PriceVolume.class);
+        ArgumentCaptor<PriceVolume> captor21 = ArgumentCaptor.forClass(PriceVolume.class);
+        ArgumentCaptor<PriceVolume> captor8 = ArgumentCaptor.forClass(PriceVolume.class);
+        verify(taContainerRepository, times(1)).upsert(anyString(), anyString(), any(LocalDate.class), captor200.capture(), captor65.capture(), captor21.capture(), captor8.capture());
+        assertEquals(161.71, captor200.getValue().getPrice(), 0.01);
+        assertEquals(173.14, captor65.getValue().getPrice(), 0.01);
+        assertEquals(191.18, captor21.getValue().getPrice(), 0.01);
+        assertEquals(196.71, captor8.getValue().getPrice(), 0.01);
     }
 }
