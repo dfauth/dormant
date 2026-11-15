@@ -1,0 +1,38 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hierarchy Tree</title>
+    <link rel="stylesheet" href="/TreeWidget.css">
+</head>
+<body>
+<div id="app"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" src="/HierarchyTreeWidget.jsx"></script>
+<script type="text/babel">
+    const HierarchyTreeWidget = window.HierarchyTreeWidget;
+    
+    // Get auth token from localStorage (if available from OAuth login)
+    // You can also set it directly: authToken: "your-token-here"
+    const authToken = localStorage.getItem('access_token');
+    
+    // Configuration modes:
+    // - "read-only" (default): No editing allowed
+    // - "writable-all": Changes write the entire hierarchy to saveEndpoint
+    // - "writable-slice": Changes write the edited node + all parent nodes to saveEndpoint
+    // - "writable-node": Changes write only the node being changed with path info to saveEndpoint
+    
+    const widgetConfig = {
+        hierarchyEndpoint: "http://localhost:8081/api/positions",
+        saveEndpoint: "http://localhost:8081/api/positions",
+        saveKeyParam: "key",
+        authToken: authToken,
+        mode: "writable-node"  // options: "read-only", "writable-all", "writable-slice", or "writable-node"
+    };
+    ReactDOM.createRoot(document.getElementById("app")).render(<HierarchyTreeWidget {...widgetConfig} />);
+</script>
+</body>
+</html>

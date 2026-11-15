@@ -46,6 +46,9 @@ spring:
           issuer-uri: https://accounts.google.com
           jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
 
+cors:
+  origins: http://localhost:4173,http://localhost:3000
+
 server:
   port: 8081
 
