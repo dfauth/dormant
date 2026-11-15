@@ -70,7 +70,7 @@ services:
     networks:
       - dormant_net
 
-  dormant:
+  trade:
     build:
       context: .
       dockerfile: trade/Dockerfile

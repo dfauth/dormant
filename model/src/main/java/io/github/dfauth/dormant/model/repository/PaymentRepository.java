@@ -14,6 +14,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     List<Payment> findByUserIdOrderByDateAsc(Long userId);
 
+    List<Payment> findByUserIdAndMarketAndCodeOrderByDateAsc(Long userId, String market, String code);
+
     List<Payment> findByUserIdAndTransactionTypeOrderByDateAsc(Long userId, TransactionType transactionType);
 
     List<Payment> findByUserIdAndCodeOrderByDateAsc(Long userId, String code);

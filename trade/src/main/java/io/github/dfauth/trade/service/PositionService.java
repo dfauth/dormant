@@ -56,6 +56,22 @@ public class PositionService {
         return filtered;
     }
 
+    public List<Position> getPositions(long userId, String market, String code, Predicate<Position> p) {
+        List<Position> filtered = tradeRepository.findByUserIdAndMarketAndCodeOrderByDateAsc(userId, market, code).stream()
+                .collect(new PositionCollector()).stream()
+                .filter(_p -> p.test(_p))
+                .toList();
+        List<Payment> allDivs = paymentRepository.findByUserIdAndTransactionTypeOrderByDateAsc(userId, io.github.dfauth.dormant.model.TransactionType.DIV);
+        Map<String, List<Payment>> divsByKey = allDivs.stream()
+                .filter(d -> d.getCode() != null)
+                .collect(Collectors.groupingBy(Payment::getCode));
+        filtered.forEach(pos -> assignDividends(
+                List.of(pos),
+                divsByKey.getOrDefault(pos.getMarket() + ":" + pos.getCode(), List.of())
+        ));
+        return filtered;
+    }
+
     public List<Position> getPositionsByMarket(Long userId, String market) {
         List<Trade> allTrades = tradeRepository.findByUserIdAndMarketOrderByDateAsc(userId, market);
         List<Payment> allDivs = paymentRepository.findByUserIdAndMarketAndTransactionTypeOrderByDateAsc(userId, market, io.github.dfauth.dormant.model.TransactionType.DIV);

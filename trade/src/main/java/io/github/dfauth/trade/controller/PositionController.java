@@ -62,6 +62,22 @@ public class PositionController extends BaseController {
         return authorize(u -> positionService.getPositions(u.getId(), or(Predicate::and, dateRangePredicate, openClosePredicate).orElse(always())));
     }
 
+    @Operation(summary = "Get positions", description = "Returns positions across all markets for the authenticated user filtered by the provided predicates.")
+    @ApiResponse(responseCode = "200", description = "List of matching positions")
+    @GetMapping("/{marketCode}")
+    public List<Position> getPositions(@Parameter(description = "Market code") @PathVariable("marketCode") String marketCode,
+                                        @Parameter(description = "Position predicate (ie. OPEN / CLOSED)") @RequestParam("predicate") Optional<PositionPredicate> positionPredicate,
+                                       @Parameter(description = "Tenor shorthand for date range (e.g. 6M, 1Y)") @RequestParam("tenor") Optional<String> tenor,
+                                       @Parameter(description = "Start date in YYYYMMDD format") @RequestParam("startFrom") Optional<String> startFrom,
+                                       @Parameter(description = "End date in YYYYMMDD format") @RequestParam("endAt") Optional<String> endAt) {
+        Optional<Predicate<Position>> dateRangePredicate = DateRange.resolve(tenor, startFrom, endAt)
+                .map(dr -> p ->
+                        (p.getOpenDate().isAfter(dr.start()) && p.getCloseDate().map(cd -> dr.end().isAfter(cd)).orElse(true))
+                );
+        Optional<Predicate<Position>> openClosePredicate = positionPredicate.map(PositionPredicate::get);
+        return authorize(u -> positionService.getPositions(u.getId(), u.resolveCode(marketCode)._1(), u.resolveCode(marketCode)._2(), or(Predicate::and, dateRangePredicate, openClosePredicate).orElse(always())));
+    }
+
     @Operation(summary = "Get open positions by market", description = "Returns open positions in the specified market for the authenticated user.")
     @ApiResponse(responseCode = "200", description = "List of open positions in the market")
     @GetMapping("/market/{market}")

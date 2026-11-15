@@ -1,0 +1,233 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Programmable Table</title>
+    <link rel="stylesheet" href="/TreeWidget.css">
+    <style>
+        .programmable-table-container {
+            padding: 20px;
+        }
+        
+        .table-container {
+            position: relative;
+            overflow: auto;
+            margin: 20px 0;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            max-height: 600px;
+        }
+        
+        .programmable-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            table-layout: fixed;
+        }
+        
+        .programmable-table tr:nth-child(even) {
+            background-color: #e9ecef;
+        }
+        
+        .programmable-table tr:hover {
+            background-color: #dee2e6;
+        }
+        
+        .table-header-cell {
+            padding: 6px 8px;
+            background-color: #4a6fa5;
+            color: white;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+            font-weight: 600;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .table-cell {
+            padding: 6px 8px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+            min-width: 80px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Frozen header row */
+        .frozen-header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: white;
+        }
+        
+        .frozen-header .table-header-cell {
+            background-color: #4a6fa5;
+            color: white;
+        }
+        
+        /* Frozen first column */
+        .frozen-column {
+            position: sticky;
+            left: 0;
+            z-index: 11;
+        }
+        
+        .frozen-cell {
+            position: sticky;
+            left: 0;
+            z-index: 9;
+            background-color: white;
+        }
+        
+        /* Column resizing */
+        .table-header-cell::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            background-color: transparent;
+            cursor: col-resize;
+            z-index: 10;
+        }
+        
+        .table-header-cell:hover::after {
+            background-color: #007bff;
+        }
+        
+        /* Input field size */
+        .label-input {
+            font-size: 12px !important;
+            padding: 3px 6px !important;
+        }
+        
+        .formula-help {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #007bff;
+        }
+        
+        .formula-help code {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+        
+        .formula-help ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        
+        .formula-help li {
+            margin: 5px 0;
+        }
+        
+        .error-status {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .header-text {
+            cursor: context-menu;
+            user-select: none;
+        }
+        
+        /* Context menu styling */
+        .context-menu {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            border: 1px solid #999;
+            text-align: left;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #e6f0fa !important;
+        }
+        
+        .context-menu-item {
+            text-align: left;
+            padding-left: 16px;
+        }
+        
+        /* Make sure context menu is visible */
+        .context-menu-overlay {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Filter input in context menu */
+        .filter-input-in-menu {
+            font-size: 12px;
+        }
+        
+        .filter-input-in-menu:focus {
+            outline: none;
+        }
+        
+        /* Sorted column */
+        .sorted-column {
+            background-color: #3a5a8f !important;
+        }
+        
+        /* Remove hover effect from context menu */
+        .context-menu-item {
+            text-align: left;
+            padding-left: 16px;
+        }
+        
+        /* Drag and drop styles */
+        .being-dragged {
+            opacity: 0.5;
+            background-color: #6c757d !important;
+        }
+        
+        .drag-over {
+            background-color: #007bff !important;
+            border-top: 2px solid #0056b3 !important;
+        }
+        
+        .table-header-cell {
+            cursor: grab;
+        }
+        
+        .table-header-cell:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="text/babel" src="/ProgrammableTable.jsx"></script>
+<script type="text/babel">
+    const ProgrammableTable = window.ProgrammableTable;
+    
+    // Get auth token from localStorage (if available from OAuth login)
+    const authToken = localStorage.getItem('access_token');
+    
+    // Configuration
+    // tableId: Unique identifier for this table (used as part of the settings key)
+    // settingsEndpoint: Endpoint for settings (default: "/api/settings")
+    const tableConfig = {
+        initialColumns: 5,
+        initialRows: 10,
+        authToken: authToken,
+        tableId: "positions_table",
+        settingsEndpoint: "http://localhost:8081/api/settings"
+    };
+    
+    ReactDOM.createRoot(document.getElementById("app")).render(<ProgrammableTable {...tableConfig} />);
+</script>
+</body>
+</html>
