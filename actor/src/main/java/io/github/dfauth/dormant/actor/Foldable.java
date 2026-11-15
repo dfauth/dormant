@@ -1,6 +1,7 @@
 package io.github.dfauth.dormant.actor;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.Optional;
@@ -16,7 +17,7 @@ public interface Foldable<T, R extends Foldable<T, R>> {
 
     R aggregate(T t);
 
-    R combine(R r);
+    R fold(R r);
 
     default Gatherer<T, R, R>  gatherer() {
         return gatherer(Optional::of);
@@ -54,46 +55,53 @@ public interface Foldable<T, R extends Foldable<T, R>> {
         };
     }
 
-    static DoubleFoldable foldable() {
-        return new DoubleFoldable();
+    static FoldableScalableDouble foldable() {
+        return new FoldableScalableDouble();
     }
 
     @AllArgsConstructor
     @NoArgsConstructor
-    class DoubleFoldable implements Foldable<Double, DoubleFoldable> {
+    class FoldableScalableDouble implements Foldable<Double, FoldableScalableDouble>, Scalable<FoldableScalableDouble> {
 
+        @Getter
         private double d;
         private int cnt;
         private int period;
 
-        public DoubleFoldable(double d) {
+        public FoldableScalableDouble(double d) {
             this(d, 0, 1);
         }
 
-        public DoubleFoldable(double d, int period) {
+        public FoldableScalableDouble(double d, int period) {
             this(d, 0, period);
         }
 
-        public static Function<DoubleFoldable, Optional<Double>> avg() {
-            return avg(0);
-        }
-
-        public static Function<DoubleFoldable, Optional<Double>> avg(int period) {
+        public static Function<FoldableScalableDouble, Optional<Double>> avg(int period) {
             return df -> df.cnt >= period ? Optional.of(df.d / df.cnt) : Optional.empty();
         }
 
         @Override
-        public DoubleFoldable aggregate(Double d) {
+        public FoldableScalableDouble aggregate(Double d) {
             this.d += d;
             this.cnt++;
             return this;
         }
 
         @Override
-        public DoubleFoldable combine(DoubleFoldable r) {
+        public FoldableScalableDouble combine(FoldableScalableDouble r) {
             this.d += r.d;
             this.cnt += r.cnt;
             return this;
+        }
+
+        @Override
+        public FoldableScalableDouble fold(FoldableScalableDouble r) {
+            return combine(r);
+        }
+
+        @Override
+        public FoldableScalableDouble scale(double multiplier) {
+            return new FoldableScalableDouble(this.d * multiplier);
         }
     }
 }

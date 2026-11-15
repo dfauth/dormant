@@ -1,7 +1,6 @@
 package io.github.dfauth.dormant.actor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import io.github.dfauth.dormant.actor.repository.FoldablePriceVolume;
 import io.github.dfauth.dormant.actor.repository.PriceVolume;
 import io.github.dfauth.dormant.model.Price;
 import io.github.dfauth.ta.RingBuffer;
@@ -14,7 +13,7 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 import static io.github.dfauth.dormant.actor.Gatherers.windowingGatherer;
-import static io.github.dfauth.dormant.actor.repository.FoldablePriceVolume.smaFinisher;
+import static io.github.dfauth.dormant.actor.repository.PriceVolume.smaFinisher;
 import static io.github.dfauth.ta.TestData.CSL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -35,7 +34,7 @@ public class WindowingGathererTest {
     @Test
     public void testPriceVolume() {
         int period = 200;
-        FoldablePriceVolume foldable = new FoldablePriceVolume();
+        PriceVolume foldable = new PriceVolume();
 
         List<Price> prices = TestData.unzipCandles(new TypeReference<>() {
         }, CSL);
@@ -43,7 +42,7 @@ public class WindowingGathererTest {
         List<PriceVolume> result = prices.stream().skip(prices.size() - 2 * period)
                 .gather(windowingGatherer(
                                 RingBuffer.create(new Price[period]),
-                                rb -> rb.stream().gather(new FoldablePriceVolume().gatherer(smaFinisher(period))).findFirst())
+                                rb -> rb.stream().gather(new PriceVolume().gatherer(smaFinisher(period))).findFirst())
                 )
                 .flatMap(Optional::stream)
                 .toList();

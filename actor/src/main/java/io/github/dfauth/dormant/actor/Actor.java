@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
-import java.util.stream.Gatherer;
 
 import static io.github.dfauth.trycatch.Function2.right;
 import static io.github.dfauth.trycatch.TryCatch.tryCatch;
@@ -54,16 +53,16 @@ public class Actor implements ConsumerSeekAware {
     public void onMessage(Price price) {
         log.info("Received price {}", price);
         RingBuffer<Price> ringBuffer = RingBuffer.create(new Price[period]);
-        Gatherer<Price, ExponentialMovingAverage<Price, PriceVolume>, PriceVolume> emaCalculator = new ExponentialMovingAverage<>(
+        ExponentialMovingAverage<Price, PriceVolume> emaCalculator = new ExponentialMovingAverage<>(
                 period,
                 extractor,
-                ringBuffer
-        ).gatherer();
+                new SimpleMovingAverage<>(ringBuffer, extractor)
+        );
         BusinessDayCalendar businessCalendar = marketHolidayRepository.findBusinessCalendarByMarket(MarketEnum.valueOf(price.getMarket()));
         LocalDate date = businessCalendar.nextOpen().minusDays(2 * period);
         priceRepository.findByCodeOrderByDateAsc(price.getMarketCode(), date)
                 .stream()
-                .gather(emaCalculator)
+                .flatMap(p -> emaCalculator.apply(p).stream())
                 .reduce(right())
                 .ifPresent(tryCatch(ema200 -> {
                     calculateEma(ringBuffer, 65).ifPresent(ema65 -> {
@@ -86,12 +85,16 @@ public class Actor implements ConsumerSeekAware {
     }
 
     private Optional<PriceVolume> calculateEma(RingBuffer<Price> ringBuffer, int period) {
-        Gatherer<Price, ExponentialMovingAverage<Price, PriceVolume>, PriceVolume> emaCalculator = new ExponentialMovingAverage<>(
+        ExponentialMovingAverage<Price, PriceVolume> emaCalculator = new ExponentialMovingAverage<>(
                 period,
                 extractor,
-                new PriceVolumeAggregator(period)
-        ).gatherer();
-        return Optional.ofNullable(ringBuffer.stream(-2 * period).gather(emaCalculator).toList()).filter(not(List::isEmpty)).map(List::getLast);
+                new SimpleAverage<>(period, extractor, new PriceVolume())
+//                new SimpleMovingAverage<>(RingBuffer.create(new Price[period]), extractor)
+        );
+        return Optional.of(ringBuffer.stream(-2 * period)
+                .flatMap(p -> emaCalculator.apply(p).stream()).toList())
+                .filter(not(List::isEmpty))
+                .map(List::getLast);
     }
 
     @Override

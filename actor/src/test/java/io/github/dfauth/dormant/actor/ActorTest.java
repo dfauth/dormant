@@ -84,8 +84,8 @@ public class ActorTest {
         ArgumentCaptor<PriceVolume> captor8 = ArgumentCaptor.forClass(PriceVolume.class);
         verify(taContainerRepository, times(1)).upsert(anyString(), anyString(), any(LocalDate.class), captor200.capture(), captor65.capture(), captor21.capture(), captor8.capture());
         assertEquals(161.71, captor200.getValue().getPrice(), 0.01);
-        assertEquals(173.14, captor65.getValue().getPrice(), 0.01);
-        assertEquals(191.18, captor21.getValue().getPrice(), 0.01);
-        assertEquals(196.71, captor8.getValue().getPrice(), 0.01);
+        assertEquals(171.74, captor65.getValue().getPrice(), 0.01);
+        assertEquals(190.97, captor21.getValue().getPrice(), 0.01);
+        assertEquals(196.51, captor8.getValue().getPrice(), 0.01);
     }
 }
