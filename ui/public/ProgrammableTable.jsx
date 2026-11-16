@@ -1,31 +1,52 @@
 const { useEffect, useState, useCallback, useRef } = React;
 
 // Parse formula in the format: =FETCH("url").field or =FETCH("url").map(...)
+// Also supports: = size * close (expression with column references)
 const parseFormula = (formula) => {
   if (!formula || !formula.startsWith("=")) {
     return null;
   }
   
-  const text = formula.substring(1); // Remove '='
+  const text = formula.substring(1).trim(); // Remove '=' and trim
   
-  // Match simple FETCH pattern: FETCH("url") or FETCH("url").field
-  const simpleFetchMatch = text.match(/^FETCH\("([^"]+)"\)(\.(\w+))?$/);
-  if (simpleFetchMatch) {
-    return {
-      type: "FETCH",
-      url: simpleFetchMatch[1],
-      field: simpleFetchMatch[3] || null,
-      transform: null
-    };
-  }
-  
-  // Match FETCH with JavaScript: FETCH("url").map(...) or FETCH("url").filter(...)
-  const jsFetchMatch = text.match(/^FETCH\("([^"]+)"\)\.(.+)$/);
-  if (jsFetchMatch) {
+  // Match FETCH formulas first (these can contain + in URLs)
+  // Use non-greedy match to handle the first closing paren
+  const fetchMatch = text.match(/^FETCH\(([^)]+)\)(.*)?$/);
+  if (fetchMatch) {
+    const urlPart = fetchMatch[1];
+    const afterFetch = fetchMatch[2] || '';
+    
+    // Remove surrounding quotes from URL if it's a simple string
+    // But keep them if it contains variables (has +)
+    const hasVariables = urlPart.includes('+');
+    const url = hasVariables ? urlPart : urlPart.replace(/^"|"$/g, '');
+    
+    // Check if there's anything after the closing paren
+    if (!afterFetch) {
+      return {
+        type: "FETCH",
+        url: url,
+        field: null,
+        transform: null
+      };
+    }
+    
+    // Check if it's a simple field extraction (.field)
+    const simpleFieldMatch = afterFetch.match(/^\.(\w+)$/);
+    if (simpleFieldMatch) {
+      return {
+        type: "FETCH",
+        url: url,
+        field: simpleFieldMatch[1],
+        transform: null
+      };
+    }
+    
+    // It's a FETCH with a method/chain (.map, .filter, .at(-1).close, etc.)
     return {
       type: "FETCH_JS",
-      url: jsFetchMatch[1],
-      jsExpression: jsFetchMatch[2]
+      url: url,
+      jsExpression: afterFetch.trim().substring(1) // Remove leading dot
     };
   }
   
@@ -35,6 +56,16 @@ const parseFormula = (formula) => {
     return {
       type: "FIELD",
       field: fieldMatch[1]
+    };
+  }
+  
+  // Match expression formula (contains operators like +, -, *, /)
+  // Examples: size * close, price + fee, total / count
+  // Only if it's not a FETCH formula (which we already checked above)
+  if (/[+\-*/]/.test(text)) {
+    return {
+      type: "EXPRESSION",
+      expression: text
     };
   }
   
@@ -82,12 +113,69 @@ const evaluateJsExpression = (data, expression) => {
     // Use Function constructor for safer evaluation
     // This prevents access to global scope
     // Prepend 'data.' to the expression to make it a method call
-    const code = `return data.${expression}`;
+    const code = `try { return data.${expression}; } catch (e) { return null; }`;
     const func = new Function('data', code);
     return func(data);
   } catch (e) {
     console.error("Error evaluating expression:", expression, "Error:", e);
-    return data; // Return original data on error
+    return null; // Return null on error
+  }
+};
+
+// Evaluate an expression formula with column references
+// Example: "size * close" -> evaluates to row[size] * row[close]
+const evaluateExpressionFormula = (expression, rowData, headerNames) => {
+  if (!expression || !rowData || !headerNames) {
+    return null;
+  }
+  
+  try {
+    // Extract all column variable references from the expression
+    const variables = [];
+    const varPattern = /\b([a-zA-Z_][a-zA-Z0-9_]*)\b/g;
+    let match;
+    const varNames = new Set();
+    
+    while ((match = varPattern.exec(expression)) !== null) {
+      const varName = match[1];
+      const colIndex = headerNames.indexOf(varName);
+      if (colIndex !== -1 && !varNames.has(varName)) {
+        variables.push({ name: varName, columnIndex: colIndex });
+        varNames.add(varName);
+      }
+    }
+    
+    // If no variables found, try to evaluate as a constant
+    if (variables.length === 0) {
+      try {
+        const result = eval(expression);
+        return result;
+      } catch (e) {
+        return null;
+      }
+    }
+    
+    // Build an object with variable values for safe evaluation
+    const context = {};
+    variables.forEach(({ name, columnIndex }) => {
+      context[name] = rowData[columnIndex];
+    });
+    
+    // Use Function constructor for safer evaluation
+    // Build: (size, close) => { return size * close; }
+    const paramNames = variables.map(v => v.name);
+    const funcBody = `return ${expression};`;
+    
+    try {
+      const func = new Function(...paramNames, funcBody);
+      return func(...paramNames.map(name => context[name]));
+    } catch (e) {
+      console.error("Error evaluating expression:", expression, "Error:", e);
+      return null;
+    }
+  } catch (e) {
+    console.error("Error in evaluateExpressionFormula:", e);
+    return null;
   }
 };
 
@@ -198,41 +286,43 @@ const extractColumnVariables = (formula, headerNames) => {
 };
 
 // Evaluate a formula with row context for column variable resolution
-// Used for formulas like =FETCH("http://.../"+asxCode).size
+// Used for formulas like =FETCH("http://.../"+asxCode).size or = size * close
 const evaluateFormulaWithContext = async (formula, rowData, headerNames, authToken) => {
   if (!formula || !formula.startsWith("=")) {
     return formula;
   }
   
-  const text = formula.substring(1); // Remove '='
-  const variables = extractColumnVariables(formula, headerNames);
+  // Try to parse the formula
+  const parsed = parseFormula(formula);
   
-  // If no variables, use standard evaluation
-  if (variables.length === 0) {
-    return evaluateFormula(formula, null, authToken);
+  // Handle EXPRESSION formulas (e.g., "size * close")
+  if (parsed && parsed.type === "EXPRESSION") {
+    return evaluateExpressionFormula(parsed.expression, rowData, headerNames);
   }
   
-  // Handle FETCH with variables
-  const fetchMatch = text.match(/^FETCH\(([^)]+)\)(\.(.+))?$/);
-  if (fetchMatch) {
-    let urlTemplate = fetchMatch[1];
-    const afterFetch = fetchMatch[3] || '';
+  // Handle FETCH formulas (including those with variables in URL)
+  if (parsed && (parsed.type === "FETCH" || parsed.type === "FETCH_JS")) {
+    // Check if URL contains variables
+    const hasVariables = parsed.url.includes('+');
     
-    // Build the URL by properly handling string literals and variable concatenation
+    if (!hasVariables) {
+      // No variables - use standard evaluation
+      return evaluateFormula(formula, null, authToken);
+    }
+    
+    // URL has variables - build the URL from the template
+    let url = parsed.url;
+    
     // Split by +, then process each part separately
-    const parts = urlTemplate.split('+');
-    
+    const parts = url.split('+');
     const urlParts = parts.map(part => {
       const trimmed = part.trim();
       
       // Check if this part is a variable reference
-      const varRef = variables.find(v => v.name === trimmed);
-      if (varRef) {
-        const value = rowData[varRef.columnIndex];
-        if (value !== null && value !== undefined) {
-          return String(value);
-        }
-        return '';
+      const varName = trimmed;
+      const colIndex = headerNames.indexOf(varName);
+      if (colIndex !== -1 && rowData[colIndex] !== null && rowData[colIndex] !== undefined) {
+        return String(rowData[colIndex]);
       }
       
       // It's a string literal - unquote it
@@ -243,14 +333,12 @@ const evaluateFormulaWithContext = async (formula, rowData, headerNames, authTok
         return trimmed.slice(1, -1);
       }
       
-      // If it has quotes in the middle, keep it as is
       return trimmed;
     });
     
-    // Join the parts - the + was the concatenation operator in the formula
-    let url = urlParts.join('');
+    url = urlParts.join('');
     
-    // Fetch data from the constructed URL
+    // Fetch data
     try {
       let data = await fetchData(url, authToken);
       
@@ -259,32 +347,29 @@ const evaluateFormulaWithContext = async (formula, rowData, headerNames, authTok
         data = [data];
       }
       
-      // If there's a field or JS expression after FETCH
-      if (afterFetch) {
-        if (afterFetch.includes('(') || afterFetch.includes('=>') || 
-            (afterFetch.includes('.') && !/^\.\w+$/.test(afterFetch))) {
-          // JS expression
-          return evaluateJsExpression(data, afterFetch);
-        } else if (afterFetch.startsWith('.')) {
-          // Simple field extraction
-          const field = afterFetch.substring(1);
-          if (Array.isArray(data)) {
-            return data.map(item => item[field]).filter(x => x !== undefined);
-          } else if (data && typeof data === "object") {
-            return data[field];
-          }
+      // If there's a field to extract (for simple FETCH)
+      if (parsed.type === "FETCH" && parsed.field) {
+        if (Array.isArray(data)) {
+          return data.map(item => item[parsed.field]).filter(x => x !== undefined);
+        } else if (data && typeof data === "object") {
+          return data[parsed.field];
         }
+      }
+      
+      // If there's a JS expression to evaluate (for FETCH_JS)
+      if (parsed.type === "FETCH_JS" && parsed.jsExpression) {
+        return evaluateJsExpression(data, parsed.jsExpression);
       }
       
       return data;
     } catch (e) {
-      console.error("Error evaluating dynamic FETCH:", e);
+      console.error("Error evaluating FETCH with variables:", e);
       return null;
     }
   }
   
-  // For non-FETCH formulas with variables, try to evaluate with context
-  return formula;
+  // For non-FETCH, non-EXPRESSION formulas, try standard evaluation
+  return evaluateFormula(formula, null, authToken);
 };
 
 // Helper function to sort data by a column
@@ -351,7 +436,9 @@ const ContextMenu = ({
   onFilterChange,
   onFilterClear,
   filterValue,
-  colIndex
+  colIndex,
+  onDecimalPlacesChange,
+  decimalPlaces
 }) => {
   if (!position) return null;
   
@@ -465,6 +552,33 @@ const ContextMenu = ({
             )}
           </div>
         )}
+        {onDecimalPlacesChange && (
+          <>
+            <hr style={{ margin: "4px 0", border: "none", borderTop: "1px solid #ddd" }} />
+            <div style={{ padding: "4px 12px" }}>
+              <label style={{ fontSize: "11px", display: "block", marginBottom: "2px", color: "#333", fontWeight: "bold" }}>
+                Decimal places:
+              </label>
+            <input
+              type="number"
+              className="decimal-places-input"
+              placeholder="0"
+              value={decimalPlaces[colIndex] !== null && decimalPlaces[colIndex] !== undefined ? decimalPlaces[colIndex] : ''}
+              onChange={(e) => onDecimalPlacesChange(colIndex, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              style={{
+                width: "60px",
+                padding: "4px 6px",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                fontSize: "12px",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+          </>
+        )}
         {onFreezeColumn && (
           <>
             <hr style={{ margin: "4px 0", border: "none", borderTop: "1px solid #ddd" }} />
@@ -516,7 +630,9 @@ const HeaderCell = ({
   dragOverColumn,
   onFilterChange,
   onFilterClear,
-  filters
+  filters,
+  onDecimalPlacesChange,
+  decimalPlaces
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [draftValue, setDraftValue] = useState(headerName || "");
@@ -723,6 +839,8 @@ const HeaderCell = ({
         onFilterClear={onFilterClear}
         filterValue={filters && filters[colIndex] ? filters[colIndex] : ''}
         colIndex={colIndex}
+        onDecimalPlacesChange={onDecimalPlacesChange}
+        decimalPlaces={decimalPlaces}
       />
     </th>
   );
@@ -767,6 +885,13 @@ const ProgrammableTable = ({
   // Filtering state - object mapping column index to filter text
   const [filters, setFilters] = useState({});
   
+  // Number formatting: decimal places per column - object mapping column index to number
+  const [decimalPlaces, setDecimalPlaces] = useState({});
+  
+  // Conditional formatting: object mapping column index to array of format rules
+  // Each rule: { condition: string, color: string, bold: boolean, italic: boolean, underline: boolean, strikeout: boolean }
+  const [conditionalFormats, setConditionalFormats] = useState({});
+  
   // Drag and drop state for column reordering
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [dragOverColumn, setDragOverColumn] = useState(null);
@@ -792,7 +917,8 @@ const ProgrammableTable = ({
         freezeHeader,
         filters,
         sortColumn,
-        sortDirection
+        sortDirection,
+        decimalPlaces
       };
       
       const headers = new Headers();
@@ -850,6 +976,7 @@ const ProgrammableTable = ({
           setFreezeFirstColumn(state.freezeFirstColumn !== false);
           setFreezeHeader(state.freezeHeader !== false);
           setFilters(state.filters || {});
+          setDecimalPlaces(state.decimalPlaces || {});
           setSortColumn(state.sortColumn || null);
           setSortDirection(state.sortDirection || null);
           
@@ -869,6 +996,7 @@ const ProgrammableTable = ({
   }, [settingsEndpoint, authToken, settingKey, initialColumns, initialRows, initialFormulas, initialHeaderNames]);
   
   // Evaluate all formulas and populate data
+  // Renders table immediately with loading state, then updates as formulas complete
   const evaluateAllFormulas = useCallback(async () => {
     // Prevent re-entrant calls
     if (isEvaluating) return;
@@ -884,13 +1012,20 @@ const ProgrammableTable = ({
       const columnData = [];
       const dependentCols = [];
       
-      // First, check which columns have formulas with variable references
+      // First, check which columns have formulas with variable references or are expressions
       for (let col = 0; col < columns; col++) {
         const formula = formulas[col];
         if (formula && formula.startsWith("=")) {
-          const variables = extractColumnVariables(formula, headerNames);
-          if (variables.length > 0) {
+          const parsed = parseFormula(formula);
+          // EXPRESSION formulas (like "= size * close") are dependent on other columns
+          if (parsed && parsed.type === "EXPRESSION") {
             dependentCols.push(col);
+          } else {
+            // For FETCH formulas, check for column variable references
+            const variables = extractColumnVariables(formula, headerNames);
+            if (variables.length > 0) {
+              dependentCols.push(col);
+            }
           }
         }
       }
@@ -969,35 +1104,138 @@ const ProgrammableTable = ({
         }
       }
       
-      // Second pass: evaluate dependent formulas row-by-row
+      // Set data with independent columns populated - this triggers a render
+      setData([...newData]);
+      setLoading(false); // Show progress while dependent formulas evaluate
+      
+      // Second pass: evaluate dependent formulas in dependency order
+      // Build dependency graph between columns
+      // A column depends on another if its formula references that column's header name
+      const colDependencies = {}; // col -> Set of column indices it depends on
+      const dependentsOf = {}; // col -> Set of column indices that depend on it
+      
+      // Initialize
+      for (let col = 0; col < neededColumns; col++) {
+        colDependencies[col] = new Set();
+        dependentsOf[col] = new Set();
+      }
+      
+      // Build dependency graph for dependent columns
       for (let col of dependentCols) {
         if (col >= neededColumns) continue;
         
         const formula = formulas[col];
         if (formula && formula.startsWith("=")) {
-          try {
-            // Evaluate this formula for each row
-            for (let row = 0; row < neededRows; row++) {
-              const rowData = newData[row] || [];
-              const result = await evaluateFormulaWithContext(formula, rowData, headerNames, authToken);
-              
-              if (result !== null && result !== undefined) {
-                const values = extractValues(result);
-                // For dependent formulas, we expect a single value per row
-                if (Array.isArray(values) && values.length > 0) {
-                  newData[row][col] = values[0];
-                } else if (values !== null && values !== undefined) {
-                  newData[row][col] = values;
+          // Find all column variable references in this formula
+          const variables = extractColumnVariables(formula, headerNames);
+          variables.forEach(({ columnIndex }) => {
+            if (columnIndex !== col) {
+              colDependencies[col].add(columnIndex);
+              dependentsOf[columnIndex].add(col);
+            }
+          });
+          
+          // Also check for expression formulas that might reference other columns by name
+          const parsed = parseFormula(formula);
+          if (parsed && parsed.type === "EXPRESSION") {
+            // For expressions like "size * close", find all header name references
+            // Use regex to match whole words only
+            headerNames.forEach((name, idx) => {
+              if (name && /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name)) {
+                // Match the name as a whole word in the formula
+                const regex = new RegExp(`\\b${name}\\b`);
+                if (regex.test(formula)) {
+                  colDependencies[col].add(idx);
+                  dependentsOf[idx].add(col);
                 }
               }
-            }
-          } catch (e) {
-            setError(`Error evaluating dependent formula in column ${col + 1}: ${e.message}`);
+            });
           }
         }
       }
       
-      setData(newData);
+      // Find columns with no dependencies (can be evaluated first)
+      // These are dependent on non-dependent columns (independent) or have no deps
+      let readyCols = dependentCols.filter(col => {
+        if (col >= neededColumns) return false;
+        // Check if all dependencies are either independent or already evaluated
+        for (const dep of colDependencies[col]) {
+          if (dependentCols.includes(dep)) {
+            // This column depends on another dependent column, not ready
+            return false;
+          }
+        }
+        return true;
+      });
+      
+      // Process in waves: evaluate ready columns, then find new ready columns
+      const evaluated = new Set();
+      let currentData = newData;
+      
+      while (readyCols.length > 0) {
+        // Evaluate all ready columns for all rows concurrently
+        const cellsToEvaluate = [];
+        for (const col of readyCols) {
+          for (let row = 0; row < neededRows; row++) {
+            cellsToEvaluate.push({ row, col, formula: formulas[col] });
+          }
+        }
+        
+        // Evaluate this wave concurrently
+        const wavePromises = cellsToEvaluate.map(async ({ row, col, formula }) => {
+          try {
+            const rowData = currentData[row] || [];
+            const result = await evaluateFormulaWithContext(formula, rowData, headerNames, authToken);
+            
+            if (result !== null && result !== undefined) {
+              const values = extractValues(result);
+              const cellValue = Array.isArray(values) && values.length > 0 ? values[0] : values;
+              return { row, col, value: cellValue };
+            }
+            return { row, col, value: null };
+          } catch (e) {
+            console.error(`Error evaluating formula at row ${row}, col ${col}:`, e);
+            return { row, col, value: null };
+          }
+        });
+        
+        const waveResults = await Promise.all(wavePromises);
+        
+        // Update data with this wave's results
+        const updatedData = currentData.map(row => [...row]);
+        waveResults.forEach(({ row, col, value }) => {
+          if (updatedData[row] && col < updatedData[row].length) {
+            updatedData[row][col] = value;
+          }
+        });
+        
+        // Update React state and our local reference
+        setData(updatedData);
+        currentData = updatedData;
+        
+        // Mark these columns as evaluated
+        readyCols.forEach(col => evaluated.add(col));
+        
+        // Find new ready columns (dependencies are now satisfied)
+        const newReadyCols = dependentCols.filter(col => {
+          if (col >= neededColumns || evaluated.has(col)) return false;
+          // Check if all dependent column dependencies are satisfied
+          for (const dep of colDependencies[col]) {
+            if (dependentCols.includes(dep) && !evaluated.has(dep)) {
+              return false;
+            }
+          }
+          return true;
+        });
+        
+        readyCols = newReadyCols;
+      }
+      
+      // Check if there are any circular dependencies or unevaluated columns
+      const unevaluated = dependentCols.filter(col => col < neededColumns && !evaluated.has(col));
+      if (unevaluated.length > 0) {
+        console.warn(`Could not evaluate some formulas due to circular dependencies: ${unevaluated.join(', ')}`);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -1018,12 +1256,12 @@ const ProgrammableTable = ({
     }
   }, [tableStateLoaded]);
   
-  // Save state when formulas, header names, filters, sorting, or column order changes
+  // Save state when formulas, header names, filters, sorting, formatting, or column order changes
   useEffect(() => {
     if (tableStateLoaded) {
       saveTableState();
     }
-  }, [formulas, headerNames, columns, rows, filters, sortColumn, sortDirection, saveTableState, tableStateLoaded]);
+  }, [formulas, headerNames, columns, rows, filters, decimalPlaces, sortColumn, sortDirection, saveTableState, tableStateLoaded]);
   
   const handleHeaderNameChange = (colIndex, newName) => {
     const newHeaderNames = [...headerNames];
@@ -1082,6 +1320,15 @@ const ProgrammableTable = ({
       delete newFilters[colIndex];
       return newFilters;
     });
+  };
+  
+  // Number formatting handlers
+  const handleDecimalPlacesChange = (colIndex, value) => {
+    const numValue = value === '' ? null : parseInt(value, 10);
+    setDecimalPlaces(prev => ({
+      ...prev,
+      [colIndex]: numValue
+    }));
   };
   
   // Drag and drop handlers for column reordering
@@ -1231,6 +1478,8 @@ const ProgrammableTable = ({
                   onFilterChange={handleFilterChange}
                   onFilterClear={handleFilterClear}
                   filters={filters}
+                  onDecimalPlacesChange={handleDecimalPlacesChange}
+                  decimalPlaces={decimalPlaces}
                 />
               ))}
             </tr>
@@ -1249,7 +1498,11 @@ const ProgrammableTable = ({
                       className={`table-cell ${col === 0 && freezeFirstColumn ? 'frozen-cell' : ''}`}
                       style={columnWidths[col] ? { width: `${columnWidths[col]}px` } : {}}
                     >
-                      {rowData[col] !== null && rowData[col] !== undefined ? String(rowData[col]) : ""}
+                      {rowData[col] !== null && rowData[col] !== undefined ? (
+                        typeof rowData[col] === 'number' && decimalPlaces[col] !== null && decimalPlaces[col] !== undefined
+                          ? rowData[col].toFixed(decimalPlaces[col])
+                          : String(rowData[col])
+                      ) : ""}
                     </td>
                   ))}
                 </tr>
@@ -1275,6 +1528,7 @@ const ProgrammableTable = ({
         <p><strong>Column References:</strong> Use column header names as variables in formulas. Formula is evaluated for each row using values from other columns in that row.</p>
         <p><strong>Sorting:</strong> Click column headers to sort (asc/desc/clear).</p>
         <p><strong>Filtering:</strong> Right-click on a header and use the filter input in the context menu to search within that column.</p>
+        <p><strong>Number Formatting:</strong> Right-click on a header and use the decimal places input in the context menu to set precision for numeric values.</p>
         <p><strong>Drag & Drop:</strong> Drag column headers to reorder columns.</p>
         {savingState && <p className="status">Saving state...</p>}
         {stateError && <p className="status error-status">Error: {stateError}</p>}

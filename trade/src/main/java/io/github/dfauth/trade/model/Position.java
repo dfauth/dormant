@@ -85,6 +85,13 @@ public class Position {
         }
     }
 
+    public double getCost() {
+        return trades.stream()
+                .filter(t -> t.getSide() == getSide())
+                .mapToDouble(t -> t.getCost().doubleValue())
+                .sum();
+    }
+
     public double getAveragePrice() {
         return trades.stream()
                 .filter(t -> t.getSide() == getSide())
