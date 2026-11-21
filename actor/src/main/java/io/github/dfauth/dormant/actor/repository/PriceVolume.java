@@ -3,19 +3,19 @@ package io.github.dfauth.dormant.actor.repository;
 import io.github.dfauth.dormant.Decoder;
 import io.github.dfauth.dormant.Dormant;
 import io.github.dfauth.dormant.Encoder;
-import io.github.dfauth.dormant.actor.Foldable;
-import io.github.dfauth.dormant.actor.Scalable;
+import io.github.dfauth.dormant.actor.Reducible;
 import io.github.dfauth.dormant.model.Price;
 import lombok.*;
 
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
 @EqualsAndHashCode
-public class PriceVolume implements Dormant, Foldable<Price, PriceVolume>, Scalable<PriceVolume> {
+public class PriceVolume implements Dormant, Reducible<Price, PriceVolume, Double> {
 
     public static Function<PriceVolume, Optional<PriceVolume>> smaFinisher(int period) {
         return r -> r.count >= period ? Optional.of(new PriceVolume(r.price / r.count, r.volume / r.count, 0)) : Optional.empty();
@@ -28,6 +28,10 @@ public class PriceVolume implements Dormant, Foldable<Price, PriceVolume>, Scala
     private int count;
 
     public PriceVolume(double price, int volume) {
+        this(price, volume, 0);
+    }
+
+    public PriceVolume(double price, double volume) {
         this(price, volume, 0);
     }
 
@@ -62,14 +66,7 @@ public class PriceVolume implements Dormant, Foldable<Price, PriceVolume>, Scala
     }
 
     @Override
-    public PriceVolume fold(PriceVolume priceVolume) {
-        return combine(priceVolume);
-    }
-
-    @Override
-    public PriceVolume scale(double multiplier) {
-        this.price *= multiplier;
-        this.volume *= multiplier;
-        return this;
+    public PriceVolume map(UnaryOperator<Double> mapper) {
+        return new PriceVolume(mapper.apply(this.price), mapper.apply(this.volume));
     }
 }

@@ -24,9 +24,9 @@ public class SimpleMovingAverageTest {
     @Test
     public void testSmaDoubleStream() {
         RingBuffer<Double> ringBuffer = RingBuffer.create(new double[3]);
-        SimpleMovingAverage<Double, Foldable.FoldableScalableDouble> sma = SimpleMovingAverage.sma(ringBuffer);
+        SimpleMovingAverage<Double, Reducible.ReducibleDouble> sma = SimpleMovingAverage.sma(ringBuffer);
         assertEquals(List.of(2.0, 3.0), Stream.of(1.0, 2.0, 3.0, 4.0).flatMap(d -> sma.apply(d).stream())
-                .map(Foldable.FoldableScalableDouble::getD).toList());
+                .map(Reducible.ReducibleDouble::getD).toList());
         assertEquals(List.of(2.0,3.0,4.0), ringBuffer.stream().toList());
     }
 

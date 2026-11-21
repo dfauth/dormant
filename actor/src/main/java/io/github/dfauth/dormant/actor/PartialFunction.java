@@ -9,7 +9,7 @@ import java.util.stream.Gatherer;
 
 import static java.util.function.Predicate.not;
 
-public interface PartialFunction<T, R extends Foldable<T, R>> extends Function<T, Optional<R>> {
+public interface PartialFunction<T, R extends Reducible<T, R, N>, N extends Number> extends Function<T, Optional<R>> {
 
     default <S> Gatherer<T, R, S> gatherer(R state, Function<R, Optional<S>> intermediatePublisher) {
         return gatherer(state, intermediatePublisher, _ -> Optional.empty());
@@ -37,7 +37,7 @@ public interface PartialFunction<T, R extends Foldable<T, R>> extends Function<T
 
             @Override
             public BinaryOperator<R> combiner() {
-                return Foldable::fold;
+                return Reducible::combine;
             }
 
             @Override

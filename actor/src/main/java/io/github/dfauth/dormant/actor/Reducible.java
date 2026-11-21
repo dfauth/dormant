@@ -5,19 +5,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.util.Optional;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.function.*;
 import java.util.stream.Gatherer;
 
 import static java.util.function.Predicate.not;
 
-public interface Foldable<T, R extends Foldable<T, R>> {
+public interface Reducible<T, R extends Reducible<T, R, N>, N extends Number> {
 
     R aggregate(T t);
 
-    R fold(R r);
+    R combine(R r);
+
+    R map(UnaryOperator<N> mapper);
 
     default Gatherer<T, R, R>  gatherer() {
         return gatherer(Optional::of);
@@ -28,7 +27,7 @@ public interface Foldable<T, R extends Foldable<T, R>> {
 
             @Override
             public Supplier<R> initializer() {
-                return () -> (R) Foldable.this;
+                return () -> (R) Reducible.this;
             }
 
             @Override
@@ -55,53 +54,49 @@ public interface Foldable<T, R extends Foldable<T, R>> {
         };
     }
 
-    static FoldableScalableDouble foldable() {
-        return new FoldableScalableDouble();
+    static ReducibleDouble reducable() {
+        return new ReducibleDouble();
     }
 
     @AllArgsConstructor
     @NoArgsConstructor
-    class FoldableScalableDouble implements Foldable<Double, FoldableScalableDouble>, Scalable<FoldableScalableDouble> {
+    class ReducibleDouble implements Reducible<Double, ReducibleDouble, Double> {
 
         @Getter
         private double d;
         private int cnt;
         private int period;
 
-        public FoldableScalableDouble(double d) {
+        public ReducibleDouble(double d) {
             this(d, 0, 1);
         }
 
-        public FoldableScalableDouble(double d, int period) {
+        public ReducibleDouble(double d, int period) {
             this(d, 0, period);
         }
 
-        public static Function<FoldableScalableDouble, Optional<Double>> avg(int period) {
+        public static Function<ReducibleDouble, Optional<Double>> avg(int period) {
             return df -> df.cnt >= period ? Optional.of(df.d / df.cnt) : Optional.empty();
         }
 
         @Override
-        public FoldableScalableDouble aggregate(Double d) {
+        public ReducibleDouble aggregate(Double d) {
             this.d += d;
             this.cnt++;
             return this;
         }
 
         @Override
-        public FoldableScalableDouble combine(FoldableScalableDouble r) {
+        public ReducibleDouble combine(ReducibleDouble r) {
             this.d += r.d;
             this.cnt += r.cnt;
             return this;
         }
 
         @Override
-        public FoldableScalableDouble fold(FoldableScalableDouble r) {
-            return combine(r);
+        public ReducibleDouble map(UnaryOperator<Double> mapper) {
+            return new ReducibleDouble(mapper.apply(this.d), this.period);
         }
 
-        @Override
-        public FoldableScalableDouble scale(double multiplier) {
-            return new FoldableScalableDouble(this.d * multiplier);
-        }
     }
 }

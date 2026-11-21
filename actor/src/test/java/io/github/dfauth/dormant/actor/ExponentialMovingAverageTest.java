@@ -28,8 +28,8 @@ public class ExponentialMovingAverageTest {
 
     @Test
     public void testEmaDoubleStream() {
-        ExponentialMovingAverage<Double, Foldable.FoldableScalableDouble> ema = ExponentialMovingAverage.ema(3);
-        assertEquals(List.of(2.0, 3.0, 4.0), Stream.of(1.0, 2.0, 3.0, 4.0, 5.0).map(ema).flatMap(Optional::stream).map(Foldable.FoldableScalableDouble::getD).toList());
+        ExponentialMovingAverage<Double, Reducible.ReducibleDouble> ema = ExponentialMovingAverage.ema(3);
+        assertEquals(List.of(2.0, 3.0, 4.0), Stream.of(1.0, 2.0, 3.0, 4.0, 5.0).map(ema).flatMap(Optional::stream).map(Reducible.ReducibleDouble::getD).toList());
     }
 
     @Test

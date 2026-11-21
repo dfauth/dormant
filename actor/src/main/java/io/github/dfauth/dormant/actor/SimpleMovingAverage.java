@@ -7,14 +7,14 @@ import java.util.Optional;
 import java.util.function.Function;
 
 @RequiredArgsConstructor
-public class SimpleMovingAverage<T, R extends Scalable<R> & Foldable<T, R>> implements PartialFunction<T, R> {
+public class SimpleMovingAverage<T, R extends Reducible<T, R, Double>> implements PartialFunction<T, R, Double> {
 
-    public static final SimpleMovingAverage<Double, Foldable.FoldableScalableDouble> sma(int period) {
+    public static final SimpleMovingAverage<Double, Reducible.ReducibleDouble> sma(int period) {
         return sma(RingBuffer.create(new double[period]));
     }
 
-    public static final SimpleMovingAverage<Double, Foldable.FoldableScalableDouble> sma(RingBuffer<Double> ringBuffer) {
-        return new SimpleMovingAverage<>(ringBuffer, Foldable.FoldableScalableDouble::new);
+    public static final SimpleMovingAverage<Double, Reducible.ReducibleDouble> sma(RingBuffer<Double> ringBuffer) {
+        return new SimpleMovingAverage<>(ringBuffer, Reducible.ReducibleDouble::new);
     }
 
     private final RingBuffer<T> ringBuffer;
@@ -27,7 +27,7 @@ public class SimpleMovingAverage<T, R extends Scalable<R> & Foldable<T, R>> impl
                 .filter(RingBuffer::isFull)
                 .flatMap(rb -> rb.stream()
                         .map(extractor)
-                        .reduce(Foldable::fold))
-                .map(r -> r.scale(1.0 / (double)ringBuffer.capacity()));
+                        .reduce(Reducible::combine))
+                .map(r -> r.map(_r -> _r *(1.0 / (double)ringBuffer.capacity())));
     }
 }

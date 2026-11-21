@@ -15,17 +15,17 @@ import static io.github.dfauth.ta.TestData.CSL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Slf4j
-public class FoldableTest {
+public class ReducibleTest {
 
     @Test
-    public void testFoldable() {
-        Foldable<Double, Foldable.FoldableScalableDouble> foldable = Foldable.foldable();
-        List<Double> result = Stream.of(1.0, 2.0, 3.0, 4.0).gather(foldable.gatherer(Foldable.FoldableScalableDouble.avg(3))).toList();
+    public void testReducible() {
+        Reducible<Double, Reducible.ReducibleDouble, Double> reducable = Reducible.reducable();
+        List<Double> result = Stream.of(1.0, 2.0, 3.0, 4.0).gather(reducable.gatherer(Reducible.ReducibleDouble.avg(3))).toList();
         assertEquals(List.of(2.0, 2.5), result);
     }
 
     @Test
-    public void testPriceVolumeFoldable() {
+    public void testPriceVolume() {
         int period = 200;
 
         List<Price> prices = TestData.unzipCandles(new TypeReference<>() {

@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 @RequiredArgsConstructor
-public class ExponentialMovingAverage<T, R extends Scalable<R> & Foldable<T, R>> implements PartialFunction<T, R> {
+public class ExponentialMovingAverage<T, R extends Reducible<T, R, Double>> implements PartialFunction<T, R, Double> {
 
     public static double ema(double multiplier, int period, double current, double prev) {
         return ema(multiplier/(period + 1.0), current, prev);
@@ -17,16 +17,16 @@ public class ExponentialMovingAverage<T, R extends Scalable<R> & Foldable<T, R>>
         return (current * multiplier) + (prev * (1 - multiplier));
     }
 
-    public static <R extends Scalable<R>> R ema(double multiplier, R current, R prev) {
-        return current.scale(multiplier).combine(prev.scale((1 - multiplier)));
+    public static <R extends Reducible<T, R, Double>, T> R ema(double multiplier, R current, R prev) {
+        return current.map(r -> r * multiplier).combine(prev.map(r -> r * (1 - multiplier)));
     }
 
-    public static ExponentialMovingAverage<Double, Foldable.FoldableScalableDouble> ema(int period) {
+    public static ExponentialMovingAverage<Double, Reducible.ReducibleDouble> ema(int period) {
         return ema(2.0, period);
     }
 
-    public static ExponentialMovingAverage<Double, Foldable.FoldableScalableDouble> ema(double multiplier, int period) {
-        return new ExponentialMovingAverage<>(multiplier, period, Foldable.FoldableScalableDouble::new, SimpleMovingAverage.sma(period));
+    public static ExponentialMovingAverage<Double, Reducible.ReducibleDouble> ema(double multiplier, int period) {
+        return new ExponentialMovingAverage<>(multiplier, period, Reducible.ReducibleDouble::new, SimpleMovingAverage.sma(period));
     }
 
     private final double multiplier;

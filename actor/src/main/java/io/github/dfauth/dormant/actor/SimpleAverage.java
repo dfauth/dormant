@@ -4,10 +4,10 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Gatherer;
 
-public class SimpleAverage<T, R extends Foldable<T, R> & Scalable<R>> implements PartialFunction<T, R> {
+public class SimpleAverage<T, R extends Reducible<T, R, Double>> implements PartialFunction<T, R, Double> {
 
-    public static final SimpleAverage<Double, Foldable.FoldableScalableDouble> sma(int period) {
-        return new SimpleAverage<>(period, Foldable.FoldableScalableDouble::new, new Foldable.FoldableScalableDouble());
+    public static final SimpleAverage<Double, Reducible.ReducibleDouble> sma(int period) {
+        return new SimpleAverage<>(period, Reducible.ReducibleDouble::new, new Reducible.ReducibleDouble());
     }
 
     private final int period;
@@ -27,7 +27,7 @@ public class SimpleAverage<T, R extends Foldable<T, R> & Scalable<R>> implements
         this.cnt++;
         return Optional.ofNullable(this.r)
                 .filter(_ -> cnt >= period)
-                .map(_r -> _r.scale(1.0 / this.cnt));
+                .map(_r -> _r.map(__r -> __r * (1.0 / this.cnt)));
     }
 
     public Gatherer<T, R, R> gatherer(R r) {
