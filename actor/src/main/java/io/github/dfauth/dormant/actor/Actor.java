@@ -89,7 +89,6 @@ public class Actor implements ConsumerSeekAware {
                 period,
                 extractor,
                 new SimpleAverage<>(period, extractor, new PriceVolume())
-//                new SimpleMovingAverage<>(RingBuffer.create(new Price[period]), extractor)
         );
         return Optional.of(ringBuffer.stream(-2 * period)
                 .flatMap(p -> emaCalculator.apply(p).stream()).toList())

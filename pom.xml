@@ -18,6 +18,7 @@
         <module>model</module>
         <module>kafka</module>
         <module>actor</module>
+        <module>authzn</module>
     </modules>
 
     <properties>
