@@ -14,9 +14,17 @@ class PrimitiveRingBufferTest {
 
         buffer.write(1.0);
         buffer.write(2.0);
-        buffer.write(3.0);
 
+        assertEquals(List.of(1.0, 2.0), buffer.stream().toList());
+        assertEquals(List.of(2.0), buffer.stream(-1).toList());
+        assertEquals(List.of(1.0, 2.0), buffer.stream(-2).toList());
+        assertEquals(List.of(1.0, 2.0), buffer.stream(-3).toList());
+
+        buffer.write(3.0);
         assertEquals(List.of(1.0, 2.0, 3.0), buffer.stream().toList());
+        assertEquals(List.of( 3.0), buffer.stream(-1).toList());
+        assertEquals(List.of( 2.0, 3.0), buffer.stream(-2).toList());
+        assertEquals(List.of( 1.0, 2.0, 3.0), buffer.stream(-3).toList());
     }
 
     @Test
@@ -29,6 +37,9 @@ class PrimitiveRingBufferTest {
         buffer.write(4.0);
 
         assertEquals(List.of(2.0, 3.0, 4.0), buffer.stream().toList());
+        assertEquals(List.of( 4.0), buffer.stream(-1).toList());
+        assertEquals(List.of( 3.0, 4.0), buffer.stream(-2).toList());
+        assertEquals(List.of( 2.0, 3.0, 4.0), buffer.stream(-3).toList());
     }
 
     @Test

@@ -5,6 +5,8 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static java.lang.Math.max;
+
 public abstract class AbstractRingBuffer<T> implements RingBuffer<T> {
 
     protected AtomicInteger counter = new AtomicInteger(0);
@@ -18,14 +20,12 @@ public abstract class AbstractRingBuffer<T> implements RingBuffer<T> {
 
     @Override
     public Stream<T> stream(int n) {
-        return IntStream.range(n, capacity()+n).mapToObj(this::read).filter(nonNull());
+        assert n <= 0;
+        n = max(n, -size());
+        return IntStream.range(n, 0).limit(size()).mapToObj(this::read).filter(nonNull());
     }
 
     protected abstract Predicate<T> nonNull();
-
-    public T read() {
-        return read(-1);
-    }
 
     public T read(int n) {
         return readOffset(offset(n));
@@ -54,6 +54,6 @@ public abstract class AbstractRingBuffer<T> implements RingBuffer<T> {
     }
 
     private int offset(int n) {
-        return (counter.get() + capacity() + n) % capacity();
+        return (counter.get() + n) % capacity();
     }
 }

@@ -11,7 +11,9 @@ public interface RingBuffer<T> {
         return new PrimitiveRingBuffer(storage);
     }
 
-    T read();
+    default T read() {
+        return read(-1);
+    }
 
     T read(int n);
 
@@ -20,7 +22,7 @@ public interface RingBuffer<T> {
     T write(T d);
 
     default Stream<T> stream() {
-        return stream(0);
+        return stream(-1 * size());
     }
 
     Stream<T> stream(int n);

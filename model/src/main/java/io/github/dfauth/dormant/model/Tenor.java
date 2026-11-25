@@ -6,12 +6,15 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.Temporal;
+import java.time.temporal.TemporalAmount;
 import java.time.temporal.TemporalUnit;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiFunction;
 
 import static java.time.LocalDate.now;
 
-public record Tenor(int n, TenorUnit u) {
+public record Tenor(int n, TenorUnit u) implements TemporalAmount {
 
     public static Tenor _1Y = new Tenor(1, TenorUnit.Y);
     public static Tenor _2Y = new Tenor(1, TenorUnit.Y);
@@ -42,6 +45,33 @@ public record Tenor(int n, TenorUnit u) {
 
     public Duration duration() {
         return Duration.of(n, u);
+    }
+
+    @Override
+    public long get(TemporalUnit unit) {
+        assert unit == u.cu;
+        return n;
+    }
+
+    @Override
+    public List<TemporalUnit> getUnits() {
+        return Collections.singletonList(u);
+    }
+
+    @Override
+    public Temporal addTo(Temporal temporal) {
+        return switch (temporal) {
+            case LocalDate localDate -> localDate.plus(n, u);
+            default -> throw new IllegalArgumentException("Unknown or unsupported temporal value: " + temporal);
+        };
+    }
+
+    @Override
+    public Temporal subtractFrom(Temporal temporal) {
+        return switch (temporal) {
+            case LocalDate localDate -> localDate.minus(n, u);
+            default -> throw new IllegalArgumentException("Unknown or unsupported temporal value: " + temporal);
+        };
     }
 
 

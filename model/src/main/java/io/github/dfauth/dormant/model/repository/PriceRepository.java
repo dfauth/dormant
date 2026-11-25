@@ -41,10 +41,14 @@ public interface PriceRepository extends JpaRepository<Price, Long> {
     List<Price> findByCodeOrderByDateAsc(@Param("market") String market, @Param("code") String code, @Param("date") LocalDate date);
 
     default List<Price> findByCodeOrderByDateAsc(String marketCodeString) {
+        LocalDate date = LocalDate.now().minusYears(1);
+        return findByCodeOrderByDateAsc(marketCodeString, date);
+    }
+
+    default List<Price> findByCodeOrderByDateAsc(String marketCodeString, LocalDate date) {
         String[] arr = marketCodeString.split(":");
         String mkt = arr[0];
         String code = arr[1];
-        LocalDate date = LocalDate.now().minusYears(1);
         return findByCodeOrderByDateAsc(mkt, code, date);
     }
 

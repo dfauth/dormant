@@ -2,10 +2,13 @@ package io.github.dfauth.dormant.actor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.dfauth.dormant.actor.config.KafkaConfig;
-import io.github.dfauth.dormant.actor.repository.TAContainer;
+import io.github.dfauth.dormant.actor.repository.PriceVolume;
 import io.github.dfauth.dormant.actor.repository.TAContainerRepository;
 import io.github.dfauth.dormant.kafka.KafkaPublisher;
+import io.github.dfauth.dormant.model.BusinessDayCalendar;
+import io.github.dfauth.dormant.model.MarketEnum;
 import io.github.dfauth.dormant.model.Price;
+import io.github.dfauth.dormant.model.repository.MarketHolidayRepository;
 import io.github.dfauth.dormant.model.repository.PriceRepository;
 import io.github.dfauth.ta.TestData;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +22,9 @@ import org.springframework.kafka.test.context.EmbeddedKafka;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +54,9 @@ public class ActorTest {
     private EmbeddedKafkaBroker embeddedKafkaBroker;
 
     @MockitoBean
+    private MarketHolidayRepository marketHolidayRepository;
+
+    @MockitoBean
     private PriceRepository priceRepository;
 
     @MockitoBean
@@ -59,7 +67,8 @@ public class ActorTest {
     public void testIt() throws InterruptedException, ExecutionException, TimeoutException {
         List<Price> prices = TestData.unzipCandles(new TypeReference<>() {
         }, TestData.CSL2);
-        when(priceRepository.findByCodeAndLimit(anyString(), anyInt())).thenReturn(prices.subList(prices.size() - 400, prices.size()));
+        when(priceRepository.findByCodeOrderByDateAsc(anyString(), any(LocalDate.class))).thenReturn(prices.subList(prices.size() - 400, prices.size()));
+        when(marketHolidayRepository.findBusinessCalendarByMarket(any(MarketEnum.class))).thenReturn(new BusinessDayCalendar(MarketEnum.ASX, new TreeMap<>()));
         CompletableFuture<SendResult<String, Price>> fut = kafkaPublisher.publish(CODE, prices.getLast());
         fut.handle(handler(sr -> {
             log.info("sendResult: {}", sr);
@@ -69,8 +78,14 @@ public class ActorTest {
 
         SendResult<String, Price> sr = fut.get(1000, TimeUnit.MILLISECONDS);
         sleep(10000);
-        ArgumentCaptor<TAContainer> captor = ArgumentCaptor.forClass(TAContainer.class);
-        verify(taContainerRepository, times(1)).save(captor.capture());
-        assertEquals(161.71, captor.getValue().getEma200().getPrice(), 0.01);
+        ArgumentCaptor<PriceVolume> captor200 = ArgumentCaptor.forClass(PriceVolume.class);
+        ArgumentCaptor<PriceVolume> captor65 = ArgumentCaptor.forClass(PriceVolume.class);
+        ArgumentCaptor<PriceVolume> captor21 = ArgumentCaptor.forClass(PriceVolume.class);
+        ArgumentCaptor<PriceVolume> captor8 = ArgumentCaptor.forClass(PriceVolume.class);
+        verify(taContainerRepository, times(1)).upsert(anyString(), anyString(), any(LocalDate.class), captor200.capture(), captor65.capture(), captor21.capture(), captor8.capture());
+        assertEquals(161.71, captor200.getValue().getPrice(), 0.01);
+        assertEquals(171.74, captor65.getValue().getPrice(), 0.01);
+        assertEquals(190.97, captor21.getValue().getPrice(), 0.01);
+        assertEquals(196.51, captor8.getValue().getPrice(), 0.01);
     }
 }

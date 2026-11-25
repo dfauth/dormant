@@ -35,7 +35,19 @@ public class TAContainer {
     @Column(nullable = true)
     private PriceVolume ema200;
 
-    public TAContainer(String market, String code, LocalDate date, PriceVolume ema200) {
-        this(null, market, code, date, ema200);
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = true)
+    private PriceVolume ema65;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = true)
+    private PriceVolume ema21;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = true)
+    private PriceVolume ema8;
+
+    public TAContainer(String market, String code, LocalDate date, PriceVolume ema200, PriceVolume ema65, PriceVolume ema21, PriceVolume ema8) {
+        this(null, market, code, date, ema200, ema65, ema21, ema8);
     }
 }
